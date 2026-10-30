@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2a3336">
+<meta name="description" content="Calculateur de matériaux, devis global, journal de chantier et diagnostic de sécurité de la maison.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bâtir Sûr">
+<title>Bâtir Sûr — Calculateur de construction & diagnostic de la maison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1e2629; --muted:#5d6a6e; --line:#e6ddd1; --bg:#f7f2ea; --card:#fffdf9;
+  --terra:#b8522a; --terra-d:#93401f; --terra-l:#f6e3d8;
+  --ok:#2c7a4b; --ok-l:#e2f2e8; --warn:#b37a0c; --warn-l:#fbf0d6; --bad:#b0302a; --bad-l:#f9e1df;
+  --blue:#2f6390; --blue-l:#e2edf6;
+  --r:14px; --sh:0 1px 2px rgba(40,30,20,.06),0 4px 14px rgba(40,30,20,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:Manrope,system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.5}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;letter-spacing:-.01em;margin:0}
+header{background:linear-gradient(135deg,#2a3336 0%,#3b2a22 100%);color:#fff;padding:26px 18px 20px}
+.wrap{max-width:1080px;margin:0 auto}
+header h1{font-size:30px}
+header p{margin:6px 0 0;opacity:.85;max-width:640px}
+.brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{width:44px;height:44px;border-radius:12px;background:var(--terra);display:grid;place-items:center;flex:none}
+.sync{margin-left:auto;font-size:12.5px;font-weight:600;background:rgba(255,255,255,.12);padding:5px 11px;border-radius:999px}
+nav{position:sticky;top:0;z-index:5;background:rgba(247,242,234,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;gap:4px;overflow-x:auto;padding:8px 12px;scrollbar-width:none}
+nav button{border:0;background:transparent;font:600 14px Manrope,sans-serif;color:var(--muted);padding:9px 13px;border-radius:999px;cursor:pointer;white-space:nowrap}
+nav button.on{background:var(--ink);color:#fff}
+nav .badge{background:var(--terra);color:#fff;border-radius:999px;font-size:11px;padding:1px 7px;margin-left:5px}
+main{padding:20px 14px 60px}
+section.tab{display:none}
+section.tab.on{display:block}
+.intro{color:var(--muted);margin:0 0 18px;max-width:760px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
+.card h3{font-size:19px;display:flex;align-items:center;gap:8px}
+.card h3 .ph{margin-left:auto}
+.card .desc{color:var(--muted);font-size:13.5px;margin:4px 0 12px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.fld.full{grid-column:1/-1}
+.fld.hide{display:none}
+input,select,textarea{font:500 15px Manrope,sans-serif;padding:9px 10px;border:1px solid #d8cdbf;border-radius:10px;background:#fff;color:var(--ink);width:100%}
+textarea{min-height:70px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--terra);outline-offset:0;border-color:transparent}
+.res{margin-top:14px;background:var(--bg);border-radius:10px;padding:10px 12px}
+.res .row{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed #e3d8ca;font-size:14px}
+.res .row:last-child{border-bottom:0}
+.res .row b{font-variant-numeric:tabular-nums;text-align:right}
+.res .row.big{font-size:16px}
+.res .row.big b{color:var(--terra-d)}
+.res .sub{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 0 2px}
+.note{font-size:12.5px;color:var(--muted);margin-top:8px}
+.alert{border-radius:10px;padding:10px 12px;font-size:13.5px;margin-top:10px}
+.alert.bad{background:var(--bad-l);color:var(--bad)}
+.alert.ok{background:var(--ok-l);color:var(--ok)}
+.alert.warn{background:var(--warn-l);color:#7d5506}
+.alert.info{background:var(--blue-l);color:var(--blue)}
+.btn{border:0;font:700 14px Manrope,sans-serif;padding:10px 14px;border-radius:10px;cursor:pointer;background:var(--terra);color:#fff}
+.btn:hover{background:var(--terra-d)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid #cfc3b4}
+.btn.ghost:hover{background:#efe7dc}
+.btn.sm{padding:6px 10px;font-size:13px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.ph{border:1px solid #d8cdbf;background:#fff;border-radius:10px;cursor:pointer;padding:5px 9px;font:700 13px Manrope,sans-serif;color:var(--ink);display:inline-flex;align-items:center;gap:5px;flex:none}
+.ph:hover{background:var(--terra-l);border-color:var(--terra)}
+.ph svg{width:17px;height:17px}
+.ph .c{background:var(--terra);color:#fff;border-radius:999px;font-size:11px;padding:0 6px;line-height:17px}
+.ph .c:empty{display:none}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-weight:600;font-size:14px;transition:.25s;z-index:40;opacity:0;pointer-events:none}
+.toast.on{transform:translateX(-50%) translateY(0);opacity:1}
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(20,24,26,.6);z-index:30;display:none;align-items:center;justify-content:center;padding:14px}
+.modal.on{display:flex}
+.mbox{background:var(--card);border-radius:16px;width:min(760px,100%);max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.mhead{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:1}
+.mhead b{font-family:Fraunces,serif;font-size:18px;flex:1}
+.mbody{padding:16px}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.thumb{position:relative;border-radius:10px;overflow:hidden;background:#eee;aspect-ratio:1}
+.thumb img{width:100%;height:100%;object-fit:cover;cursor:zoom-in;display:block}
+.thumb .del{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:50%;width:26px;height:26px;cursor:pointer;font-weight:700}
+.thumb .dt{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(transparent,rgba(0,0,0,.65));color:#fff;font-size:11px;padding:14px 7px 5px}
+.upl{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:2px dashed #d0c3b2;border-radius:10px;aspect-ratio:1;cursor:pointer;color:var(--muted);font-weight:700;font-size:13px;text-align:center;padding:8px}
+.upl:hover{border-color:var(--terra);color:var(--terra)}
+.upl input{display:none}
+.big img{width:100%;border-radius:10px;display:block}
+/* diagnostic */
+.dsec{margin-bottom:16px}
+.dsec h3{font-size:20px;margin-bottom:4px}
+.q{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line)}
+.q p{margin:0;font-size:14.5px;flex:1}
+.qr{display:flex;gap:6px;align-items:center;flex:none}
+.seg{display:flex;flex:none;border:1px solid #d8cdbf;border-radius:10px;overflow:hidden}
+.seg button{border:0;background:#fff;font:600 13px Manrope,sans-serif;padding:7px 11px;cursor:pointer;color:var(--muted)}
+.seg button+button{border-left:1px solid #d8cdbf}
+.seg button.sel.good{background:var(--ok);color:#fff}
+.seg button.sel.badc{background:var(--bad);color:#fff}
+.seg button.sel.nsp{background:#8a8f90;color:#fff}
+.sev{display:inline-block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:999px;margin-right:6px}
+.sev.urgent{background:var(--bad-l);color:var(--bad)}
+.sev.important{background:var(--warn-l);color:#7d5506}
+.sev.conseil{background:#e5edf0;color:#3a5560}
+.score{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.ring{width:110px;height:110px;flex:none}
+.prob{padding:10px 0;border-top:1px solid var(--line)}
+.prob b{display:block;margin:3px 0}
+.prob span.fix{color:var(--muted);font-size:13.5px}
+.layout2{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+.sticky{position:sticky;top:64px}
+@media(max-width:860px){.layout2{grid-template-columns:1fr}.sticky{position:static}}
+@media(max-width:560px){.q{flex-direction:column;align-items:flex-start}.fields{grid-template-columns:1fr}}
+/* guide */
+details{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;box-shadow:var(--sh)}
+summary{cursor:pointer;padding:14px 16px;font-weight:700;font-size:15.5px;list-style:none;display:flex;gap:10px;align-items:center}
+summary::-webkit-details-marker{display:none}
+summary .n{width:28px;height:28px;border-radius:50%;background:var(--terra-l);color:var(--terra-d);display:grid;place-items:center;font-size:13px;flex:none}
+summary .ph{margin-left:auto}
+details[open] summary{border-bottom:1px solid var(--line)}
+details .body{padding:12px 18px 14px;font-size:14.5px}
+details .body ul{margin:6px 0;padding-left:20px}
+details .body li{margin:4px 0}
+.ctl{background:var(--ok-l);border-radius:10px;padding:8px 12px;margin-top:8px;font-size:13.5px}
+.ctl b{color:var(--ok)}
+h2.sec{font-size:23px;margin:26px 0 10px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr.lot td{background:var(--terra-l);font-weight:800;color:var(--terra-d);font-size:13.5px}
+tr.lot td.num{font-size:14px}
+td input.q{width:90px;text-align:right;padding:5px 7px;font-size:14px}
+.tablecard{overflow-x:auto}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700}
+.emerg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+.emerg div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+.emerg b{font-size:22px;font-family:Fraunces,serif;color:var(--bad)}
+.disclaimer{font-size:12.5px;color:var(--muted);border-left:3px solid var(--terra);padding:6px 12px;margin:18px 0 0;max-width:760px}
+.pricegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px}
+.pricegrid label{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:7px 12px;font-size:13.5px}
+.pricegrid input{width:100px;text-align:right;padding:6px 8px}
+.pgroup{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--terra-d);margin:16px 0 6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.chips button{border:1px solid #d8cdbf;background:var(--card);border-radius:999px;padding:6px 12px;font:600 13px Manrope,sans-serif;cursor:pointer;color:var(--ink)}
+.chips button:hover{border-color:var(--terra);background:var(--terra-l)}
+.card.flash{outline:3px solid var(--terra);transition:outline .3s}
+.io{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.io button,.io label{display:flex;flex-direction:column;gap:4px;align-items:flex-start;text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:14px;cursor:pointer;font:600 14px Manrope,sans-serif;color:var(--ink)}
+.io button:hover,.io label:hover{border-color:var(--terra);background:var(--terra-l)}
+.io small{font-weight:500;color:var(--muted);font-size:12.5px}
+.io .ic{font-size:26px}
+.io input{display:none}
+.chk{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.chk input[type=checkbox]{width:18px;height:18px;flex:none}
+.chk select{width:auto;padding:5px 8px;font-size:13px;margin-left:auto}
+.empty{text-align:center;color:var(--muted);padding:30px}
+.bar{height:8px;background:#eee3d6;border-radius:99px;overflow:hidden;min-width:80px}
+.bar i{display:block;height:100%;background:var(--terra)}
+.proj{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:6px}
+.jentry{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line);align-items:flex-start}
+.jentry .d{flex:none;width:62px;text-align:center;background:var(--terra-l);color:var(--terra-d);border-radius:10px;padding:6px 4px;font-weight:800;line-height:1.1}
+.jentry .d small{display:block;font-size:11px;font-weight:700}
+.jentry .t{flex:1}
+.jentry .t b{display:block}
+.jentry .t p{margin:2px 0 0;font-size:14px;color:var(--muted);white-space:pre-wrap}
+.jentry .mini{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.jentry .mini img{width:52px;height:52px;object-fit:cover;border-radius:7px;cursor:pointer}
+.tot td{font-weight:800}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <div class="logo"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg></div>
+      <h1>Bâtir Sûr</h1>
+      <button class="btn sm" id="installBtn" style="display:none;margin-left:auto">📲 Installer l'application</button>
+      <span class="sync" id="sync">📱 Enregistré sur cet appareil</span>
+    </div>
+    <p>Calculez vos matériaux, établissez le devis global, suivez votre chantier en photos et vérifiez la sécurité de votre maison.</p>
+  </div>
+</header>
+
+<nav><div class="wrap" id="nav">
+  <button data-t="calc" class="on">🧮 Calculateur</button>
+  <button data-t="devis">📋 Devis global <span class="badge" id="devisCount">0</span></button>
+  <button data-t="journal">📸 Journal de chantier</button>
+  <button data-t="diag">🛡️ Diagnostic maison</button>
+  <button data-t="fiss">🔍 Fissures</button>
+  <button data-t="guide">📘 Guide</button>
+  <button data-t="pieges">⚠️ Pièges</button>
+  <button data-t="prix">⚙️ Prix & réglages</button>
+  <button id="ioBtn" style="color:var(--terra-d)">📂 Importer / Exporter</button>
+</div></nav>
+
+<main><div class="wrap">
+
+<section class="tab on" id="t-calc">
+  <p class="intro">Entrez vos dimensions : les quantités se calculent tout de suite (pertes et casse incluses). Chaque résultat peut être ajouté au <b>Devis global</b>, rangé par lot. L'icône <b>📷</b> permet d'attacher des photos à chaque élément.</p>
+  <div class="chips" id="calcNav"></div>
+  <div class="grid" id="calcs"></div>
+  <p class="disclaimer">Les quantités sont des estimations basées sur des ratios courants. Pour la structure (poteaux, poutres, dalles, fondations, escaliers, réservoirs), seul le plan d'un ingénieur en béton armé fait foi. L'électricité et le gaz doivent être réalisés par des professionnels qualifiés.</p>
+</section>
+
+<section class="tab" id="t-devis">
+  <div class="card tablecard" id="devisBox"></div>
+</section>
+
+<section class="tab" id="t-journal">
+  <p class="intro">Notez chaque étape du chantier avec des photos datées — surtout le <b>ferraillage avant le coulage du béton</b>, les gaines électriques et les tuyaux avant de les cacher. C'est votre preuve en cas de litige et votre plan pour les travaux futurs.</p>
+  <div class="layout2">
+    <div class="card" id="jList"></div>
+    <div class="sticky"><div class="card">
+      <h3>➕ Nouvelle entrée</h3>
+      <div class="fields" style="margin-top:12px">
+        <label class="fld"><span>Date</span><input type="date" id="jDate"></label>
+        <label class="fld"><span>Étape</span><select id="jStep"></select></label>
+        <label class="fld full"><span>Observation</span><textarea id="jNote" placeholder="Ex. : ferraillage poteaux RDC vérifié, 4 Ø12, cadres Ø6 tous les 15 cm…"></textarea></label>
+      </div>
+      <div class="actions"><button class="btn" id="jAdd">Ajouter au journal</button></div>
+      <p class="note">Après l'ajout, utilisez 📷 sur l'entrée pour joindre les photos.</p>
+    </div></div>
+  </div>
+</section>
+
+<section class="tab" id="t-diag">
+  <p class="intro">Répondez aux questions. Le bilan classe les problèmes du plus urgent au simple conseil, avec ce qu'il faut faire. Prenez en photo chaque point douteux avec 📷 pour le montrer à un professionnel.</p>
+  <div class="layout2">
+    <div id="diagQs"></div>
+    <div class="sticky"><div class="card" id="diagRes"></div></div>
+  </div>
+</section>
+
+<section class="tab" id="t-fiss">
+  <p class="intro">Toutes les fissures ne sont pas graves. Leur largeur, leur direction et leur évolution disent si c'est esthétique ou structurel.</p>
+  <div class="card tablecard">
+    <h3>Lire une fissure</h3>
+    <table style="margin-top:10px">
+      <tr><th>Type</th><th>À quoi elle ressemble</th><th>Gravité</th><th>Que faire</th></tr>
+      <tr><td><b>Microfissure</b></td><td>Moins de 0,2 mm, comme un cheveu, dans l'enduit ou la peinture</td><td><span class="pill" style="background:var(--ok-l);color:var(--ok)">Faible</span></td><td>Esthétique. Enduit souple + peinture.</td></tr>
+      <tr><td><b>Fissure fine</b></td><td>0,2 à 2 mm, souvent à la jonction béton / brique</td><td><span class="pill" style="background:var(--warn-l);color:#7d5506">Moyenne</span></td><td>Surveiller 3 à 6 mois avec un témoin. Si stable : ouvrir, poser une bande armée, reboucher.</td></tr>
+      <tr><td><b>Fissure large</b></td><td>Plus de 2 mm, traverse le mur, visible des deux côtés</td><td><span class="pill" style="background:var(--bad-l);color:var(--bad)">Élevée</span></td><td>Faire venir un ingénieur. Ne pas simplement reboucher.</td></tr>
+      <tr><td><b>Diagonale (≈45°)</b></td><td>Part des coins des portes et fenêtres ou monte en biais</td><td><span class="pill" style="background:var(--bad-l);color:var(--bad)">Élevée</span></td><td>Signe de tassement de fondation ou de mouvement. Expertise.</td></tr>
+      <tr><td><b>En escalier</b></td><td>Suit les joints entre les briques / agglos</td><td><span class="pill" style="background:var(--warn-l);color:#7d5506">Moyenne à élevée</span></td><td>Souvent un tassement du sol. Surveiller et faire vérifier.</td></tr>
+      <tr><td><b>Horizontale</b></td><td>Le long d'un mur, sous la dalle ou au-dessus des fondations</td><td><span class="pill" style="background:var(--bad-l);color:var(--bad)">Élevée</span></td><td>Poussée des terres, dalle qui fléchit ou chaînage absent. Expertise.</td></tr>
+      <tr><td><b>Sur poteau / poutre</b></td><td>Béton éclaté, fer rouillé visible</td><td><span class="pill" style="background:var(--bad-l);color:var(--bad)">Très élevée</span></td><td>Le fer gonfle en rouillant et fait éclater le béton. Réparation par spécialiste, rapidement.</td></tr>
+    </table>
+  </div>
+  <div class="grid" style="margin-top:16px">
+    <div class="card"><h3>📏 Mesurer sans outil</h3><ul style="padding-left:20px;margin:8px 0 0">
+      <li>Une feuille de papier (≈0,1 mm) qui entre à peine → microfissure.</li>
+      <li>Une carte bancaire (≈0,8 mm) qui entre → fissure fine.</li>
+      <li>Une pièce de monnaie (≈2 mm) qui entre → <b>fissure large, à faire voir.</b></li>
+    </ul></div>
+    <div class="card"><h3>🧷 Poser un témoin <span class="ph-slot" data-k="fiss:temoins" data-n="Témoins de fissures"></span></h3><ul style="padding-left:20px;margin:8px 0 0">
+      <li>Collez en travers de la fissure une bande de plâtre ou un morceau de verre fin.</li>
+      <li>Notez la date dessus et prenez une photo avec une règle à côté (bouton 📷).</li>
+      <li>Si le témoin se casse ou si la fissure s'élargit : <b>la fissure bouge</b>, appelez un ingénieur.</li>
+    </ul></div>
+    <div class="card"><h3>🌍 Après un séisme</h3><ul style="padding-left:20px;margin:8px 0 0">
+      <li>Sortez si vous voyez de nouvelles fissures larges, des poteaux abîmés ou une odeur de gaz.</li>
+      <li>Fermez le gaz et coupez le courant au tableau.</li>
+      <li>Ne rentrez pas avant l'inspection des services techniques (commune, protection civile).</li>
+      <li>Méfiez-vous des répliques : les murs fissurés peuvent tomber plus tard.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section class="tab" id="t-guide">
+  <p class="intro">Les étapes d'une construction et ce qu'il faut contrôler à chaque fois — surtout avant que le béton soit coulé. Chaque étape a son 📷 pour garder les photos.</p>
+  <div id="steps"></div>
+  <h2 class="sec">Règles parasismiques essentielles</h2>
+  <div class="card">
+    <p style="margin-top:0">Au Maroc, les constructions doivent respecter le <b>règlement parasismique RPS 2000</b> (révisé en 2011). Le séisme d'Al Haouz (2023) a montré que les maisons sans chaînages ni poteaux en béton armé s'effondrent les premières. L'essentiel :</p>
+    <ul style="padding-left:20px">
+      <li><b>Chaînages partout</b> : poteaux aux angles et aux croisements des murs, poutres de chaînage en haut de chaque mur et à chaque niveau.</li>
+      <li><b>Poteaux pas trop fins</b> : le RPS impose une section minimale (généralement 25 × 25 cm).</li>
+      <li><b>Cadres (étriers) resserrés</b> près des nœuds poteau–poutre, crochets repliés à 135°.</li>
+      <li><b>Recouvrement des barres</b> suffisant (environ 50 fois le diamètre, ex. 60 cm pour du Ø12), jamais tous au même endroit.</li>
+      <li><b>Enrobage</b> : 2,5 à 3 cm de béton autour des fers (cales en béton, pas des morceaux de brique).</li>
+      <li><b>Formes simples et symétriques</b> ; éviter les grands porte-à-faux et les « étages mous ».</li>
+      <li><b>Réservoirs d'eau sur le toit</b> : 1 000 litres = 1 tonne. Toujours au-dessus d'un poteau ou d'une poutre.</li>
+      <li><b>Ne jamais ajouter un étage</b> sans vérification par un ingénieur.</li>
+    </ul>
+  </div>
+  <h2 class="sec">Électricité : les règles de sécurité</h2>
+  <div class="card"><ul style="padding-left:20px;margin:0">
+    <li><b>Disjoncteur différentiel 30 mA</b> obligatoire en tête de tous les circuits de prises et de la salle de bain.</li>
+    <li><b>Prise de terre</b> (piquet de terre) reliée à toutes les prises et aux appareils métalliques.</li>
+    <li><b>Bonne section de fil</b> : 1,5 mm² pour l'éclairage (disjoncteur 10 A), 2,5 mm² pour les prises (20 A), 6 mm² pour la plaque de cuisson (32 A).</li>
+    <li><b>Couleurs</b> : vert-jaune = terre uniquement ; bleu = neutre ; rouge, marron ou noir = phase.</li>
+    <li>Pas de prise ni d'interrupteur à portée de la douche ; matériel étanche en salle de bain.</li>
+    <li>Tous les raccordements dans des boîtes de dérivation fermées, jamais de dominos dans le mur.</li>
+  </ul></div>
+  <h2 class="sec">Eau potable & réservoir</h2>
+  <div class="card"><ul style="padding-left:20px;margin:0">
+    <li>Tuyaux d'eau potable en matériaux alimentaires (PPR, PER, multicouche) ; jamais de récupération de tuyaux d'occasion.</li>
+    <li>Séparer clairement l'eau potable des évacuations : les tuyaux d'eau ne passent pas dans les regards d'égout.</li>
+    <li>Réservoir <b>fermé</b> (couvercle étanche), à l'abri du soleil si possible, avec trappe de visite et trop-plein protégé par une grille.</li>
+    <li>Nettoyer et désinfecter le réservoir au moins une fois par an : vider, brosser, désinfecter, puis bien rincer avant de le remplir.</li>
+    <li>Puits : le plus loin possible des fosses septiques et des étables, et faire analyser l'eau par un laboratoire agréé avant de la boire.</li>
+    <li>Pente des évacuations : environ 1 à 3 cm par mètre ; siphon sous chaque appareil pour bloquer les odeurs.</li>
+  </ul></div>
+  <h2 class="sec">Documents administratifs</h2>
+  <div class="card"><ul style="padding-left:20px;margin:0">
+    <li><b>Note de renseignements urbanistiques</b> : ce qu'on a le droit de construire sur le terrain.</li>
+    <li><b>Plans d'architecte</b> et <b>plans de béton armé</b> établis par un bureau d'études / ingénieur.</li>
+    <li><b>Autorisation de construire</b> délivrée par la commune avant de commencer. Les règles varient entre milieu urbain et rural : renseignez-vous au service d'urbanisme de votre commune.</li>
+    <li><b>Permis d'habiter / certificat de conformité</b> à la fin des travaux, nécessaire pour les branchements et les actes.</li>
+    <li>Gardez plans, factures et photos du journal de chantier : utiles pour une vente, une extension ou une expertise.</li>
+  </ul></div>
+</section>
+
+<section class="tab" id="t-pieges">
+  <p class="intro">Les tricheries les plus courantes sur les chantiers, et comment les vérifier soi-même en quelques minutes.</p>
+  <div class="grid" id="pieges"></div>
+</section>
+
+<section class="tab" id="t-prix">
+  <p class="intro">Les prix ci-dessous sont des <b>valeurs indicatives à remplacer</b> par ceux de votre fournisseur ou de votre région (en dirhams). Tout le devis se met à jour automatiquement.</p>
+  <div id="prices"></div>
+  <div class="actions"><button class="btn ghost" id="resetPrices">Remettre les prix par défaut</button></div>
+  <h2 class="sec">Sauvegarde</h2>
+  <div class="card">
+    <p style="margin-top:0" id="syncInfo"></p>
+    <div class="actions"><button class="btn" id="exportData">Copier une sauvegarde</button></div>
+    <label class="fld full" style="margin-top:14px"><span>Restaurer : collez une sauvegarde ici</span><textarea id="importBox" placeholder='{"prices":…}'></textarea></label>
+    <div class="actions"><button class="btn ghost" id="importData">Restaurer</button></div>
+    <p class="note">La sauvegarde contient les calculs, le devis, le journal, le diagnostic et les prix (pas les photos).</p>
+  </div>
+</section>
+
+</div></main>
+
+<div class="modal" id="modal"><div class="mbox"><div class="mhead"><b id="mTitle"></b><button class="btn ghost sm" id="mBack" style="display:none">← Retour</button><button class="btn ghost sm" id="mClose">✕</button></div><div class="mbody" id="mBody"></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= utilitaires ================= */
+const $ = s => document.querySelector(s);
+const fmt = (n, d = 1) => (isFinite(n) ? n : 0).toLocaleString('fr-FR', { maximumFractionDigits: d });
+const dh = n => fmt(Math.round(n), 0) + ' DH';
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+};
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 2400); }
+async function copy(text) { try { await navigator.clipboard.writeText(text); toast('Copié ✔'); } catch (e) { toast('Copie impossible sur cet appareil'); } }
+function confirmBtn(btn, fn, label = 'Confirmer ?') { let armed = false; btn.onclick = () => { if (!armed) { armed = true; btn.textContent = label; setTimeout(() => { armed = false; }, 4000); return; } fn(); }; }
+
+/* ================= état & sauvegarde ================= */
+const DEF = { prices: {}, calcs: {}, devis: [], diag: {}, journal: [], photos: {}, projet: { nom: '', proprio: '', lieu: '', mo: 0, imp: 10 } };
+const KEYS = Object.keys(DEF);
+const S = {};
+KEYS.forEach(k => { S[k] = store.get('bs_' + k, clone(DEF[k])); });
+let DB = null, UID = null, ASSETS = null;
+const pend = {}, busy = {};
+function setSync(m) {
+  const t = { cloud: '☁️ Synchronisé sur votre compte', local: '📱 Enregistré sur cet appareil', err: '⚠️ Synchronisation en attente' }[m];
+  $('#sync').textContent = t;
+  $('#syncInfo').textContent = m === 'cloud' ? 'Vos données sont enregistrées sur votre compte Claude : vous les retrouvez sur le téléphone et sur l\'ordinateur. Photos comprises.' :
+    m === 'err' ? 'La dernière synchronisation a échoué ; vos données restent sur cet appareil et seront renvoyées à la prochaine modification.' :
+    'Vos données sont enregistrées uniquement dans ce navigateur. Copiez régulièrement une sauvegarde pour ne rien perdre.';
+}
+function cloudVal(k) {
+  if (k !== 'photos') return S[k];
+  const o = {}; for (const key in S.photos) { const a = S.photos[key].filter(p => p.id); if (a.length) o[key] = a; } return o;
+}
+function save(k) {
+  const ok = store.set('bs_' + k, S[k]);
+  if (!ok && k === 'photos' && !DB) toast('Mémoire de l\'appareil pleine : supprimez des photos');
+  if (DB) { clearTimeout(pend[k]); pend[k] = setTimeout(() => push(k), 700); }
+}
+async function push(k) {
+  if (busy[k]) { busy[k] = 'again'; return; }
+  busy[k] = true;
+  try { await DB.doc('data/users/' + UID + '/' + k).set({ v: cloudVal(k), t: Date.now() }); setSync('cloud'); }
+  catch (e) { setSync('err'); }
+  const again = busy[k] === 'again'; busy[k] = false; if (again) push(k);
+}
+function isEmpty(v) { return v == null || (Array.isArray(v) ? !v.length : typeof v === 'object' && !Object.keys(v).length); }
+async function initCloud() {
+  if (!window.claude || !window.claude.use) { setSync('local'); return; }
+  let done = false; const timer = setTimeout(() => { if (!done) setSync('local'); }, 10000);
+  try {
+    const [db, u, as] = await Promise.all([claude.use('db'), claude.use('user'), claude.use('assets')]);
+    ASSETS = as || null;
+    if (!db || !u) { done = true; clearTimeout(timer); setSync('local'); return; }
+    const id = await u.id();
+    if (!id) { done = true; clearTimeout(timer); setSync('local'); return; }
+    const snaps = await Promise.all(KEYS.map(k => db.doc('data/users/' + id + '/' + k).get()));
+    done = true; clearTimeout(timer);
+    DB = db; UID = id;
+    snaps.forEach((s, i) => {
+      const k = KEYS[i];
+      if (s.exists && s.data() && s.data().v !== undefined) {
+        const v = clone(s.data().v);
+        if (k === 'photos') { for (const key in S.photos) { const extra = S.photos[key].filter(p => !p.id); if (extra.length) v[key] = (v[key] || []).concat(extra); } }
+        S[k] = v; store.set('bs_' + k, v);
+      } else if (!isEmpty(cloudVal(k))) push(k);
+    });
+    renderAll(); setSync('cloud');
+  } catch (e) { done = true; clearTimeout(timer); setSync('local'); }
+}
+
+/* ================= navigation ================= */
+function goTab(t) {
+  document.querySelectorAll('#nav button').forEach(x => x.classList.toggle('on', x.dataset.t === t));
+  document.querySelectorAll('section.tab').forEach(s => s.classList.toggle('on', s.id === 't-' + t));
+  if (t === 'devis') renderDevis();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+document.querySelectorAll('#nav button').forEach(b => b.onclick = () => goTab(b.dataset.t));
+
+/* ================= photos ================= */
+const CAM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg>';
+const phCount = k => (S.photos[k] || []).length;
+const phBtn = (k, name) => `<button type="button" class="ph" data-ph="${esc(k)}" data-n="${esc(name)}" title="Photos : ${esc(name)}">${CAM}<span class="c">${phCount(k) || ''}</span></button>`;
+const URLS = {};
+let IDB = null;
+function idb() { if (IDB) return IDB; IDB = new Promise((res, rej) => { try { const r = indexedDB.open('batir-sur', 1); r.onupgradeneeded = () => r.result.createObjectStore('photos'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }); return IDB; }
+async function idbDo(mode, fn) { const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction('photos', mode), rq = fn(tx.objectStore('photos')); tx.oncomplete = () => res(rq && rq.result); tx.onerror = () => rej(tx.error); }); }
+async function loadLocalPhotos() {
+  try { const ids = []; for (const k in S.photos) S.photos[k].forEach(p => { if (p.lid && !URLS[p.lid]) ids.push(p.lid); });
+    for (const id of ids) { const b = await idbDo('readonly', st => st.get(id)); if (b) URLS[id] = URL.createObjectURL(b); }
+    if (ids.length) { renderJournal(); if (curPh) openPhotos(curPh.k, curPh.n); } } catch (e) {}
+}
+const phSrc = p => p.id ? '/_blob/' + p.id : p.lid ? (URLS[p.lid] || '') : p.data;
+function refreshPh() { document.querySelectorAll('button[data-ph]').forEach(b => { b.querySelector('.c').textContent = phCount(b.dataset.ph) || ''; }); }
+function fillSlots() { document.querySelectorAll('.ph-slot').forEach(s => { s.outerHTML = phBtn(s.dataset.k, s.dataset.n); }); }
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-ph]'); if (!b) return;
+  e.preventDefault(); e.stopPropagation(); openPhotos(b.dataset.ph, b.dataset.n);
+}, true);
+let curPh = null;
+function openModal(title) { $('#mTitle').textContent = title; $('#modal').classList.add('on'); }
+function closeModal() { $('#modal').classList.remove('on'); curPh = null; }
+$('#mClose').onclick = closeModal;
+$('#modal').onclick = e => { if (e.target.id === 'modal') closeModal(); };
+$('#mBack').onclick = () => curPh && openPhotos(curPh.k, curPh.n);
+function openPhotos(k, n) {
+  curPh = { k, n }; $('#mBack').style.display = 'none';
+  openModal('📷 ' + n);
+  const list = S.photos[k] || [];
+  $('#mBody').innerHTML = `<div class="thumbs">
+    <label class="upl">${CAM.replace('<svg', '<svg width="30" height="30"')}<span>Ajouter des photos</span><small style="font-weight:500">appareil photo ou galerie</small><input type="file" accept="image/*" multiple id="phInput"></label>
+    ${list.map((p, i) => `<div class="thumb"><img src="${esc(phSrc(p))}" data-i="${i}" alt="Photo ${i + 1}"><button class="del" data-del="${i}" title="Supprimer">✕</button><div class="dt">${new Date(p.d).toLocaleDateString('fr-FR')}</div></div>`).join('')}
+  </div>${list.length ? '' : '<p class="note" style="margin-top:12px">Aucune photo pour l\'instant.</p>'}`;
+  $('#phInput').onchange = e => addPhotos(k, n, [...e.target.files]);
+  $('#mBody').querySelectorAll('img[data-i]').forEach(im => im.onclick = () => {
+    $('#mBack').style.display = '';
+    const p = list[+im.dataset.i];
+    $('#mBody').innerHTML = `<div class="big"><img src="${esc(phSrc(p))}" alt=""></div><p class="note">Photo du ${new Date(p.d).toLocaleString('fr-FR')}</p>`;
+  });
+  $('#mBody').querySelectorAll('[data-del]').forEach(b => {
+    confirmBtn(b, async () => {
+      const p = list[+b.dataset.del];
+      S.photos[k] = list.filter((_, i) => i !== +b.dataset.del);
+      if (!S.photos[k].length) delete S.photos[k];
+      save('photos'); refreshPh(); openPhotos(k, n); renderJournal();
+      if (p.id && ASSETS) { try { await ASSETS.delete(p.id); } catch (e) {} }
+      if (p.lid) { try { await idbDo('readwrite', st => st.delete(p.lid)); } catch (e) {} delete URLS[p.lid]; }
+    }, '?');
+  });
+}
+async function shrink(file, max) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const s = Math.min(1, max / Math.max(img.width, img.height));
+    const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); return c;
+  } finally { URL.revokeObjectURL(url); }
+}
+async function addPhotos(k, n, files) {
+  if (!files.length) return;
+  toast('Ajout de ' + files.length + ' photo(s)…');
+  for (const f of files) {
+    try {
+      let entry = null;
+      if (ASSETS) {
+        try {
+          const c = await shrink(f, 1600);
+          const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.82));
+          const r = await ASSETS.upload(blob); entry = { id: r.id, d: Date.now() };
+        } catch (e) { entry = null; }
+      }
+      if (!entry) { try { const c = await shrink(f, 1600); const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.82)); const lid = 'L' + Date.now() + Math.random().toString(36).slice(2, 7); await idbDo('readwrite', st => st.put(blob, lid)); URLS[lid] = URL.createObjectURL(blob); entry = { lid, d: Date.now() }; } catch (e) { entry = null; } }
+      if (!entry) { const c = await shrink(f, 1000); entry = { data: c.toDataURL('image/jpeg', 0.7), d: Date.now() }; }
+      (S.photos[k] = S.photos[k] || []).push(entry);
+    } catch (e) { toast('Une image n\'a pas pu être lue'); }
+  }
+  save('photos'); refreshPh(); renderJournal(); if (curPh && curPh.k === k) openPhotos(k, n);
+  toast('Photos ajoutées ✔');
+}
+
+/* ================= prix ================= */
+const PRICE_DEF = [
+  ['Gros œuvre'],
+  ['ciment', 'Ciment (sac 50 kg)', 'sac', 80], ['sable', 'Sable', 'm³', 250], ['gravette', 'Gravette / gravier', 'm³', 250],
+  ['acier', 'Acier (fer à béton)', 'kg', 11], ['treillis', 'Treillis soudé', 'm²', 18], ['hydrofuge', 'Hydrofuge (bidon 5 L)', 'u', 90],
+  ['brique6', 'Brique 6 trous', 'u', 2.5], ['brique12', 'Brique 12 trous', 'u', 3.5],
+  ['agglo10', 'Agglo 10 cm', 'u', 4.5], ['agglo15', 'Agglo 15 cm', 'u', 5.5], ['agglo20', 'Agglo 20 cm', 'u', 6.5],
+  ['hourdis', 'Hourdis', 'u', 5], ['poutrelle', 'Poutrelle', 'ml', 25],
+  ['Finitions'],
+  ['carrelage', 'Carrelage', 'm²', 120], ['colle', 'Colle carrelage (sac 25 kg)', 'sac', 60], ['joint', 'Joint carrelage', 'kg', 10],
+  ['peinture', 'Peinture', 'L', 45], ['impression', 'Sous-couche / impression', 'L', 35],
+  ['Électricité'],
+  ['fil15', 'Fil 1,5 mm²', 'm', 3], ['fil25', 'Fil 2,5 mm²', 'm', 4.5], ['fil6', 'Fil 6 mm²', 'm', 12], ['gaine', 'Gaine ICTA', 'm', 2.5],
+  ['boite', 'Boîte d\'encastrement', 'u', 3], ['prise', 'Prise de courant', 'u', 25], ['inter', 'Interrupteur', 'u', 25],
+  ['disj', 'Disjoncteur divisionnaire', 'u', 60], ['diff', 'Interrupteur différentiel 30 mA', 'u', 350], ['tableau', 'Tableau électrique (rangée)', 'u', 250], ['terre', 'Kit prise de terre', 'u', 300],
+  ['Plomberie & eau'],
+  ['ppr20', 'Tube PPR Ø20', 'm', 8], ['ppr25', 'Tube PPR Ø25', 'm', 12], ['pvc40', 'Tube PVC évacuation Ø40', 'm', 15], ['pvc100', 'Tube PVC évacuation Ø100', 'm', 35],
+  ['raccord', 'Raccord (coude, té, manchon)', 'u', 6], ['robinet', 'Robinet d\'arrêt', 'u', 45], ['siphon', 'Siphon', 'u', 40], ['regard', 'Regard', 'u', 300],
+  ['citerne', 'Citerne plastique 1 000 L', 'u', 1800],
+  ['Menuiserie — bois'],
+  ['pi_bois', 'Porte intérieure bois (posée)', 'u', 1800], ['pe_bois', 'Porte d\'entrée bois massif', 'u', 6000], ['fen_bois', 'Fenêtre / baie bois', 'm²', 2200],
+  ['Menuiserie — aluminium'],
+  ['pi_alu', 'Porte intérieure aluminium', 'u', 1600], ['pe_alu', 'Porte d\'entrée aluminium', 'u', 4500], ['fen_alu', 'Fenêtre / baie aluminium', 'm²', 1400],
+  ['Menuiserie — métallique'],
+  ['pi_met', 'Porte intérieure métallique', 'u', 1200], ['pe_met', 'Porte d\'entrée métallique', 'u', 3500], ['fen_met', 'Fenêtre métallique', 'm²', 900],
+  ['grille', 'Grille de protection fenêtre', 'm²', 450], ['gcorps', 'Garde-corps métallique', 'ml', 600], ['portail', 'Portail / porte de garage', 'm²', 1000],
+  ['dv', 'Supplément double vitrage', 'm²', 350], ['silicone', 'Mastic silicone / mousse', 'u', 35],
+  ['Étanchéité'],
+  ['membrane', 'Membrane bitumineuse (rouleau 10 m²)', 'u', 350], ['primaire', 'Primaire d\'accrochage', 'kg', 25], ['resine', 'Résine d\'étanchéité liquide', 'kg', 60],
+  ['spec', 'Étanchéité sous carrelage (SPEC)', 'kg', 45], ['bande', 'Bande d\'angle armée', 'ml', 15], ['bitume', 'Enduit bitumineux / émulsion', 'kg', 15],
+  ['descente', 'Descente d\'eau Ø100 + crapaudine', 'u', 250], ['gravillon', 'Gravillons de protection', 'm³', 300],
+  ['Terrassement'],
+  ['terr_m3', 'Terrassement / fouilles (par m³)', 'm³', 60], ['camion', 'Évacuation des terres (voyage de camion)', 'u', 400], ['herisson', 'Hérisson / tout-venant', 'm³', 200],
+  ['Faïence & plâtrerie'],
+  ['faience', 'Faïence murale', 'm²', 100], ['baguette', 'Baguette d\'angle', 'ml', 15],
+  ['ba13', 'Plaque de plâtre BA13 (3 m²)', 'u', 75], ['fourrure', 'Fourrure / montant métallique', 'ml', 12], ['rail', 'Rail / cornière', 'ml', 10], ['suspente', 'Suspente', 'u', 3],
+  ['vis', 'Vis placo (boîte de 1 000)', 'u', 80], ['bandejt', 'Bande à joint', 'ml', 1], ['enduitjt', 'Enduit à joint', 'kg', 12], ['laine', 'Laine minérale (isolation)', 'm²', 40],
+  ['spot', 'Spot LED encastré', 'u', 60], ['staff', 'Plafond en staff / plâtre traditionnel (posé)', 'm²', 250], ['corniche', 'Corniche en plâtre', 'ml', 120],
+  ['Énergie solaire'],
+  ['cesol', 'Chauffe-eau solaire (par litre de ballon)', 'L', 45], ['pv_kwc', 'Photovoltaïque posé (par kWc)', 'kWc', 9000], ['batt', 'Batterie de stockage (par kWh)', 'kWh', 3500],
+  ['Clôture & assainissement'],
+  ['portail_alu', 'Portail aluminium', 'm²', 1600], ['fosse_pref', 'Fosse septique préfabriquée (par m³)', 'm³', 3000],
+  ['drain', 'Tuyau d\'épandage perforé Ø100', 'ml', 25], ['geotex', 'Géotextile', 'm²', 10], ['pvc125', 'Tube PVC Ø125 (branchement égout)', 'm', 45], ['pierres', 'Pierres / moellons de remplissage', 'm³', 180],
+  ['Sanitaires (gamme moyenne)'],
+  ['wc_poser', 'WC à poser complet', 'u', 1200], ['wc_susp', 'WC suspendu + bâti-support', 'u', 3000], ['wc_turc', 'WC à la turque', 'u', 400], ['douchette', 'Douchette WC (hygiénique)', 'u', 250],
+  ['lavabo', 'Lavabo + meuble vasque', 'u', 1500], ['lavemain', 'Lave-mains', 'u', 500], ['receveur', 'Receveur de douche + paroi', 'u', 1800], ['italienne', 'Douche à l\'italienne (siphon de sol + paroi)', 'u', 2500],
+  ['baignoire', 'Baignoire', 'u', 2500], ['mit_lav', 'Mitigeur lavabo', 'u', 450], ['mit_dou', 'Mitigeur / colonne de douche', 'u', 1200], ['rob_lm', 'Robinet lave-mains', 'u', 200],
+  ['flex', 'Flexible + robinet d\'équerre', 'u', 60], ['access', 'Accessoires salle de bain (kit)', 'u', 600], ['extracteur', 'Extracteur d\'air', 'u', 300], ['ce_elec', 'Chauffe-eau électrique 80 L', 'u', 1600], ['ce_gaz', 'Chauffe-eau gaz 10 L/min', 'u', 2200],
+  ['Cuisine (milieu de gamme)'],
+  ['mb_bas', 'Meubles bas', 'ml', 2200], ['mb_haut', 'Meubles hauts', 'ml', 1500], ['colonne', 'Colonne (four / frigo)', 'u', 3500],
+  ['plan_strat', 'Plan de travail stratifié', 'ml', 400], ['plan_marbre', 'Plan de travail marbre', 'ml', 1200], ['plan_granit', 'Plan de travail granit', 'ml', 1500], ['plan_quartz', 'Plan de travail quartz', 'ml', 2500],
+  ['evier', 'Évier', 'u', 900], ['mit_cui', 'Mitigeur cuisine', 'u', 600], ['plaque_gaz', 'Plaque de cuisson gaz', 'u', 2500], ['plaque_ind', 'Plaque à induction', 'u', 4500],
+  ['hotte', 'Hotte aspirante', 'u', 2500], ['four', 'Four encastrable', 'u', 4000], ['lv', 'Lave-vaisselle', 'u', 4500],
+  ['Estimation globale'],
+  ['go_m2', 'Gros œuvre (par m² plancher)', 'm²', 2000],
+  ['fin1', 'Finitions économiques (par m²)', 'm²', 1000], ['fin2', 'Finitions moyennes (par m²)', 'm²', 1800], ['fin3', 'Finitions haut de gamme (par m²)', 'm²', 3200]
+];
+const PDEF = {}, UNIT = {}, PLAB = {};
+PRICE_DEF.forEach(p => { if (p.length > 1) { PDEF[p[0]] = p[3]; UNIT[p[0]] = p[2]; PLAB[p[0]] = p[1]; } });
+const PR = k => (S.prices[k] !== undefined ? S.prices[k] : PDEF[k]) || 0;
+function renderPrices() {
+  let h = '', open = false;
+  PRICE_DEF.forEach(p => {
+    if (p.length === 1) { if (open) h += '</div>'; h += `<div class="pgroup">${p[0]}</div><div class="pricegrid">`; open = true; }
+    else h += `<label>${p[1]}<span><input type="number" step="any" min="0" data-p="${p[0]}" value="${PR(p[0])}"> <small>DH/${p[2]}</small></span></label>`;
+  });
+  $('#prices').innerHTML = h + '</div>';
+  document.querySelectorAll('[data-p]').forEach(i => i.onchange = i.oninput = () => {
+    S.prices[i.dataset.p] = parseFloat(i.value) || 0; save('prices'); updateAllCalcs(); updateDevisCount();
+  });
+}
+confirmBtn($('#resetPrices'), () => { S.prices = {}; save('prices'); renderPrices(); updateAllCalcs(); $('#resetPrices').textContent = 'Remettre les prix par défaut'; toast('Prix réinitialisés'); });
+
+/* ================= données techniques ================= */
+const BLOCKS = {
+  b6: { n: 'Brique 6 trous (10×20×30)', m2: 16, mort: 0.012, p: 'brique6' },
+  b12: { n: 'Brique 12 trous (15×20×30)', m2: 16, mort: 0.018, p: 'brique12' },
+  a10: { n: 'Agglo 10×20×40', m2: 12.5, mort: 0.012, p: 'agglo10' },
+  a15: { n: 'Agglo 15×20×40', m2: 12.5, mort: 0.018, p: 'agglo15' },
+  a20: { n: 'Agglo 20×20×40', m2: 12.5, mort: 0.024, p: 'agglo20' }
+};
+const ELEMS = {
+  dalle:   { n: 'Dalle pleine', l: ['Longueur (m)', 'Largeur (m)', 'Épaisseur (cm)', null], v: (a, b, c) => a * b * c / 100, steel: 90, dos: 350 },
+  poteau:  { n: 'Poteaux', l: ['Côté a (cm)', 'Côté b (cm)', 'Hauteur (m)', 'Nombre'], v: (a, b, c, n) => a * b / 1e4 * c * n, steel: 150, dos: 350 },
+  poutre:  { n: 'Poutres', l: ['Largeur (cm)', 'Hauteur (cm)', 'Longueur (m)', 'Nombre'], v: (a, b, c, n) => a * b / 1e4 * c * n, steel: 120, dos: 350 },
+  chain:   { n: 'Chaînages', l: ['Largeur (cm)', 'Hauteur (cm)', 'Longueur totale (m)', null], v: (a, b, c) => a * b / 1e4 * c, steel: 100, dos: 350 },
+  semelle: { n: 'Semelles isolées', l: ['Longueur (m)', 'Largeur (m)', 'Hauteur (m)', 'Nombre'], v: (a, b, c, n) => a * b * c * n, steel: 60, dos: 350 },
+  filante: { n: 'Semelle filante', l: ['Largeur (m)', 'Hauteur (m)', 'Longueur totale (m)', null], v: (a, b, c) => a * b * c, steel: 50, dos: 350 },
+  longrine:{ n: 'Longrines', l: ['Largeur (cm)', 'Hauteur (cm)', 'Longueur totale (m)', null], v: (a, b, c) => a * b / 1e4 * c, steel: 100, dos: 350 },
+  dallage: { n: 'Dallage au sol', l: ['Longueur (m)', 'Largeur (m)', 'Épaisseur (cm)', null], v: (a, b, c) => a * b * c / 100, steel: 0, dos: 300, treillis: true },
+  propre:  { n: 'Béton de propreté', l: ['Longueur (m)', 'Largeur (m)', 'Épaisseur (cm)', null], v: (a, b, c) => a * b * c / 100, steel: 0, dos: 200 }
+};
+const ELDEF = { dalle: [5, 4, 15, 1], poteau: [25, 25, 3, 8], poutre: [25, 40, 5, 4], chain: [20, 25, 40, 1], semelle: [1.2, 1.2, 0.4, 8], filante: [0.6, 0.4, 40, 1], longrine: [25, 40, 40, 1], dallage: [8, 10, 10, 1], propre: [8, 10, 5, 1] };
+const STEEL = { 6: 0.222, 8: 0.395, 10: 0.617, 12: 0.888, 14: 1.208, 16: 1.578, 20: 2.466 };
+const PLANCHER = { '12+4': 0.065, '16+4': 0.075, '20+5': 0.095 };
+const sacs = kg => Math.ceil(kg / 50);
+const concrete = (V, dos, k = 1.05) => ({ ck: V * dos * k, sa: V * 0.4 * k, gr: V * 0.8 * k, eau: V * 175 });
+const yn = { 1: 'Oui', 0: 'Non' };
+
+/* ================= calculateurs ================= */
+const CALCS = [
+  { id: 'terrass', lot: 'Terrassement', t: '🚜 Terrassement & fouilles', d: 'Décapage, fouilles en rigole et en puits, camions d\'évacuation et hérisson.',
+    f: [{ k: 'S', l: 'Surface de la maison (m²)', v: 120 }, { k: 'dec', l: 'Décapage terre végétale (cm)', v: 20 },
+        { k: 'Lr', l: 'Fouilles en rigole : longueur (m)', v: 40 }, { k: 'lr', l: 'Largeur rigole (m)', v: 0.6 }, { k: 'hr', l: 'Profondeur rigole (m)', v: 1 },
+        { k: 'np', l: 'Fouilles en puits : nombre', v: 8 }, { k: 'ap', l: 'Côté d\'un puits (m)', v: 1.4 }, { k: 'hp', l: 'Profondeur puits (m)', v: 1.5 },
+        { k: 'her', l: 'Hérisson sous dallage (cm)', v: 20 }],
+    c(v) {
+      const vd = v.S * v.dec / 100, vr = v.Lr * v.lr * v.hr, vp = v.np * v.ap * v.ap * v.hp, vt = vd + vr + vp, vf = vt * 1.25, cam = Math.ceil(vf / 8), vh = v.S * v.her / 100;
+      return { rows: [['Décapage', fmt(vd, 1) + ' m³'], ['Fouilles en rigole', fmt(vr, 1) + ' m³'], ['Fouilles en puits', fmt(vp, 1) + ' m³'], ['Total déblais (en place)', fmt(vt, 1) + ' m³', 1],
+        ['Volume foisonné (+25 %)', fmt(vf, 1) + ' m³'], ['Camions de 8 m³', cam, 1], ['Hérisson', fmt(vh, 1) + ' m³']],
+        items: [['Terrassement / fouilles', vt, 'terr_m3'], ['Évacuation des terres', cam, 'camion'], ['Hérisson sous dallage', vh, 'herisson']],
+        note: 'Gardez une partie de la terre (sans terre végétale) pour les remblais. Ne coulez jamais sur un fond de fouille boueux ou remblayé.' + (Math.max(v.hr, v.hp) > 1.3 ? '<div class="alert bad">⚠️ Fouilles de plus de 1,30 m : risque d\'éboulement mortel pour les ouvriers. Talutez les parois ou étayez-les (blindage), et ne stockez pas de terre au bord.</div>' : '') };
+    } },
+  { id: 'mur', lot: 'Maçonnerie', t: '🧱 Murs en briques / agglos', d: 'Nombre de blocs, mortier, ciment et sable.',
+    f: [{ k: 'L', l: 'Longueur totale des murs (m)', v: 12 }, { k: 'H', l: 'Hauteur (m)', v: 2.9 },
+        { k: 'o', l: 'Portes + fenêtres (m²)', v: 4 }, { k: 'type', l: 'Type de bloc', s: Object.fromEntries(Object.entries(BLOCKS).map(([k, b]) => [k, b.n])), v: 'b12' }],
+    c(v) {
+      const B = BLOCKS[v.type], S2 = Math.max(0, v.L * v.H - v.o), nb = Math.ceil(S2 * B.m2 * 1.05), m = S2 * B.mort, ck = m * 300, sa = m * 1.1;
+      return { rows: [['Surface nette', fmt(S2) + ' m²'], ['Blocs (+5 % de casse)', fmt(nb, 0), 1], ['Mortier de pose', fmt(m, 2) + ' m³'], ['Ciment', sacs(ck) + ' sacs de 50 kg', 1], ['Sable', fmt(sa, 2) + ' m³']],
+        items: [[B.n, nb, B.p], ['Ciment (mortier murs)', sacs(ck), 'ciment'], ['Sable (mortier murs)', sa, 'sable']],
+        note: `Environ ${B.m2} blocs par m². Mortier dosé à 300 kg/m³. N'oubliez pas les linteaux en béton armé au-dessus des ouvertures.` };
+    } },
+  { id: 'beton', lot: 'Gros œuvre', t: '🏗️ Béton armé', d: 'Dalle, poteaux, poutres, chaînages, fondations : ciment, sable, gravette, eau et acier.',
+    f: [{ k: 'el', l: 'Élément', s: Object.fromEntries(Object.entries(ELEMS).map(([k, e]) => [k, e.n])), v: 'poteau', full: 1 },
+        { k: 'a', l: '', v: 25 }, { k: 'b', l: '', v: 25 }, { k: 'h', l: '', v: 3 }, { k: 'n', l: '', v: 8 }],
+    labels(v) { const L = ELEMS[v.el].l; return { a: L[0], b: L[1], h: L[2], n: L[3] }; },
+    onSel(k, val, set) { if (k === 'el') { const d = ELDEF[val]; ['a', 'b', 'h', 'n'].forEach((x, i) => set(x, d[i])); } },
+    c(v) {
+      const E = ELEMS[v.el], V = E.v(v.a, v.b, v.h, v.n || 1), m = concrete(V, E.dos), ac = V * E.steel, nm = E.n.toLowerCase();
+      const rows = [['Volume de béton', fmt(V, 2) + ' m³', 1], ['Ciment (' + E.dos + ' kg/m³)', sacs(m.ck) + ' sacs de 50 kg', 1], ['Sable', fmt(m.sa, 2) + ' m³'], ['Gravette', fmt(m.gr, 2) + ' m³'], ['Eau', fmt(m.eau, 0) + ' L']];
+      const items = [['Ciment (' + nm + ')', sacs(m.ck), 'ciment'], ['Sable (' + nm + ')', m.sa, 'sable'], ['Gravette (' + nm + ')', m.gr, 'gravette']];
+      if (ac) { rows.push(['Acier (estimation)', fmt(ac, 0) + ' kg', 1]); items.push(['Acier (' + nm + ')', ac, 'acier']); }
+      if (E.treillis) { const t = v.a * v.b * 1.1; rows.push(['Treillis soudé', fmt(t, 1) + ' m²']); items.push(['Treillis soudé (dallage)', t, 'treillis']); }
+      const warn = v.el === 'poteau' && (v.a < 25 || v.b < 25) ? '<div class="alert bad">⚠️ Poteau de moins de 25 cm : en dessous de la section minimale habituellement exigée par le règlement parasismique.</div>' : '';
+      return { rows, items, note: 'Pour 1 sac de 50 kg (béton à 350) : ≈ 57 L de sable, 114 L de gravette, 25 L d\'eau. L\'acier est un ratio moyen : le plan de l\'ingénieur donne la valeur exacte.' + warn };
+    } },
+  { id: 'plancher', lot: 'Gros œuvre', t: '🧩 Plancher à hourdis', d: 'Hourdis, poutrelles, treillis et béton de la table de compression.',
+    f: [{ k: 'S', l: 'Surface du plancher (m²)', v: 100 }, { k: 'type', l: 'Épaisseur', s: { '12+4': '12 + 4 cm', '16+4': '16 + 4 cm (courant)', '20+5': '20 + 5 cm (grandes portées)' }, v: '16+4' }],
+    c(v) {
+      const b = PLANCHER[v.type], h = Math.ceil(v.S * 8.3 * 1.05), pt = v.S / 0.6 * 1.05, tr = v.S * 1.1, V = v.S * b, m = concrete(V, 350);
+      return { rows: [['Hourdis (+5 %)', fmt(h, 0), 1], ['Poutrelles', fmt(pt, 0) + ' ml', 1], ['Treillis soudé', fmt(tr, 0) + ' m²'], ['Béton (table + nervures)', fmt(V, 2) + ' m³'], ['Ciment', sacs(m.ck) + ' sacs', 1], ['Sable', fmt(m.sa, 2) + ' m³'], ['Gravette', fmt(m.gr, 2) + ' m³']],
+        items: [['Hourdis', h, 'hourdis'], ['Poutrelles', pt, 'poutrelle'], ['Treillis soudé (plancher)', tr, 'treillis'], ['Ciment (plancher)', sacs(m.ck), 'ciment'], ['Sable (plancher)', m.sa, 'sable'], ['Gravette (plancher)', m.gr, 'gravette']],
+        note: 'Entraxe des poutrelles 60 cm. Poutres porteuses et aciers chapeaux à compter à part. Garder les étais au moins 21 jours.' };
+    } },
+  { id: 'escalier', lot: 'Gros œuvre', t: '🪜 Escalier en béton', d: 'Nombre et taille des marches (règle de confort de Blondel), béton et acier.',
+    f: [{ k: 'H', l: 'Hauteur à monter (m)', v: 3 }, { k: 'w', l: 'Largeur de l\'escalier (m)', v: 1 }, { k: 'dispo', l: 'Longueur disponible au sol (m)', v: 4.5 }, { k: 'e', l: 'Épaisseur de la paillasse (cm)', v: 15 }],
+    c(v) {
+      if (!v.H) return { rows: [], items: [] };
+      const n = Math.max(2, Math.round(v.H / 0.175)), h = v.H / n, g = Math.min(0.32, Math.max(0.24, 0.63 - 2 * h)), recul = (n - 1) * g;
+      const pail = Math.sqrt(v.H * v.H + recul * recul), V = pail * v.w * v.e / 100 + n * (h * g / 2) * v.w, m = concrete(V, 350), ac = V * 100;
+      const bl = (2 * h + g) * 100, ang = Math.atan(v.H / recul) * 180 / Math.PI;
+      let al = '';
+      if (recul > v.dispo) al += `<div class="alert bad">⚠️ Il faut ${fmt(recul, 2)} m au sol pour un escalier droit, vous avez ${fmt(v.dispo, 2)} m : prévoyez un escalier <b>quart tournant</b> ou <b>à palier</b>.</div>`;
+      if (h > 0.185) al += '<div class="alert warn">Marches hautes (plus de 18 cm) : escalier fatigant et dangereux pour les enfants et les personnes âgées.</div>';
+      if (v.w < 0.8) al += '<div class="alert warn">Largeur inférieure à 80 cm : passage des meubles difficile. 90 cm à 1 m est confortable.</div>';
+      return { rows: [['Nombre de marches', n + ' contremarches', 1], ['Hauteur de marche', fmt(h * 100, 1) + ' cm', 1], ['Profondeur (giron)', fmt(g * 100, 1) + ' cm', 1], ['Confort 2h + g (idéal 60 à 64)', fmt(bl, 1) + ' cm'], ['Longueur au sol', fmt(recul, 2) + ' m'], ['Pente', fmt(ang, 0) + '°'],
+        ['Béton', fmt(V, 2) + ' m³'], ['Ciment', sacs(m.ck) + ' sacs', 1], ['Sable / gravette', fmt(m.sa, 2) + ' / ' + fmt(m.gr, 2) + ' m³'], ['Acier (estimation)', fmt(ac, 0) + ' kg']],
+        items: [['Ciment (escalier)', sacs(m.ck), 'ciment'], ['Sable (escalier)', m.sa, 'sable'], ['Gravette (escalier)', m.gr, 'gravette'], ['Acier (escalier)', ac, 'acier']],
+        note: 'Toutes les marches doivent avoir exactement la même hauteur. Hauteur libre au-dessus des marches : au moins 2 m. Garde-corps d\'au moins 1 m côté vide.' + al };
+    } },
+  { id: 'reservoir', lot: 'Plomberie & eau', t: '🛢️ Réservoir d\'eau', d: 'Capacité nécessaire pour la famille, citernes ou réservoir en béton, et poids à porter.',
+    f: [{ k: 'p', l: 'Personnes dans la maison', v: 5 }, { k: 'c', l: 'Litres / personne / jour', v: 100 }, { k: 'j', l: 'Jours d\'autonomie', v: 2 },
+        { k: 'type', l: 'Type de réservoir', s: { plast: 'Citernes plastiques 1 000 L', beton: 'Réservoir en béton armé' }, v: 'plast' },
+        { k: 'L', l: 'Longueur intérieure (m)', v: 2 }, { k: 'l', l: 'Largeur intérieure (m)', v: 1.5 }, { k: 'H', l: 'Hauteur d\'eau (m)', v: 1.2 }],
+    labels(v) { const b = v.type === 'beton'; return { L: b ? 'Longueur intérieure (m)' : null, l: b ? 'Largeur intérieure (m)' : null, H: b ? 'Hauteur d\'eau (m)' : null }; },
+    c(v) {
+      const need = v.p * v.c * v.j;
+      if (v.type === 'plast') {
+        const n = Math.ceil(need / 1000);
+        return { rows: [['Besoin', fmt(need, 0) + ' litres', 1], ['Citernes de 1 000 L', n, 1], ['Poids plein', fmt(n, 1) + ' tonne(s)', 1]],
+          items: [['Citerne 1 000 L', n, 'citerne'], ['Robinet d\'arrêt (réservoir)', n + 1, 'robinet']],
+          note: '<div class="alert warn">Chaque citerne pleine pèse 1 tonne : posez-la sur un socle au-dessus d\'un poteau ou d\'une poutre, jamais au milieu d\'une dalle, et sanglez-la contre les séismes.</div>Préférez des citernes opaques (pas de lumière = pas d\'algues), couvercle fermé.' };
+      }
+      const cap = v.L * v.l * v.H * 1000, e = 0.15, Hb = v.H + 0.2;
+      const V = 2 * (v.L + v.l + 2 * e) * Hb * e + 2 * (v.L + 2 * e) * (v.l + 2 * e) * e, m = concrete(V, 350), ac = V * 100;
+      const Senduit = 2 * (v.L + v.l) * Hb + v.L * v.l, me = Senduit * 0.02 * 1.15, cke = me * 400;
+      const al = cap < need ? `<div class="alert bad">Capacité insuffisante : il manque ${fmt(need - cap, 0)} L.</div>` : `<div class="alert ok">✔ Capacité suffisante pour ${fmt(cap / (v.p * v.c || 1), 1)} jours.</div>`;
+      return { rows: [['Besoin', fmt(need, 0) + ' L'], ['Capacité du réservoir', fmt(cap, 0) + ' L', 1], ['Poids de l\'eau', fmt(cap / 1000, 1) + ' t'], ['Béton (parois, fond, couvercle 15 cm)', fmt(V, 2) + ' m³'], ['Ciment béton + enduit', sacs(m.ck + cke) + ' sacs', 1], ['Sable', fmt(m.sa + me * 1.1, 2) + ' m³'], ['Gravette', fmt(m.gr, 2) + ' m³'], ['Acier (estimation)', fmt(ac, 0) + ' kg'], ['Enduit étanche intérieur', fmt(Senduit, 1) + ' m²']],
+        items: [['Ciment (réservoir)', sacs(m.ck + cke), 'ciment'], ['Sable (réservoir)', m.sa + me * 1.1, 'sable'], ['Gravette (réservoir)', m.gr, 'gravette'], ['Acier (réservoir)', ac, 'acier'], ['Hydrofuge (réservoir)', Math.ceil(Senduit / 15), 'hydrofuge']],
+        note: 'Enduit intérieur au mortier dosé à 400 kg/m³ avec hydrofuge, angles arrondis. Trappe de visite fermée, trop-plein avec grille. Le plan doit être validé par un ingénieur.' + al };
+    } },
+  { id: 'elec', lot: 'Électricité', t: '⚡ Électricité', d: 'Nombre de points, circuits, fils, gaines et appareillage pour toute la maison.',
+    f: [{ k: 'ch', l: 'Chambres', v: 3 }, { k: 'sal', l: 'Salons / séjours', v: 2 }, { k: 'cui', l: 'Cuisines', v: 1 }, { k: 'sdb', l: 'Salles de bain / WC', v: 2 },
+        { k: 'niv', l: 'Niveaux', v: 1 }, { k: 'clim', l: 'Climatiseurs', v: 0 }, { k: 'ce', l: 'Chauffe-eau électrique', s: yn, v: '0' }, { k: 'dist', l: 'Distance moyenne tableau → pièce (m)', v: 8 }],
+    c(v) {
+      const ce = +v.ce;
+      const lum = v.ch + v.sal * 2 + v.cui + v.sdb + v.niv * 2 + 2;
+      const pr = v.ch * 3 + v.sal * 5 + v.cui * 6 + v.sdb + v.niv + 1;
+      const spec = v.cui * 3 + ce + v.clim, plq = v.cui;
+      const cl = Math.ceil(lum / 8), cp = Math.ceil(pr / 8), circ = cl + cp + spec + plq;
+      const diff = Math.max(2, Math.ceil(circ / 8)), rang = Math.ceil((circ + diff * 2 + 2) / 13);
+      const d = v.dist, f15 = lum * d * 3 * 1.1, f25 = (pr * d * 0.7 + spec * d * 1.5) * 3 * 1.1, f6 = plq * d * 1.5 * 3 * 1.1;
+      const gaine = (lum * d + pr * d * 0.7 + (spec + plq) * d * 1.5) * 1.1, inter = lum + v.niv, boites = lum + inter + pr + spec + plq;
+      return { rows: [['Points lumineux', lum], ['Prises de courant', pr], ['Circuits spécialisés (four, machines, chauffe-eau, clim)', spec + plq], ['Circuits au total', circ, 1],
+        ['Fil 1,5 mm² (éclairage)', fmt(f15, 0) + ' m', 1], ['Fil 2,5 mm² (prises)', fmt(f25, 0) + ' m', 1], ['Fil 6 mm² (plaque de cuisson)', fmt(f6, 0) + ' m'], ['Gaine ICTA', fmt(gaine, 0) + ' m', 1],
+        ['Interrupteurs', inter], ['Boîtes d\'encastrement', boites], ['Disjoncteurs', circ], ['Différentiels 30 mA', diff, 1], ['Tableau', rang + ' rangée(s)']],
+        items: [['Fil 1,5 mm²', f15, 'fil15'], ['Fil 2,5 mm²', f25, 'fil25'], ['Fil 6 mm²', f6, 'fil6'], ['Gaine ICTA', gaine, 'gaine'], ['Prises de courant', pr, 'prise'], ['Interrupteurs', inter, 'inter'],
+          ['Boîtes d\'encastrement', boites, 'boite'], ['Disjoncteurs divisionnaires', circ, 'disj'], ['Différentiels 30 mA', diff, 'diff'], ['Tableau électrique (rangées)', rang, 'tableau'], ['Kit prise de terre', 1, 'terre']],
+        note: 'Calcul selon les règles courantes : 8 points maximum par circuit, 3 fils par ligne (phase, neutre, terre). Longueurs estimées : faites confirmer par l\'électricien. <div class="alert info">La prise de terre et les différentiels 30 mA sauvent des vies : ne les supprimez jamais pour économiser.</div>' };
+    } },
+  { id: 'plomb', lot: 'Plomberie & eau', t: '🚰 Plomberie & eau potable', d: 'Points d\'eau froide et chaude, tubes d\'alimentation, évacuations, raccords et robinets.',
+    f: [{ k: 'sdb', l: 'Salles de bain (douche + lavabo + WC)', v: 2 }, { k: 'wc', l: 'WC séparés', v: 0 }, { k: 'cui', l: 'Cuisines', v: 1 }, { k: 'ml', l: 'Machines à laver', v: 1 },
+        { k: 'ch', l: 'Eau chaude', s: { gaz: 'Chauffe-eau gaz', elec: 'Chauffe-eau électrique', sol: 'Chauffe-eau solaire', non: 'Pas d\'eau chaude' }, v: 'gaz' },
+        { k: 'niv', l: 'Niveaux', v: 1 }, { k: 'dist', l: 'Distance compteur → maison (m)', v: 10 }],
+    c(v) {
+      const hot = v.ch !== 'non';
+      const ef = v.sdb * 3 + v.wc * 2 + v.cui + v.ml + (hot ? 1 : 0), ec = hot ? v.sdb * 2 + v.cui : 0;
+      const t20 = (ef + ec) * 7 * 1.1, t25 = v.dist + v.niv * 8 + (hot ? 6 : 0);
+      const e40 = (v.sdb * 2 + v.wc + v.cui + v.ml) * 4, e100 = (v.sdb + v.wc) * 4 + v.niv * 3 + 10;
+      const rac = (ef + ec) * 4 + 10, rob = v.sdb + v.wc + v.cui + 1 + (hot ? 2 : 0), sip = v.sdb * 2 + v.wc + v.cui + v.ml, reg = 2;
+      const al = v.ch === 'gaz' ? '<div class="alert warn">Chauffe-eau à gaz : toujours à l\'extérieur ou dans une pièce bien ventilée avec conduit vers dehors, jamais dans la salle de bain (monoxyde de carbone).</div>' : v.ch === 'sol' ? '<div class="alert ok">Le solaire réduit fortement la facture : prévoir la place et le poids sur la terrasse.</div>' : '';
+      return { rows: [['Points d\'eau froide', ef], ['Points d\'eau chaude', ec], ['<div class="sub">Alimentation</div>', ''], ['Tube PPR Ø20 (distribution)', fmt(t20, 0) + ' m', 1], ['Tube PPR Ø25 (arrivée)', fmt(t25, 0) + ' m', 1],
+        ['<div class="sub">Évacuation</div>', ''], ['PVC Ø40 (lavabo, douche, évier)', fmt(e40, 0) + ' m', 1], ['PVC Ø100 (WC, descente)', fmt(e100, 0) + ' m', 1],
+        ['Raccords', rac], ['Robinets d\'arrêt', rob], ['Siphons', sip], ['Regards', reg]],
+        items: [['Tube PPR Ø20', t20, 'ppr20'], ['Tube PPR Ø25', t25, 'ppr25'], ['PVC Ø40', e40, 'pvc40'], ['PVC Ø100', e100, 'pvc100'], ['Raccords plomberie', rac, 'raccord'], ['Robinets d\'arrêt', rob, 'robinet'], ['Siphons', sip, 'siphon'], ['Regards', reg, 'regard']],
+        note: 'Un robinet d\'arrêt par pièce d\'eau + un général : en cas de fuite, on coupe sans priver toute la maison. Tester l\'installation sous pression avant de fermer les saignées.' + al };
+    } },
+  { id: 'menuis', lot: 'Menuiserie', t: '🚪 Menuiserie bois, alu & métal', d: 'Portes, fenêtres, baies vitrées, grilles, garde-corps et portail selon le matériau.',
+    f: [{ k: 'mat', l: 'Matériau principal', s: { bois: 'Bois', alu: 'Aluminium', met: 'Métallique (fer)' }, v: 'alu', full: 1 },
+        { k: 'pi', l: 'Portes intérieures', v: 6 }, { k: 'pe', l: 'Portes d\'entrée', v: 1 },
+        { k: 'nf', l: 'Fenêtres', v: 8 }, { k: 'fw', l: 'Largeur × hauteur fenêtre (m)', v: 1.2 }, { k: 'fh', l: 'Hauteur fenêtre (m)', v: 1.2 },
+        { k: 'nb', l: 'Baies vitrées', v: 1 }, { k: 'bw', l: 'Largeur baie (m)', v: 2.4 }, { k: 'bh', l: 'Hauteur baie (m)', v: 2.2 },
+        { k: 'vit', l: 'Vitrage', s: { s: 'Simple vitrage', d: 'Double vitrage' }, v: 's' },
+        { k: 'gr', l: 'Grilles de protection (m²)', v: 0 }, { k: 'gc', l: 'Garde-corps (ml)', v: 0 }, { k: 'po', l: 'Portail / garage (m²)', v: 0 }],
+    labels(v) { return { fw: 'Largeur fenêtre (m)', bw: v.nb ? 'Largeur baie (m)' : null, bh: v.nb ? 'Hauteur baie (m)' : null, vit: v.mat === 'met' ? null : 'Vitrage' }; },
+    c(v) {
+      const m = v.mat, sf = v.nf * v.fw * v.fh, sb = v.nb * v.bw * v.bh, sv = sf + sb, dbl = v.vit === 'd' && m !== 'met';
+      const per = v.nf * 2 * (v.fw + v.fh) + v.nb * 2 * (v.bw + v.bh) + (v.pi + v.pe) * 6, sil = Math.ceil(per / 10);
+      const name = { bois: 'bois', alu: 'aluminium', met: 'métallique' }[m];
+      const items = [['Portes intérieures ' + name, v.pi, 'pi_' + m], ['Portes d\'entrée ' + name, v.pe, 'pe_' + m], ['Fenêtres & baies ' + name, sv, 'fen_' + m]];
+      if (dbl) items.push(['Supplément double vitrage', sv, 'dv']);
+      items.push(['Grilles de protection', v.gr, 'grille'], ['Garde-corps métallique', v.gc, 'gcorps'], ['Portail / porte de garage', v.po, 'portail'], ['Mastic silicone / mousse', sil, 'silicone']);
+      const tips = {
+        bois: 'Bois sec et traité (fongicide + insecticide), vernis ou lasure tous les 2-3 ans côté extérieur. Le bois massif (cèdre, iroko) résiste mieux que l\'aggloméré ou le MDF, qui gonfle à l\'humidité.',
+        alu: 'Vérifiez l\'épaisseur des profilés et la marque de la gamme. Les joints d\'étanchéité, les rejets d\'eau et la quincaillerie font la différence entre une fenêtre qui dure 30 ans et une qui siffle et fuit.',
+        met: 'Exigez 2 couches d\'antirouille avant la peinture (ou de l\'acier galvanisé). Soudures meulées, pas de bavures. Fenêtres métalliques peu isolantes : plus de chaleur l\'été.'
+      }[m];
+      return { rows: [['Portes', (v.pi + v.pe) + ' (dont ' + v.pe + ' d\'entrée)'], ['Surface fenêtres', fmt(sf, 2) + ' m²'], ['Surface baies vitrées', fmt(sb, 2) + ' m²'], ['Total vitré', fmt(sv, 2) + ' m²', 1],
+        ['Grilles / garde-corps / portail', fmt(v.gr, 1) + ' m² / ' + fmt(v.gc, 1) + ' ml / ' + fmt(v.po, 1) + ' m²'], ['Joints silicone / mousse', sil + ' cartouches']],
+        items, note: tips + ' Faites poser les précadres (ou dormants) <b>avant les enduits</b>, d\'aplomb, avec un appui de fenêtre en pente vers l\'extérieur.' +
+          (v.gr > 0 ? '<div class="alert warn">Grilles : prévoyez au moins une fenêtre par étage avec grille ouvrante de l\'intérieur, pour pouvoir sortir en cas d\'incendie.</div>' : '') +
+          (v.gc > 0 ? '<div class="alert info">Garde-corps : au moins 1 m de haut, barreaux verticaux espacés de 11 cm maximum (un enfant ne doit pas passer la tête ni grimper).</div>' : '') };
+    } },
+  { id: 'etanch', lot: 'Étanchéité', t: '🛡️ Étanchéité', d: 'Terrasse, salle de bain ou murs enterrés : membranes, primaire, relevés, forme de pente et descentes d\'eau.',
+    f: [{ k: 'z', l: 'Zone', s: { terr: 'Toiture-terrasse', sdb: 'Salle de bain / douche (sous carrelage)', fond: 'Murs enterrés / fondations' }, v: 'terr', full: 1 },
+        { k: 'S', l: 'Surface (m²)', v: 100 }, { k: 'P', l: 'Périmètre (m)', v: 40 }, { k: 'h', l: 'Hauteur des relevés (m)', v: 0.2 }, { k: 'pt', l: 'Forme de pente, épaisseur moyenne (cm)', v: 5 },
+        { k: 'sys', l: 'Système', s: { bi: 'Multicouche bitumineux (2 couches)', mono: 'Membrane monocouche SBS', liq: 'Résine liquide (polyuréthane)' }, v: 'bi' },
+        { k: 'prot', l: 'Protection', s: { car: 'Carrelage', grav: 'Gravillons (4 cm)', auto: 'Autoprotégée (ardoisée / résine)' }, v: 'car' }],
+    labels(v) {
+      const t = v.z === 'terr', f = v.z === 'fond';
+      return { S: f ? null : (t ? 'Surface de la terrasse (m²)' : 'Surface du sol (m²)'), P: f ? 'Longueur des murs enterrés (m)' : 'Périmètre (m)',
+        h: f ? 'Hauteur enterrée (m)' : (t ? 'Hauteur des relevés (m)' : 'Hauteur des relevés (m) — 2 m dans la douche'), pt: t ? 'Forme de pente, épaisseur moyenne (cm)' : null, sys: t ? 'Système' : null, prot: t ? 'Protection' : null };
+    },
+    onSel(k, val, set) { if (k === 'z') { if (val === 'terr') { set('S', 100); set('P', 40); set('h', 0.2); } else if (val === 'sdb') { set('S', 6); set('P', 10); set('h', 0.2); } else { set('P', 40); set('h', 1.2); } } },
+    c(v) {
+      if (v.z === 'fond') {
+        const S2 = v.P * v.h, kg = S2 * 0.8;
+        return { rows: [['Surface à protéger', fmt(S2, 1) + ' m²'], ['Enduit bitumineux (2 couches)', fmt(kg, 0) + ' kg', 1]],
+          items: [['Enduit bitumineux (murs enterrés)', kg, 'bitume']],
+          note: 'Sur enduit de ciment lisse et sec. Ajoutez un drain au pied des fondations, entouré de gravier et de géotextile, relié à un exutoire. Remblai drainant, jamais d\'argile collée au mur.' };
+      }
+      if (v.z === 'sdb') {
+        const S2 = v.S + v.P * v.h, kg = S2 * 1.5, b = v.P * 1.1;
+        return { rows: [['Surface traitée (sol + relevés)', fmt(S2, 1) + ' m²'], ['Étanchéité liquide sous carrelage', fmt(kg, 1) + ' kg', 1], ['Bande d\'angle armée', fmt(b, 1) + ' ml', 1]],
+          items: [['Étanchéité SPEC (salle de bain)', kg, 'spec'], ['Bande d\'angle (salle de bain)', b, 'bande']],
+          note: 'Deux couches croisées, bande dans tous les angles et autour du siphon et des tuyaux. Douche à l\'italienne : relever à 2 m sur les murs de la douche. Laisser sécher puis faire un test à l\'eau avant le carrelage.' };
+      }
+      const rel = v.P * v.h, St = v.S + rel, items = [];
+      const rows = [['Surface terrasse', fmt(v.S, 0) + ' m²'], ['Relevés (acrotères)', fmt(rel, 1) + ' m²'], ['Surface à étancher', fmt(St, 1) + ' m²', 1]];
+      const mv = v.S * v.pt / 100 * 1.1, ck = mv * 250;
+      if (v.pt > 0) { rows.push(['Forme de pente (mortier)', fmt(mv, 2) + ' m³'], ['Ciment forme de pente', sacs(ck) + ' sacs']); items.push(['Ciment (forme de pente)', sacs(ck), 'ciment'], ['Sable (forme de pente)', mv * 1.1, 'sable']); }
+      const pri = St * 0.3; rows.push(['Primaire', fmt(pri, 0) + ' kg']); items.push(['Primaire d\'accrochage', pri, 'primaire']);
+      if (v.sys === 'liq') { const kg = St * 1.5; rows.push(['Résine (2 couches)', fmt(kg, 0) + ' kg', 1]); items.push(['Résine d\'étanchéité', kg, 'resine']); }
+      else { const n = Math.ceil(St * 1.12 / 10) * (v.sys === 'bi' ? 2 : 1); rows.push(['Rouleaux de membrane (10 m²)', n, 1]); items.push(['Membrane bitumineuse (' + (v.sys === 'bi' ? '2 couches' : 'monocouche') + ')', n, 'membrane']); }
+      const de = Math.max(2, Math.ceil(v.S / 80)); rows.push(['Descentes d\'eau Ø100', de, 1]); items.push(['Descentes d\'eau Ø100', de, 'descente']);
+      if (v.prot === 'car') { const c = v.S * 1.1; rows.push(['Carrelage de protection', fmt(c, 0) + ' m²']); items.push(['Carrelage terrasse', c, 'carrelage']); }
+      if (v.prot === 'grav') { const g = v.S * 0.04; rows.push(['Gravillons', fmt(g, 1) + ' m³']); items.push(['Gravillons de protection', g, 'gravillon']); }
+      return { rows, items, note: 'Pente minimale 1,5 à 2 % vers les descentes. Relevés d\'au moins 15 cm au-dessus de la protection, terminés sous une bande ou couvertine. Recouvrement des lés 10 cm. <div class="alert info">Avant de poser la protection : bouchez les descentes, mettez 5 cm d\'eau pendant 48 h et vérifiez le plafond en dessous.</div>' +
+        (v.sys === 'mono' && v.S > 0 ? '' : '') };
+    } },
+  { id: 'enduit', lot: 'Enduits & chapes', t: '🪣 Enduit & chape', d: 'Mortier pour enduire les murs ou faire une chape au sol.',
+    f: [{ k: 'S', l: 'Surface (m²)', v: 60 }, { k: 'e', l: 'Épaisseur (cm)', v: 2 }, { k: 'type', l: 'Travail', s: { enduit: 'Enduit de mur (350 kg/m³)', chape: 'Chape de sol (300 kg/m³)' }, v: 'enduit', full: 1 }],
+    c(v) {
+      const d = v.type === 'enduit' ? 350 : 300, m = v.S * v.e / 100 * 1.15, ck = m * d, sa = m * 1.1;
+      return { rows: [['Mortier (+15 % pertes)', fmt(m, 2) + ' m³'], ['Ciment', sacs(ck) + ' sacs de 50 kg', 1], ['Sable', fmt(sa, 2) + ' m³', 1]],
+        items: [['Ciment (' + v.type + ')', sacs(ck), 'ciment'], ['Sable (' + v.type + ')', sa, 'sable']],
+        note: v.type === 'enduit' ? 'Enduit en 2 couches sur mur humidifié. Arroser l\'enduit 2-3 jours par temps chaud.' : 'Une chape fait en général 4 à 6 cm.' };
+    } },
+  { id: 'carrelage', lot: 'Revêtements', t: '🔲 Carrelage', d: 'Surface à acheter, colle ou mortier, joints.',
+    f: [{ k: 'S', l: 'Surface (m²)', v: 40 }, { k: 'ch', l: 'Chutes (%)', v: 10 }, { k: 'pose', l: 'Pose', s: { colle: 'À la colle', mortier: 'Au mortier (scellé)' }, v: 'colle', full: 1 }],
+    c(v) {
+      const c = v.S * (1 + v.ch / 100), rows = [['Carrelage à acheter', fmt(c, 1) + ' m²', 1]], items = [['Carrelage', c, 'carrelage']];
+      if (v.pose === 'colle') { const k = Math.ceil(v.S * 5 / 25); rows.push(['Colle (≈5 kg/m²)', k + ' sacs de 25 kg', 1]); items.push(['Colle carrelage', k, 'colle']); }
+      else { const m = v.S * 0.03, ck = m * 300; rows.push(['Mortier de pose', fmt(m, 2) + ' m³'], ['Ciment', sacs(ck) + ' sacs', 1], ['Sable', fmt(m * 1.1, 2) + ' m³']); items.push(['Ciment (pose carrelage)', sacs(ck), 'ciment'], ['Sable (pose carrelage)', m * 1.1, 'sable']); }
+      const j = v.S * 0.4; rows.push(['Joint', fmt(j, 1) + ' kg']); items.push(['Joint carrelage', j, 'joint']);
+      return { rows, items, note: '10 % de chutes en pose droite, 15 % en diagonale. Gardez quelques carreaux de réserve pour les réparations.' };
+    } },
+  { id: 'faience', lot: 'Revêtements', t: '🧩 Faïence murale', d: 'Cuisine, salle de bain, douche : faïence, colle, joints et baguettes d\'angle.',
+    f: [{ k: 'P', l: 'Longueur des murs à carreler (m)', v: 10 }, { k: 'H', l: 'Hauteur de pose (m)', v: 2.2 }, { k: 'o', l: 'Portes / fenêtres (m²)', v: 2 },
+        { k: 'ch', l: 'Chutes (%)', v: 10 }, { k: 'ang', l: 'Angles sortants', v: 2 }],
+    c(v) {
+      const S2 = Math.max(0, v.P * v.H - v.o), b = S2 * (1 + v.ch / 100), col = Math.ceil(S2 * 4 / 25), j = S2 * 0.3, bg = v.ang * v.H * 1.05;
+      return { rows: [['Surface à carreler', fmt(S2, 1) + ' m²'], ['Faïence à acheter', fmt(b, 1) + ' m²', 1], ['Colle (≈4 kg/m²)', col + ' sacs de 25 kg', 1], ['Joint', fmt(j, 1) + ' kg'], ['Baguettes d\'angle', fmt(bg, 1) + ' ml']],
+        items: [['Faïence murale', b, 'faience'], ['Colle (faïence)', col, 'colle'], ['Joint (faïence)', j, 'joint'], ['Baguettes d\'angle', bg, 'baguette']],
+        note: 'Posez la faïence après les gaines et tuyaux, et après l\'étanchéité sous carrelage dans la douche. Commencez au 2ᵉ rang avec une règle bien de niveau, puis posez le 1ᵉʳ rang après le carrelage du sol.' };
+    } },
+  { id: 'platre', lot: 'Plâtrerie & faux plafond', t: '🏛️ Plâtre & faux plafond', d: 'Faux plafond en plaques, cloisons en plaques de plâtre ou plafond traditionnel en staff.',
+    f: [{ k: 'type', l: 'Ouvrage', s: { fp: 'Faux plafond en plaques (BA13)', cl: 'Cloison en plaques de plâtre', tr: 'Plafond traditionnel (staff / gebs)' }, v: 'fp', full: 1 },
+        { k: 'S', l: 'Surface (m²)', v: 40 }, { k: 'P', l: 'Périmètre de la pièce (m)', v: 26 }, { k: 'sp', l: 'Spots encastrés', v: 8 }, { k: 'h', l: 'Hauteur de la cloison (m)', v: 2.7 }],
+    labels(v) { return { S: v.type === 'cl' ? 'Surface de cloison, une face (m²)' : 'Surface du plafond (m²)', P: v.type === 'cl' ? null : (v.type === 'tr' ? 'Longueur de corniches (m)' : 'Périmètre de la pièce (m)'), sp: v.type === 'cl' ? null : 'Spots encastrés', h: v.type === 'cl' ? 'Hauteur de la cloison (m)' : null }; },
+    c(v) {
+      const rows = [], items = [];
+      if (v.type === 'fp') {
+        const pl = Math.ceil(v.S * 1.1 / 3), fo = v.S * 3 * 1.05, su = Math.ceil(v.S * 1.6), co = v.P * 1.05, vi = Math.max(1, Math.ceil(v.S * 25 / 1000)), bd = v.S * 1.6, en = v.S * 0.4;
+        rows.push(['Plaques BA13 (2,5 × 1,2 m)', pl, 1], ['Fourrures', fmt(fo, 0) + ' ml', 1], ['Suspentes', su], ['Cornières de rive', fmt(co, 1) + ' ml'], ['Vis', vi + ' boîte(s)'], ['Bande à joint', fmt(bd, 0) + ' ml'], ['Enduit à joint', fmt(en, 0) + ' kg'], ['Spots', v.sp]);
+        items.push(['Plaques BA13 (plafond)', pl, 'ba13'], ['Fourrures (plafond)', fo, 'fourrure'], ['Suspentes', su, 'suspente'], ['Cornières de rive', co, 'rail'], ['Vis placo', vi, 'vis'], ['Bande à joint', bd, 'bandejt'], ['Enduit à joint', en, 'enduitjt'], ['Spots LED', v.sp, 'spot']);
+        return { rows, items, note: 'Fourrures tous les 50 à 60 cm maximum, suspentes tous les 1,2 m. En salle de bain et cuisine, utilisez des plaques hydrofuges (vertes). Prévoyez une trappe de visite si des tuyaux passent au-dessus.' };
+      }
+      if (v.type === 'cl') {
+        const Lc = v.S / (v.h || 2.7), pl = Math.ceil(v.S * 2 * 1.1 / 3), ra = 2 * Lc * 1.05, mo = (Math.ceil(Lc / 0.6) + 1) * v.h, vi = Math.max(1, Math.ceil(v.S * 2 * 25 / 1000)), bd = v.S * 2 * 1.6, en = v.S * 2 * 0.4;
+        rows.push(['Longueur de cloison', fmt(Lc, 1) + ' m'], ['Plaques BA13 (2 faces)', pl, 1], ['Rails haut et bas', fmt(ra, 1) + ' ml'], ['Montants (tous les 60 cm)', fmt(mo, 0) + ' ml', 1], ['Laine minérale', fmt(v.S, 0) + ' m²'], ['Vis', vi + ' boîte(s)'], ['Bande / enduit', fmt(bd, 0) + ' ml / ' + fmt(en, 0) + ' kg']);
+        items.push(['Plaques BA13 (cloison)', pl, 'ba13'], ['Rails (cloison)', ra, 'rail'], ['Montants (cloison)', mo, 'fourrure'], ['Laine minérale', v.S, 'laine'], ['Vis placo', vi, 'vis'], ['Bande à joint', bd, 'bandejt'], ['Enduit à joint', en, 'enduitjt']);
+        return { rows, items, note: 'La laine minérale à l\'intérieur améliore beaucoup l\'isolation phonique entre chambres. Renforcez avec un tasseau là où vous accrocherez des meubles lourds ou une télévision.' };
+      }
+      rows.push(['Plafond en staff', fmt(v.S, 1) + ' m²', 1], ['Corniches', fmt(v.P, 1) + ' ml', 1], ['Spots', v.sp]);
+      items.push(['Plafond staff / gebs', v.S, 'staff'], ['Corniches en plâtre', v.P, 'corniche'], ['Spots LED', v.sp, 'spot']);
+      return { rows, items, note: 'Prix au m² posé (matériaux + main d\'œuvre). Le staff est lourd : il doit être accroché solidement à la dalle par des suspentes, jamais seulement collé. Le gebs sculpté se paie souvent au mètre selon le motif : demandez un devis à l\'artisan.' };
+    } },
+  { id: 'solaire', lot: 'Énergie solaire', t: '☀️ Énergie solaire', d: 'Chauffe-eau solaire ou panneaux photovoltaïques : taille, coût et retour sur investissement.',
+    f: [{ k: 'type', l: 'Installation', s: { ce: 'Chauffe-eau solaire', pv: 'Panneaux photovoltaïques (électricité)' }, v: 'ce', full: 1 },
+        { k: 'p', l: 'Personnes dans la maison', v: 5 }, { k: 'kwh', l: 'Consommation électrique (kWh / mois)', v: 250 }, { k: 'pk', l: 'Prix moyen du kWh (DH)', v: 1.4 },
+        { k: 'bat', l: 'Stockage', s: { 0: 'Sans batterie (réseau)', 1: 'Avec batteries' }, v: '0', full: 1 }],
+    labels(v) { const c = v.type === 'ce'; return { p: c ? 'Personnes dans la maison' : null, kwh: c ? null : 'Consommation électrique (kWh / mois)', bat: c ? null : 'Stockage', pk: c ? 'Prix du kWh si chauffe-eau électrique (DH)' : 'Prix moyen du kWh (DH)' }; },
+    c(v) {
+      if (v.type === 'ce') {
+        const need = v.p * 50, size = [150, 200, 300, 400, 500].find(s => s >= need) || Math.ceil(need / 100) * 100;
+        const cap = Math.ceil(size / 70 * 2) / 2, cost = size * PR('cesol'), kwhY = size * 0.0407 * 365 * 0.7, gain = kwhY * v.pk;
+        return { rows: [['Besoin en eau chaude', fmt(need, 0) + ' L / jour'], ['Ballon conseillé', size + ' litres', 1], ['Capteurs', '≈ ' + fmt(cap, 1) + ' m²'], ['Coût estimé', dh(cost), 1], ['Économie (vs électrique)', dh(gain) + ' / an'], ['Retour sur investissement', gain ? fmt(cost / gain, 1) + ' ans' : '—', 1]],
+          items: [['Chauffe-eau solaire ' + size + ' L', size, 'cesol']],
+          note: 'Environ 50 L d\'eau chaude par personne et par jour. Capteurs orientés plein sud, sans ombre. Ballon plein ≈ ' + fmt(size * 1.2 / 1000, 1) + ' t avec le support : posez-le au-dessus d\'un poteau ou d\'une poutre. Gardez un appoint (électrique ou gaz) pour les jours nuageux.' };
+      }
+      const kwc = v.kwh / 120, n = Math.ceil(kwc * 1000 / 550), kwcR = n * 0.55, surf = n * 2.6, prod = kwcR * 1650, bat = +v.bat ? v.kwh / 30 * 0.6 : 0;
+      const cost = kwcR * PR('pv_kwc') + bat * PR('batt'), gain = Math.min(prod, v.kwh * 12) * v.pk;
+      const items = [['Photovoltaïque ' + fmt(kwcR, 2) + ' kWc', kwcR, 'pv_kwc']]; if (bat) items.push(['Batteries', bat, 'batt']);
+      return { rows: [['Puissance nécessaire', fmt(kwc, 2) + ' kWc'], ['Panneaux de 550 W', n, 1], ['Surface au toit', '≈ ' + fmt(surf, 0) + ' m²'], ['Poids des panneaux', '≈ ' + fmt(n * 28, 0) + ' kg'], ['Production estimée', fmt(prod, 0) + ' kWh / an'],
+        ...(bat ? [['Batteries', fmt(bat, 1) + ' kWh']] : []), ['Coût estimé', dh(cost), 1], ['Économie', dh(gain) + ' / an'], ['Retour sur investissement', gain ? fmt(cost / gain, 1) + ' ans' : '—', 1]],
+        items, note: 'Panneaux orientés sud, inclinés d\'environ 30°, sans aucune ombre. Fixations dimensionnées contre le vent. Onduleur de qualité et protections électriques posés par un installateur qualifié. Avant de raccorder une installation au réseau, renseignez-vous auprès de votre distributeur d\'électricité sur les conditions en vigueur.' + (bat ? '<div class="alert warn">Les batteries coûtent cher et s\'usent (à remplacer après plusieurs années) : elles allongent le retour sur investissement.</div>' : '') };
+    } },
+  { id: 'sanit', lot: 'Sanitaires', t: '🛁 Sanitaires', d: 'WC, lavabos, douches ou baignoires, robinetterie, chauffe-eau et accessoires, selon la gamme.',
+    f: [{ k: 'sdb', l: 'Salles de bain', v: 2 }, { k: 'wcs', l: 'WC séparés', v: 1 },
+        { k: 'wc', l: 'Type de WC', s: { poser: 'WC à poser', susp: 'WC suspendu', turc: 'WC à la turque' }, v: 'poser' }, { k: 'dou', l: 'Douche', s: { rec: 'Receveur + paroi', ita: 'Douche à l\'italienne', bai: 'Baignoire' }, v: 'rec' },
+        { k: 'g', l: 'Gamme', s: { 0.6: 'Économique', 1: 'Moyenne', 2: 'Haut de gamme' }, v: '1' }, { k: 'ce', l: 'Chauffe-eau', s: { non: 'Déjà prévu / aucun', elec: 'Électrique 80 L', gaz: 'Gaz 10 L/min' }, v: 'non' },
+        { k: 'sf', l: 'Pièces d\'eau sans fenêtre', v: 1 }, { k: 'dch', l: 'Douchette hygiénique au WC', s: yn, v: '1' }],
+    c(v) {
+      const g = +v.g, nwc = v.sdb + v.wcs, wk = 'wc_' + v.wc, dk = { rec: 'receveur', ita: 'italienne', bai: 'baignoire' }[v.dou], dch = +v.dch ? nwc : 0;
+      const app = nwc + v.sdb * 2 + v.wcs, flex = app * 2;
+      const items = [[PLAB[wk], nwc, wk, g], ['Lavabo + meuble vasque', v.sdb, 'lavabo', g], [PLAB[dk], v.sdb, dk, g], ['Mitigeur lavabo', v.sdb, 'mit_lav', g], ['Mitigeur / colonne de douche', v.sdb, 'mit_dou', g],
+        ['Lave-mains', v.wcs, 'lavemain', g], ['Robinet lave-mains', v.wcs, 'rob_lm', g], ['Douchette WC', dch, 'douchette', g], ['Flexibles + robinets d\'équerre', flex, 'flex'], ['Accessoires salle de bain', v.sdb, 'access', g], ['Extracteur d\'air', v.sf, 'extracteur']];
+      if (v.ce !== 'non') items.push([PLAB['ce_' + v.ce], 1, 'ce_' + v.ce]);
+      let al = '';
+      if (v.dou === 'ita') al += '<div class="alert info">Douche à l\'italienne : pente de 1 à 2 % vers le siphon, étanchéité sous carrelage obligatoire (calculateur Étanchéité) et siphon prévu avant la chape.</div>';
+      if (v.wc === 'susp') al += '<div class="alert info">WC suspendu : le bâti-support se fixe au sol et au mur porteur ; prévoyez une trappe d\'accès au réservoir.</div>';
+      if (v.ce === 'gaz') al += '<div class="alert bad">Chauffe-eau à gaz : jamais dans la salle de bain. À l\'extérieur ou dans un local ventilé, avec conduit d\'évacuation vers dehors.</div>';
+      return { rows: [['WC', nwc + ' (' + { poser: 'à poser', susp: 'suspendus', turc: 'à la turque' }[v.wc] + ')'], ['Lavabos', v.sdb], ['Douches / baignoires', v.sdb], ['Lave-mains', v.wcs], ['Robinets / mitigeurs', v.sdb * 2 + v.wcs], ['Douchettes WC', dch], ['Flexibles + robinets d\'équerre', flex], ['Extracteurs', v.sf]],
+        items, note: 'Prix ajustés selon la gamme choisie. Un mitigeur thermostatique dans la douche évite les brûlures (enfants, personnes âgées). Les pièces d\'eau sans fenêtre doivent avoir un extracteur, sinon l\'humidité noircit plafonds et joints. Pas de prise ni d\'interrupteur près de la douche.' + al };
+    } },
+  { id: 'cuisine', lot: 'Cuisine', t: '🍳 Cuisine équipée', d: 'Meubles bas et hauts, plan de travail, crédence, évier et électroménager.',
+    f: [{ k: 'bas', l: 'Meubles bas (mètres linéaires)', v: 4 }, { k: 'haut', l: 'Meubles hauts (ml)', v: 3 }, { k: 'col', l: 'Colonnes (four, frigo)', v: 1 },
+        { k: 'mat', l: 'Façades / caissons', s: { 0.8: 'Aggloméré mélaminé', 1: 'MDF hydrofuge', 1.4: 'MDF laqué', 1.3: 'Aluminium', 2.2: 'Bois massif' }, v: '1' },
+        { k: 'plan', l: 'Plan de travail', s: { strat: 'Stratifié', marbre: 'Marbre', granit: 'Granit', quartz: 'Quartz' }, v: 'granit' },
+        { k: 'pl', l: 'Plaque de cuisson', s: { gaz: 'Gaz', ind: 'Induction' }, v: 'gaz' },
+        { k: 'ho', l: 'Hotte', s: yn, v: '1' }, { k: 'fo', l: 'Four encastrable', s: yn, v: '1' }, { k: 'lvv', l: 'Lave-vaisselle', s: yn, v: '0' }, { k: 'cr', l: 'Crédence en faïence', s: yn, v: '1' }],
+    c(v) {
+      const m = +v.mat, pk = 'plan_' + v.plan, plk = 'plaque_' + v.pl, pml = v.bas * 1.05, cred = +v.cr ? v.bas * 0.65 : 0;
+      const items = [['Meubles bas', v.bas, 'mb_bas', m], ['Meubles hauts', v.haut, 'mb_haut', m], ['Colonnes', v.col, 'colonne', m], [PLAB[pk], pml, pk], ['Évier', 1, 'evier'], ['Mitigeur cuisine', 1, 'mit_cui'], [PLAB[plk], 1, plk]];
+      if (+v.ho) items.push(['Hotte aspirante', 1, 'hotte']); if (+v.fo) items.push(['Four encastrable', 1, 'four']); if (+v.lvv) items.push(['Lave-vaisselle', 1, 'lv']);
+      if (cred) items.push(['Crédence en faïence', cred * 1.1, 'faience'], ['Colle (crédence)', Math.ceil(cred * 4 / 25), 'colle']);
+      let al = '';
+      if (v.pl === 'gaz') al += '<div class="alert warn">Plaque gaz : bouteille dans un meuble ventilé en bas (ou mieux, à l\'extérieur avec tuyauterie fixe), robinet d\'arrêt accessible, jamais deux bouteilles dans la cuisine. Évitez de placer la plaque sous une fenêtre : le courant d\'air peut éteindre la flamme.</div>';
+      if (v.pl === 'ind') al += '<div class="alert info">Induction : circuit dédié en 6 mm² sur disjoncteur 32 A (calculateur Électricité).</div>';
+      if (v.mat === '0.8') al += '<div class="alert warn">L\'aggloméré gonfle au contact de l\'eau : prenez au moins le caisson sous évier en MDF hydrofuge.</div>';
+      return { rows: [['Meubles bas / hauts', fmt(v.bas, 1) + ' ml / ' + fmt(v.haut, 1) + ' ml', 1], ['Colonnes', v.col], ['Plan de travail', fmt(pml, 2) + ' ml (' + v.plan + ')', 1], ['Crédence', fmt(cred, 1) + ' m²'],
+        ['Électroménager', [v.pl === 'gaz' ? 'plaque gaz' : 'induction', +v.ho ? 'hotte' : '', +v.fo ? 'four' : '', +v.lvv ? 'lave-vaisselle' : ''].filter(Boolean).join(', ')]],
+        items, note: 'Plan de travail à environ 90 cm de haut. Triangle évier – plaque – réfrigérateur : 1,2 à 2,7 m entre chaque point pour circuler facilement. Hotte avec évacuation vers l\'extérieur. Prévoyez 6 prises au-dessus du plan de travail et des circuits séparés pour le four, la plaque et le lave-vaisselle.' + al };
+    } },
+  { id: 'peinture', lot: 'Peinture', t: '🎨 Peinture', d: 'Litres de peinture et de sous-couche.',
+    f: [{ k: 'S', l: 'Surface murs + plafonds (m²)', v: 150 }, { k: 'n', l: 'Nombre de couches', v: 2 }, { k: 'r', l: 'Rendement (m²/L)', v: 10 }],
+    c(v) {
+      const p = v.S * v.n / (v.r || 10), im = v.S / 12;
+      return { rows: [['Peinture', fmt(p, 1) + ' L', 1], ['Sous-couche (1 couche)', fmt(im, 1) + ' L']], items: [['Peinture', p, 'peinture'], ['Sous-couche', im, 'impression']], note: 'Surface d\'une pièce : (périmètre × hauteur) + plafond − ouvertures.' };
+    } },
+  { id: 'acier', lot: 'Gros œuvre', t: '🔩 Acier : poids & contrôle', d: 'Convertir des barres en kg et vérifier qu\'on ne vous vend pas un diamètre plus faible.',
+    f: [{ k: 'd', l: 'Diamètre', s: Object.fromEntries(Object.keys(STEEL).map(d => [d, 'Ø' + d + ' mm'])), v: '12' }, { k: 'n', l: 'Nombre de barres', v: 20 },
+        { k: 'L', l: 'Longueur d\'une barre (m)', v: 12 }, { k: 'w', l: 'Poids pesé d\'une barre (kg, optionnel)', v: '' }],
+    c(v) {
+      const kgm = STEEL[v.d], one = kgm * v.L, tot = one * v.n;
+      let note = 'Poids théorique : ' + fmt(kgm, 3) + ' kg par mètre.';
+      if (v.w > 0) { const r = v.w / one;
+        note += r < 0.95 ? `<div class="alert bad">⚠️ La barre pèse ${fmt((1 - r) * 100, 0)} % de moins que prévu : diamètre réel probablement plus petit ou acier non conforme. Refusez la livraison.</div>` : `<div class="alert ok">✔ Poids conforme (écart ${fmt((r - 1) * 100, 1)} %).</div>`; }
+      return { rows: [['Poids d\'une barre', fmt(one, 2) + ' kg'], ['Poids total', fmt(tot, 1) + ' kg', 1]], items: [['Acier Ø' + v.d + ' (' + v.n + ' barres)', tot, 'acier']], note };
+    } },
+  { id: 'cloture', lot: 'Clôture & portail', t: '🧱 Mur de clôture & portail', d: 'Fondation, poteaux, chaînages, agglos, enduit, portail et portillon.',
+    f: [{ k: 'L', l: 'Longueur totale de clôture (m)', v: 80 }, { k: 'H', l: 'Hauteur du mur (m)', v: 2 },
+        { k: 'b', l: 'Bloc', s: { a15: 'Agglo 15×20×40', a20: 'Agglo 20×20×40', b12: 'Brique 12 trous' }, v: 'a15' }, { k: 'esp', l: 'Espacement des poteaux (m)', v: 3 },
+        { k: 'pw', l: 'Largeur du portail (m)', v: 4 }, { k: 'pm', l: 'Matériau du portail', s: { met: 'Métallique', alu: 'Aluminium' }, v: 'met' },
+        { k: 'pt', l: 'Largeur du portillon (m)', v: 1 }, { k: 'enf', l: 'Faces enduites', s: { 0: 'Aucune', 1: 'Une face', 2: 'Deux faces' }, v: '2' }],
+    c(v) {
+      const B = BLOCKS[v.b], Lm = Math.max(0, v.L - v.pw - v.pt), S2 = Lm * v.H, nb = Math.ceil(S2 * B.m2 * 1.05), mo = S2 * B.mort;
+      const npot = Math.ceil(Lm / (v.esp || 3)) + 1 + (v.pw ? 2 : 0) + (v.pt ? 2 : 0);
+      const Vp = npot * 0.2 * 0.2 * (v.H + 0.6), Vsem = Lm * 0.5 * 0.35, Vch = 2 * Lm * 0.2 * 0.2, Vsp = npot * 0.6 * 0.6 * 0.4, V = Vp + Vsem + Vch + Vsp;
+      const m = concrete(V, 350), ac = Vp * 130 + Vch * 100 + (Vsem + Vsp) * 50, fou = Lm * 0.6 * 0.6 + npot * 0.6 * 0.6 * 0.3;
+      const fa = +v.enf, men = S2 * fa * 0.023, ckm = mo * 300 + men * 350, sam = mo * 1.1 + men * 1.1;
+      const sp = v.pw * 2.2 + v.pt * 2.1, pk = v.pm === 'alu' ? 'portail_alu' : 'portail';
+      let al = '';
+      if (v.H > 2.5) al += '<div class="alert bad">⚠️ Mur de plus de 2,5 m : risque de renversement (vent, séisme). Faites dimensionner fondation et poteaux par un ingénieur. Vérifiez aussi la hauteur autorisée par la commune.</div>';
+      if (Lm > 15) al += `<div class="alert info">Prévoyez un joint de dilatation tous les 10 à 15 m (soit environ ${Math.floor(Lm / 12)} joints) pour éviter les fissures.</div>`;
+      return { rows: [['Longueur de mur (hors ouvertures)', fmt(Lm, 1) + ' m'], ['Surface de mur', fmt(S2, 1) + ' m²'], ['Blocs (+5 %)', fmt(nb, 0), 1], ['Poteaux 20 × 20', npot, 1],
+        ['Béton (semelle, plots, poteaux, chaînages)', fmt(V, 2) + ' m³'], ['Ciment (béton + mortier + enduit)', sacs(m.ck + ckm) + ' sacs', 1], ['Sable', fmt(m.sa + sam, 2) + ' m³'], ['Gravette', fmt(m.gr, 2) + ' m³'],
+        ['Acier (estimation)', fmt(ac, 0) + ' kg', 1], ['Fouilles', fmt(fou, 1) + ' m³'], ['Portail + portillon', fmt(sp, 2) + ' m²', 1]],
+        items: [[B.n + ' (clôture)', nb, B.p], ['Ciment (clôture)', sacs(m.ck + ckm), 'ciment'], ['Sable (clôture)', m.sa + sam, 'sable'], ['Gravette (clôture)', m.gr, 'gravette'], ['Acier (clôture)', ac, 'acier'],
+          ['Fouilles (clôture)', fou, 'terr_m3'], ['Portail & portillon ' + (v.pm === 'alu' ? 'aluminium' : 'métallique'), sp, pk]],
+        note: 'Semelle filante 50 × 35 cm, plot sous chaque poteau, chaînage bas et haut 20 × 20. Couronnez le mur d\'un chaperon en pente pour que l\'eau ne s\'infiltre pas. Les poteaux du portail doivent être plus forts (il travaille en porte-à-faux).' + al };
+    } },
+  { id: 'assain', lot: 'Assainissement', t: '🚽 Fosse septique & assainissement', d: 'Fosse septique, épandage ou puits perdu, ou raccordement à l\'égout public.',
+    f: [{ k: 'p', l: 'Personnes dans la maison', v: 6 }, { k: 'sys', l: 'Système', s: { epand: 'Fosse septique + tranchées d\'épandage', puis: 'Fosse septique + puits perdu', egout: 'Raccordement à l\'égout public' }, v: 'epand', full: 1 },
+        { k: 'mat', l: 'Fosse', s: { beton: 'Construite en béton armé', pref: 'Préfabriquée (plastique / béton)' }, v: 'beton' },
+        { k: 'sol', l: 'Type de sol', s: { bon: 'Sableux / perméable', moy: 'Moyen (terre)', arg: 'Argileux / peu perméable' }, v: 'moy' },
+        { k: 'd', l: 'Distance maison → fosse ou égout (m)', v: 10 }, { k: 'niv', l: 'Niveaux de la maison', v: 1 }],
+    labels(v) { const e = v.sys === 'egout'; return { mat: e ? null : 'Fosse', sol: v.sys === 'epand' ? 'Type de sol' : null, d: e ? 'Distance maison → regard de branchement (m)' : 'Distance maison → fosse (m)' }; },
+    c(v) {
+      const rows = [], items = [], ven = v.niv * 3 + 3;
+      let note = '<div class="alert bad">⚠️ Ne descendez jamais dans une fosse ou un regard d\'égout : les gaz qui s\'y accumulent tuent en quelques secondes, y compris ceux qui viennent porter secours.</div>';
+      if (v.sys === 'egout') {
+        const reg = Math.ceil(v.d / 15) + 1;
+        rows.push(['Tube PVC Ø125 (branchement)', fmt(v.d * 1.05, 1) + ' m', 1], ['Regards (tous les 15 m + branchement)', reg, 1], ['Ventilation Ø100 en toiture', fmt(ven, 0) + ' m']);
+        items.push(['Tube PVC Ø125 (branchement égout)', v.d * 1.05, 'pvc125'], ['Regards (assainissement)', reg, 'regard'], ['PVC Ø100 ventilation', ven, 'pvc100']);
+        return { rows, items, note: 'Pente de 2 à 3 %. Le raccordement au réseau public se fait avec l\'autorisation du gestionnaire (commune, régie ou ONEE) ; ne branchez pas les eaux de pluie sur l\'égout si le réseau est séparatif. ' + note };
+      }
+      const Vf = Math.max(3, 3 + (v.p - 5) * 0.5);
+      rows.push(['Volume de la fosse', fmt(Vf, 1) + ' m³', 1]);
+      if (v.mat === 'beton') {
+        const hh = 1.5, w = 1.2, L = Vf / (w * hh), e = 0.15, Hb = hh + 0.3;
+        const Vb = 2 * (L + w + 2 * e) * Hb * e + 2 * (L + 2 * e) * (w + 2 * e) * e + w * Hb * e, m = concrete(Vb, 350), ac = Vb * 100;
+        rows.push(['Dimensions intérieures', fmt(L, 2) + ' × ' + fmt(w, 1) + ' × ' + fmt(hh, 1) + ' m'], ['Béton (avec cloison)', fmt(Vb, 2) + ' m³'], ['Ciment', sacs(m.ck) + ' sacs', 1], ['Acier (estimation)', fmt(ac, 0) + ' kg']);
+        items.push(['Ciment (fosse)', sacs(m.ck), 'ciment'], ['Sable (fosse)', m.sa, 'sable'], ['Gravette (fosse)', m.gr, 'gravette'], ['Acier (fosse)', ac, 'acier'], ['Hydrofuge (fosse)', 2, 'hydrofuge']);
+      } else items.push(['Fosse septique préfabriquée', Vf, 'fosse_pref']);
+      const fou = Vf * 1.6;
+      items.push(['Fouilles (fosse)', fou, 'terr_m3'], ['PVC Ø100 maison → fosse', v.d * 1.05, 'pvc100'], ['PVC Ø100 ventilation', ven, 'pvc100']);
+      if (v.sys === 'epand') {
+        const per = { bon: 6, moy: 10, arg: 15 }[v.sol], Le = v.p * per, gr = Le * 0.5 * 0.4, ge = Le * 0.7, fe = Le * 0.5 * 0.8;
+        rows.push(['Tranchées d\'épandage', fmt(Le, 0) + ' ml', 1], ['Tuyau perforé Ø100', fmt(Le * 1.05, 0) + ' ml'], ['Gravier', fmt(gr, 1) + ' m³'], ['Géotextile', fmt(ge, 0) + ' m²'], ['Regards (répartition + bouclage)', 3]);
+        items.push(['Tuyau d\'épandage perforé', Le * 1.05, 'drain'], ['Gravier (épandage)', gr, 'gravette'], ['Géotextile', ge, 'geotex'], ['Fouilles (épandage)', fe, 'terr_m3'], ['Regards (assainissement)', 3, 'regard']);
+        if (v.sol === 'arg') note = '<div class="alert warn">Sol argileux : l\'eau s\'infiltre mal et l\'épandage risque de saturer. Faites un test de perméabilité ; un filtre à sable peut être nécessaire.</div>' + note;
+      } else {
+        const Vpu = Math.PI * 0.75 * 0.75 * 3;
+        rows.push(['Puits perdu Ø1,5 m × 3 m', fmt(Vpu, 1) + ' m³ de fouille', 1], ['Pierres de remplissage', fmt(Vpu * 0.7, 1) + ' m³']);
+        items.push(['Fouilles (puits perdu)', Vpu, 'terr_m3'], ['Pierres (puits perdu)', Vpu * 0.7, 'pierres'], ['Regards (assainissement)', 2, 'regard']);
+        note = '<div class="alert warn">Le puits perdu ne convient pas si la nappe d\'eau est proche ou si des puits d\'eau potable sont aux alentours : il pollue directement la nappe.</div>' + note;
+      }
+      rows.push(['Ventilation Ø100 en toiture', fmt(ven, 0) + ' m']);
+      return { rows, items, note: 'Fosse à au moins 5 m de la maison et à <b>30 à 35 m au minimum de tout puits ou source</b>. Ventilation jusqu\'au-dessus du toit. Les eaux de pluie ne vont jamais dans la fosse. Vidange tous les 3 à 4 ans environ.' + note };
+    } },
+  { id: 'estim', lot: 'Estimation (indicatif)', t: '🏠 Estimation rapide du budget', d: 'Ordre de grandeur du coût total d\'une maison avant d\'avoir les devis.',
+    f: [{ k: 'S', l: 'Surface par niveau (m²)', v: 100 }, { k: 'niv', l: 'Nombre de niveaux', v: 2 }, { k: 'g', l: 'Niveau de finition', s: { fin1: 'Économique', fin2: 'Moyen', fin3: 'Haut de gamme' }, v: 'fin2', full: 1 }],
+    c(v) {
+      const S2 = v.S * v.niv, go = S2 * PR('go_m2'), fi = S2 * PR(v.g);
+      return { rows: [['Surface construite', fmt(S2, 0) + ' m²'], ['Gros œuvre', dh(go)], ['Finitions', dh(fi)], ['Total estimé', dh(go + fi), 1], ['Fourchette (± 20 %)', dh((go + fi) * 0.8) + ' – ' + dh((go + fi) * 1.2)]],
+        items: [['Gros œuvre (estimation au m²)', S2, 'go_m2'], ['Finitions (estimation au m²)', S2, v.g]],
+        note: 'Hors terrain, honoraires (architecte, ingénieur, topographe), taxes et branchements. À ne pas cumuler avec les calculs détaillés dans le devis.' };
+    } }
+];
+function readCalc(C) {
+  const v = {};
+  C.f.forEach(f => { const el = $('#' + C.id + '_' + f.k); v[f.k] = f.s ? el.value : (parseFloat(String(el.value).replace(',', '.')) || 0); });
+  return v;
+}
+function updateCalc(C) {
+  const v = readCalc(C);
+  if (C.labels) Object.entries(C.labels(v)).forEach(([k, l]) => { const w = $('#w_' + C.id + '_' + k); w.classList.toggle('hide', !l); if (l) w.querySelector('span').textContent = l; });
+  const r = C.c(v); C._last = r;
+  const cost = r.items.reduce((s, [, q, p, m]) => s + q * PR(p) * (m || 1), 0);
+  $('#r_' + C.id).innerHTML = r.rows.map(([a, b, big]) => String(a).startsWith('<div') ? a : `<div class="row${big ? ' big' : ''}"><span>${a}</span><b>${b}</b></div>`).join('') +
+    (r.items.length && !['estim', 'solaire'].includes(C.id) ? `<div class="row"><span>Coût estimé des fournitures</span><b>${dh(cost)}</b></div>` : '');
+  $('#n_' + C.id).innerHTML = r.note || '';
+}
+function updateAllCalcs() { CALCS.forEach(updateCalc); }
+function renderCalcs() {
+  const saved = S.calcs;
+  $('#calcNav').innerHTML = CALCS.map(C => `<button data-go="${C.id}">${C.t}</button>`).join('');
+  $('#calcNav').querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const c = $('#card_' + b.dataset.go); c.scrollIntoView({ behavior: 'smooth', block: 'start' }); window.scrollBy(0, -70); c.classList.add('flash'); setTimeout(() => c.classList.remove('flash'), 1200); });
+  $('#calcs').innerHTML = CALCS.map(C => `<div class="card" id="card_${C.id}"><h3>${C.t}${phBtn('calc:' + C.id, C.t.replace(/^\S+\s/, ''))}</h3><p class="desc">${C.d}</p><div class="fields">` +
+    C.f.map(f => {
+      const val = saved[C.id] && saved[C.id][f.k] !== undefined ? saved[C.id][f.k] : f.v;
+      const inp = f.s ? `<select id="${C.id}_${f.k}">${Object.entries(f.s).map(([k, l]) => `<option value="${k}"${String(k) === String(val) ? ' selected' : ''}>${l}</option>`).join('')}</select>`
+        : `<input id="${C.id}_${f.k}" type="number" inputmode="decimal" step="any" min="0" value="${val === 0 && f.v === '' ? '' : val}">`;
+      return `<label class="fld${f.full ? ' full' : ''}" id="w_${C.id}_${f.k}"><span>${f.l}</span>${inp}</label>`;
+    }).join('') + `</div><div class="res" id="r_${C.id}"></div><div class="note" id="n_${C.id}"></div>
+    <div class="actions"><button class="btn sm" data-add="${C.id}">➕ Ajouter au devis</button><small style="color:var(--muted)">Lot : ${C.lot}</small></div></div>`).join('');
+  CALCS.forEach(C => {
+    C.f.forEach(f => {
+      const el = $('#' + C.id + '_' + f.k);
+      el.addEventListener(f.s ? 'change' : 'input', () => {
+        if (f.s && C.onSel) C.onSel(f.k, el.value, (k, x) => { $('#' + C.id + '_' + k).value = x; });
+        S.calcs[C.id] = readCalc(C); clearTimeout(C._sv); C._sv = setTimeout(() => save('calcs'), 600);
+        updateCalc(C);
+      });
+    });
+    updateCalc(C);
+  });
+  document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
+    const C = CALCS.find(c => c.id === b.dataset.add);
+    const items = C._last.items.filter(i => i[1] > 0);
+    if (!items.length) return toast('Rien à ajouter');
+    S.devis.push(...items.map(([l, q, p, m]) => Object.assign({ l, q: Math.round(q * 100) / 100, p, lot: C.lot }, m && m !== 1 ? { m } : {})));
+    save('devis'); updateDevisCount(); toast(items.length + ' ligne(s) ajoutée(s) au lot « ' + C.lot + ' »');
+  });
+}
+
+/* ================= devis global ================= */
+const LOTS = ['Terrassement', 'Gros œuvre', 'Maçonnerie', 'Enduits & chapes', 'Étanchéité', 'Électricité', 'Plomberie & eau', 'Énergie solaire', 'Menuiserie', 'Plâtrerie & faux plafond', 'Sanitaires', 'Cuisine', 'Revêtements', 'Peinture', 'Clôture & portail', 'Assainissement', 'Main d\'œuvre & services', 'Divers', 'Estimation (indicatif)'];
+const lineU = d => d.p ? UNIT[d.p] || '' : (d.u || '');
+const linePU = d => d.p ? PR(d.p) * (d.m || 1) : (+d.pu || 0);
+function updateDevisCount() { $('#devisCount').textContent = S.devis.length; }
+function devisTotals() {
+  const by = {}; let mat = 0;
+  S.devis.forEach(d => { const t = linePU(d) * d.q, lot = d.lot || 'Divers'; by[lot] = (by[lot] || 0) + t; mat += t; });
+  const P = S.projet, mo = mat * (+P.mo || 0) / 100, imp = (mat + mo) * (+P.imp || 0) / 100;
+  return { by, mat, mo, imp, tot: mat + mo + imp };
+}
+function renderDevis() {
+  const P = S.projet, box = $('#devisBox'), T = devisTotals();
+  const lots = LOTS.filter(l => T.by[l] !== undefined).concat(Object.keys(T.by).filter(l => !LOTS.includes(l)));
+  let rows = '';
+  lots.forEach(lot => {
+    rows += `<tr class="lot"><td colspan="4">${esc(lot)}</td><td class="num">${dh(T.by[lot])}</td><td></td></tr>`;
+    S.devis.forEach((d, i) => { if ((d.lot || 'Divers') !== lot) return;
+      rows += `<tr><td>${esc(d.l)}</td><td class="num"><input class="q" type="number" step="any" min="0" data-qi="${i}" value="${d.q}"></td><td>${esc(lineU(d))}</td><td class="num">${fmt(linePU(d), 2)}</td><td class="num"><b>${dh(linePU(d) * d.q)}</b></td><td><button class="btn ghost sm" data-del="${i}" aria-label="Supprimer">✕</button></td></tr>`; });
+  });
+  const recap = lots.map(l => `<tr><td>${esc(l)}</td><td style="width:40%"><div class="bar"><i style="width:${T.mat ? T.by[l] / T.mat * 100 : 0}%"></i></div></td><td class="num">${fmt(T.mat ? T.by[l] / T.mat * 100 : 0, 0)} %</td><td class="num">${dh(T.by[l])}</td></tr>`).join('');
+  box.innerHTML = `<h3 style="justify-content:space-between">📋 Devis global ${phBtn('devis:docs', 'Devis & factures des fournisseurs')}</h3>
+  <p class="desc">Toutes les lignes ajoutées depuis les calculateurs, classées par lot. Modifiez les quantités directement ; les prix viennent de l'onglet Prix.</p>
+  <div class="proj">
+    <label class="fld"><span>Projet</span><input data-pj="nom" value="${esc(P.nom)}" placeholder="Maison R+1"></label>
+    <label class="fld"><span>Propriétaire</span><input data-pj="proprio" value="${esc(P.proprio)}"></label>
+    <label class="fld"><span>Lieu</span><input data-pj="lieu" value="${esc(P.lieu)}"></label>
+    <label class="fld"><span>Main d'œuvre (% des fournitures)</span><input type="number" min="0" step="any" data-pj="mo" value="${P.mo}"></label>
+    <label class="fld"><span>Imprévus (%)</span><input type="number" min="0" step="any" data-pj="imp" value="${P.imp}"></label>
+  </div>
+  ${S.devis.length ? `<div class="tablecard"><table><tr><th>Désignation</th><th class="num">Qté</th><th>Unité</th><th class="num">P.U. (DH)</th><th class="num">Total</th><th></th></tr>${rows}</table></div>` :
+    '<p class="empty">Le devis est vide.<br>Utilisez les calculateurs puis « Ajouter au devis », ou ajoutez une ligne libre ci-dessous.</p>'}
+  <h3 style="font-size:16px;margin-top:18px">➕ Ligne libre (main d'œuvre, menuiserie, transport…)</h3>
+  <div class="proj" style="margin-top:8px">
+    <label class="fld"><span>Désignation</span><input id="mlL" placeholder="Menuiserie aluminium fenêtres"></label>
+    <label class="fld"><span>Lot</span><select id="mlLot">${LOTS.map(l => `<option${l === 'Divers' ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="fld"><span>Quantité</span><input id="mlQ" type="number" step="any" min="0" value="1"></label>
+    <label class="fld"><span>Unité</span><input id="mlU" value="u"></label>
+    <label class="fld"><span>Prix unitaire (DH)</span><input id="mlP" type="number" step="any" min="0"></label>
+  </div>
+  <div class="actions"><button class="btn ghost sm" id="mlAdd">Ajouter la ligne</button></div>
+  ${S.devis.length ? `<h3 style="font-size:16px;margin-top:22px">Récapitulatif</h3>
+  <table style="margin-top:6px">${recap}
+    <tr class="tot"><td colspan="3">Total fournitures</td><td class="num">${dh(T.mat)}</td></tr>
+    <tr><td colspan="3">Main d'œuvre (${fmt(+P.mo || 0)} %)</td><td class="num">${dh(T.mo)}</td></tr>
+    <tr><td colspan="3">Imprévus (${fmt(+P.imp || 0)} %)</td><td class="num">${dh(T.imp)}</td></tr>
+    <tr class="tot"><td colspan="3" style="font-size:17px">TOTAL GÉNÉRAL</td><td class="num" style="font-size:18px;color:var(--terra-d)">${dh(T.tot)}</td></tr>
+  </table>${T.by['Estimation (indicatif)'] !== undefined && lots.length > 1 ? '<div class="alert warn">Le lot « Estimation (indicatif) » fait double emploi avec les calculs détaillés : supprimez l\'un ou l\'autre.</div>' : ''}
+  <div class="actions"><button class="btn" id="copyDevis">Copier le devis</button><button class="btn ghost" id="clearDevis">Vider le devis</button></div>` : ''}`;
+  box.querySelectorAll('[data-pj]').forEach(i => i.onchange = () => { S.projet[i.dataset.pj] = i.type === 'number' ? (parseFloat(i.value) || 0) : i.value; save('projet'); if (i.type === 'number') renderDevis(); });
+  box.querySelectorAll('[data-qi]').forEach(i => i.onchange = () => { S.devis[+i.dataset.qi].q = parseFloat(i.value) || 0; save('devis'); renderDevis(); });
+  box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { S.devis.splice(+b.dataset.del, 1); save('devis'); updateDevisCount(); renderDevis(); });
+  $('#mlAdd').onclick = () => {
+    const l = $('#mlL').value.trim(); if (!l) return toast('Indiquez une désignation');
+    S.devis.push({ l, lot: $('#mlLot').value, q: parseFloat($('#mlQ').value) || 0, u: $('#mlU').value, pu: parseFloat($('#mlP').value) || 0 });
+    save('devis'); updateDevisCount(); renderDevis(); toast('Ligne ajoutée');
+  };
+  if (S.devis.length) {
+    $('#copyDevis').onclick = () => {
+      let t = `DEVIS GLOBAL — ${P.nom || 'Projet'}\n${P.proprio ? 'Propriétaire : ' + P.proprio + '\n' : ''}${P.lieu ? 'Lieu : ' + P.lieu + '\n' : ''}Date : ${new Date().toLocaleDateString('fr-FR')}\n`;
+      lots.forEach(lot => { t += `\n== ${lot.toUpperCase()} — ${dh(T.by[lot])} ==\n`;
+        S.devis.forEach(d => { if ((d.lot || 'Divers') === lot) t += `- ${d.l} : ${fmt(d.q, 2)} ${lineU(d)} × ${fmt(linePU(d), 2)} DH = ${dh(linePU(d) * d.q)}\n`; }); });
+      t += `\nTotal fournitures : ${dh(T.mat)}\nMain d'œuvre (${P.mo} %) : ${dh(T.mo)}\nImprévus (${P.imp} %) : ${dh(T.imp)}\nTOTAL GÉNÉRAL : ${dh(T.tot)}`;
+      copy(t);
+    };
+    confirmBtn($('#clearDevis'), () => { S.devis = []; save('devis'); updateDevisCount(); renderDevis(); }, 'Confirmer : tout effacer ?');
+  }
+}
+
+/* ================= journal ================= */
+function renderJournal() {
+  const list = [...S.journal].sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.id - a.id);
+  $('#jList').innerHTML = '<h3>📸 Journal de chantier</h3>' + (list.length ? list.map(e => {
+    const dt = e.date ? new Date(e.date + 'T12:00') : new Date(e.id), ph = S.photos['jr:' + e.id] || [];
+    return `<div class="jentry"><div class="d">${dt.getDate()}<small>${dt.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })}</small></div>
+      <div class="t"><b>${esc(e.step)}</b><p>${esc(e.note)}</p>${ph.length ? `<div class="mini">${ph.slice(0, 6).map(p => `<img src="${esc(phSrc(p))}" alt="" data-ph="jr:${e.id}" data-n="${esc(e.step)} — ${dt.toLocaleDateString('fr-FR')}">`).join('')}${ph.length > 6 ? `<small style="align-self:center">+${ph.length - 6}</small>` : ''}</div>` : ''}</div>
+      <div style="display:flex;flex-direction:column;gap:6px">${phBtn('jr:' + e.id, e.step + ' — ' + dt.toLocaleDateString('fr-FR'))}<button class="btn ghost sm" data-jdel="${e.id}">✕</button></div></div>`;
+  }).join('') : '<p class="empty">Aucune entrée. Commencez par la première étape de votre chantier.</p>');
+  $('#jList').querySelectorAll('[data-jdel]').forEach(b => confirmBtn(b, () => {
+    S.journal = S.journal.filter(e => String(e.id) !== b.dataset.jdel); save('journal'); renderJournal();
+  }, '?'));
+}
+function initJournalForm() {
+  $('#jDate').value = new Date().toISOString().slice(0, 10);
+  $('#jStep').innerHTML = STEPS.map(s => `<option>${s[0]}</option>`).join('') + '<option>Livraison de matériaux</option><option>Réunion / visite</option><option>Problème / malfaçon</option><option>Autre</option>';
+  $('#jAdd').onclick = () => {
+    const note = $('#jNote').value.trim();
+    S.journal.push({ id: Date.now(), date: $('#jDate').value, step: $('#jStep').value, note });
+    save('journal'); $('#jNote').value = ''; renderJournal(); toast('Ajouté au journal — ajoutez les photos avec 📷');
+  };
+}
+
+/* ================= diagnostic ================= */
+const DIAG = [
+  { t: '🏚️ Structure & séisme', q: [
+    ['La maison a-t-elle été construite avec des plans d\'architecte et d\'ingénieur ?', 'non', 'important', 'Faites examiner la structure par un ingénieur en génie civil, surtout avant tout agrandissement.'],
+    ['Y a-t-il des poteaux en béton armé aux angles et des chaînages en haut des murs ?', 'non', 'urgent', 'Sans chaînage, les murs peuvent s\'ouvrir lors d\'un séisme. Un ingénieur peut proposer un renforcement.'],
+    ['Les murs porteurs sont-ils en pierre, en terre (pisé) ou en briques sans béton armé ?', 'oui', 'urgent', 'Construction vulnérable aux séismes. Demandez une étude de confortement ; évitez de dormir sous des murs lourds non chaînés.'],
+    ['Un étage a-t-il été ajouté plus tard sans vérification des fondations ?', 'oui', 'urgent', 'Risque de surcharge. Faites vérifier fondations et poteaux.'],
+    ['Voyez-vous du béton éclaté ou des fers rouillés sur les poteaux, poutres ou dalles ?', 'oui', 'urgent', 'Corrosion des armatures : la structure s\'affaiblit. Réparation par un spécialiste.'],
+    ['Des réservoirs d\'eau sont-ils posés au milieu d\'une dalle, loin des poteaux ?', 'oui', 'urgent', '1 000 L = 1 tonne. Déplacez-les au-dessus d\'un poteau ou d\'une poutre, sur un socle, et sanglez-les.'],
+    ['Des objets lourds sont-ils posés en hauteur sans fixation (armoires hautes, étagères) ?', 'oui', 'important', 'Fixez les meubles hauts au mur, ne mettez rien de lourd au-dessus des lits.'],
+    ['La maison est-elle sur une pente forte, un remblai ou près d\'un oued ?', 'oui', 'important', 'Risque de glissement ou d\'inondation. Vérifiez les murs de soutènement et l\'évacuation des eaux.']
+  ]},
+  { t: '🔍 Fissures', q: [
+    ['Y a-t-il des fissures plus larges que 2 mm (une pièce de monnaie entre dedans) ?', 'oui', 'urgent', 'Faites venir un ingénieur. Ne vous contentez pas de reboucher.'],
+    ['Y a-t-il des fissures en diagonale partant des coins des portes ou fenêtres ?', 'oui', 'urgent', 'Signe de tassement ou de mouvement de la structure : expertise nécessaire.'],
+    ['Des fissures s\'agrandissent-elles avec le temps ?', 'oui', 'urgent', 'Une fissure qui bouge est active. Posez un témoin et contactez un ingénieur rapidement.'],
+    ['Des portes ou fenêtres se sont-elles mises à coincer sans raison ?', 'oui', 'important', 'Peut indiquer une déformation de la structure. Surveillez les fissures autour.'],
+    ['Y a-t-il des fissures en escalier le long des joints de briques ?', 'oui', 'important', 'Souvent liées au sol qui tasse. Posez un témoin et faites vérifier.']
+  ]},
+  { t: '⚡ Électricité', q: [
+    ['Le tableau électrique a-t-il un disjoncteur différentiel 30 mA ?', 'non', 'urgent', 'C\'est lui qui coupe le courant en cas d\'électrocution. À faire installer par un électricien.'],
+    ['L\'installation a-t-elle une prise de terre ?', 'non', 'urgent', 'Sans terre, les appareils métalliques peuvent électrocuter. Faites poser une prise de terre.'],
+    ['Y a-t-il des fils dénudés, des dominos apparents ou des multiprises branchées les unes sur les autres ?', 'oui', 'important', 'Risque d\'incendie. Faites refaire ces connexions dans des boîtiers et ajoutez des prises.'],
+    ['Avez-vous des prises ou interrupteurs près de la douche ou de l\'évier ?', 'oui', 'important', 'Respectez les distances de sécurité et utilisez du matériel étanche protégé par le différentiel 30 mA.'],
+    ['Sentez-vous une odeur de brûlé ou des prises chaudes / noircies ?', 'oui', 'urgent', 'Coupez le circuit concerné au tableau et appelez un électricien.'],
+    ['L\'installation a-t-elle plus de 25 ans sans révision ?', 'oui', 'important', 'Faites faire un contrôle complet par un électricien.']
+  ]},
+  { t: '🔥 Gaz', q: [
+    ['La bouteille de gaz est-elle dans une pièce fermée sans aération ?', 'oui', 'urgent', 'Placez-la dans un endroit ventilé, debout, loin de la chaleur, avec une aération basse (le butane est plus lourd que l\'air).'],
+    ['Le tuyau de gaz est-il fissuré, durci ou sa date de validité imprimée dépassée ?', 'oui', 'urgent', 'Remplacez-le immédiatement par un tuyau normalisé, fixé par des colliers des deux côtés.'],
+    ['Y a-t-il un chauffe-eau à gaz dans la salle de bain ou une pièce fermée sans conduit d\'évacuation ?', 'oui', 'urgent', 'Danger mortel de monoxyde de carbone. Déplacez-le à l\'extérieur ou installez une évacuation vers dehors.'],
+    ['Le tuyau est-il bien serré par des colliers aux deux bouts ?', 'non', 'important', 'Ajoutez des colliers de serrage métalliques.'],
+    ['Avez-vous un détecteur de gaz ou de monoxyde de carbone ?', 'non', 'conseil', 'Un détecteur coûte peu et peut sauver une famille.']
+  ]},
+  { t: '🚰 Eau potable', q: [
+    ['Le réservoir d\'eau est-il fermé par un couvercle étanche ?', 'non', 'important', 'Un réservoir ouvert reçoit poussière, insectes et animaux. Posez un couvercle et une grille sur le trop-plein.'],
+    ['Le réservoir est-il nettoyé et désinfecté au moins une fois par an ?', 'non', 'important', 'Videz, brossez, désinfectez puis rincez abondamment avant de le remplir.'],
+    ['Votre puits est-il proche (moins de 30 m) d\'une fosse septique ou d\'une étable ?', 'oui', 'urgent', 'Risque de contamination. Faites analyser l\'eau par un laboratoire agréé et faites bouillir l\'eau de boisson en attendant.'],
+    ['L\'eau a-t-elle parfois une couleur, une odeur ou un goût anormal ?', 'oui', 'urgent', 'Ne la buvez pas sans traitement et faites-la analyser.'],
+    ['Les tuyaux d\'eau potable passent-ils dans des regards d\'égout ou près des évacuations ?', 'oui', 'important', 'Une fuite peut aspirer de l\'eau sale dans le réseau. Faites dévier les tuyaux.'],
+    ['Y a-t-il de vieux tuyaux en plomb ou en fer galvanisé rouillé ?', 'oui', 'important', 'Remplacez-les par du PPR ou du PER. En attendant, laissez couler l\'eau avant de la boire.']
+  ]},
+  { t: '💧 Humidité', q: [
+    ['Y a-t-il des taches d\'humidité, de moisissure ou du salpêtre sur les murs ?', 'oui', 'important', 'Cherchez la cause (remontées du sol, fuite, condensation). Aérez, traitez, ne peignez pas par-dessus sans réparer.'],
+    ['L\'eau s\'infiltre-t-elle par le toit ou la terrasse quand il pleut ?', 'oui', 'important', 'Refaites l\'étanchéité de la terrasse. L\'eau qui entre fait rouiller les fers de la dalle.'],
+    ['Les descentes d\'eau de pluie sont-elles bouchées ou absentes ?', 'oui', 'important', 'Nettoyez-les avant l\'hiver. L\'eau stagnante surcharge et abîme la dalle.']
+  ]},
+  { t: '🧯 Sécurité & incendie', q: [
+    ['Avez-vous un extincteur accessible dans la maison ?', 'non', 'conseil', 'Un extincteur à poudre de 6 kg près de la cuisine, et apprenez à vous en servir.'],
+    ['Les escaliers et la terrasse ont-ils des garde-corps d\'au moins 1 m ?', 'non', 'important', 'Installez des garde-corps solides, sans barreaux horizontaux où un enfant peut grimper.'],
+    ['Les fenêtres des étages sont-elles sécurisées pour les enfants ?', 'non', 'conseil', 'Posez des bloqueurs ou des grilles qui s\'ouvrent de l\'intérieur en cas d\'incendie.'],
+    ['La famille sait-elle quoi faire en cas de séisme ou d\'incendie ?', 'non', 'conseil', 'Faites un plan familial : où se protéger, comment sortir, où se retrouver, numéros d\'urgence.']
+  ]}
+];
+function renderDiag() {
+  const ANS = S.diag;
+  $('#diagQs').innerHTML = DIAG.map((s, si) => `<div class="card dsec"><h3>${s.t}</h3>` + s.q.map((q, qi) => {
+    const id = si + '-' + qi, a = ANS[id];
+    const cls = x => a === x ? ' sel ' + (x === 'nsp' ? 'nsp' : (x === q[1] ? 'badc' : 'good')) : '';
+    return `<div class="q"><p>${q[0]}</p><div class="qr"><div class="seg" data-q="${id}"><button data-a="oui" class="${cls('oui')}">Oui</button><button data-a="non" class="${cls('non')}">Non</button><button data-a="nsp" class="${cls('nsp')}">Je ne sais pas</button></div>${phBtn('diag:' + id, q[0])}</div></div>`;
+  }).join('') + '</div>').join('');
+  document.querySelectorAll('.seg button').forEach(b => b.onclick = () => {
+    const id = b.parentElement.dataset.q;
+    if (S.diag[id] === b.dataset.a) delete S.diag[id]; else S.diag[id] = b.dataset.a;
+    save('diag'); renderDiag();
+  });
+  renderDiagRes();
+}
+function renderDiagRes() {
+  const ANS = S.diag, order = { urgent: 0, important: 1, conseil: 2 }, probs = [], unk = [];
+  let total = 0, answered = 0, good = 0;
+  DIAG.forEach((s, si) => s.q.forEach((q, qi) => {
+    total++; const a = ANS[si + '-' + qi];
+    if (a === 'nsp') unk.push(q[0]); else if (a) { answered++; if (a === q[1]) probs.push({ s: s.t, q, id: si + '-' + qi }); else good++; }
+  }));
+  probs.sort((x, y) => order[x.q[2]] - order[y.q[2]]);
+  const sc = answered ? Math.round(good / answered * 100) : 0, col = sc >= 80 ? 'var(--ok)' : sc >= 50 ? 'var(--warn)' : 'var(--bad)';
+  const nU = probs.filter(p => p.q[2] === 'urgent').length, C = 2 * Math.PI * 46;
+  const ring = `<svg class="ring" viewBox="0 0 110 110"><circle cx="55" cy="55" r="46" fill="none" stroke="#eee3d6" stroke-width="10"/><circle cx="55" cy="55" r="46" fill="none" stroke="${col}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C * sc / 100} ${C}" transform="rotate(-90 55 55)"/><text x="55" y="61" text-anchor="middle" font-family="Fraunces,serif" font-size="26" font-weight="700" fill="${col}">${answered ? sc : '–'}</text></svg>`;
+  let h = `<h3>Bilan de sécurité</h3><div class="score" style="margin-top:10px">${ring}<div><b>${answered}/${total}</b> questions répondues<br>${answered ? (nU ? `<span style="color:var(--bad);font-weight:700">${nU} problème(s) urgent(s)</span>` : '<span style="color:var(--ok);font-weight:700">Aucun problème urgent</span>') : 'Commencez à répondre'}</div></div>`;
+  if (probs.length) h += '<div style="margin-top:12px">' + probs.map(p => `<div class="prob"><span class="sev ${p.q[2]}">${p.q[2]}</span><small style="color:var(--muted)">${p.s}</small>${phCount('diag:' + p.id) ? ` <small>· 📷 ${phCount('diag:' + p.id)}</small>` : ''}<b>${p.q[0]}</b><span class="fix">→ ${p.q[3]}</span></div>`).join('') + '</div>';
+  if (unk.length) h += `<div class="alert warn">À vérifier (${unk.length}) : demandez à un professionnel ou regardez de plus près.</div>`;
+  h += `<div class="actions"><button class="btn sm" id="copyDiag">Copier le bilan</button><button class="btn ghost sm" id="resetDiag">Recommencer</button></div>
+  <div style="margin-top:14px"><b style="font-size:13px">Numéros d'urgence (Maroc)</b><div class="emerg"><div><b>15</b><br><small>Protection civile</small></div><div><b>19</b><br><small>Police</small></div><div><b>177</b><br><small>Gendarmerie</small></div><div><b>141</b><br><small>SAMU</small></div></div></div>
+  <div class="alert bad" style="margin-top:12px"><b>Odeur de gaz ?</b> Fermez la bouteille, ouvrez les fenêtres, n'allumez ni lumière ni flamme, sortez et appelez le 15.</div>`;
+  $('#diagRes').innerHTML = h;
+  $('#copyDiag').onclick = () => copy(`BILAN DE SÉCURITÉ — Bâtir Sûr\nScore : ${answered ? sc + '/100' : '—'} (${answered}/${total} réponses)\n\n` + (probs.length ? probs.map(p => `[${p.q[2].toUpperCase()}] ${p.q[0]}\n   → ${p.q[3]}`).join('\n\n') : 'Aucun problème détecté.') + (unk.length ? `\n\nÀ VÉRIFIER :\n- ${unk.join('\n- ')}` : ''));
+  confirmBtn($('#resetDiag'), () => { S.diag = {}; save('diag'); renderDiag(); });
+}
+
+/* ================= guide & pièges ================= */
+const STEPS = [
+  ['Terrain, plans et autorisations', ['Vérifier le titre foncier ou les documents de propriété et les limites du terrain (topographe).', 'Demander la note de renseignements urbanistiques à la commune.', 'Faire les plans d\'architecte puis les plans de béton armé par un ingénieur.', 'Obtenir l\'autorisation de construire avant le premier coup de pioche.'], 'Ne jamais démarrer sans plans de béton armé : ce sont eux qui fixent les sections et les fers.'],
+  ['Étude de sol et terrassement', ['Une étude géotechnique indique la profondeur et le type de fondations — indispensable sur remblai, argile ou pente.', 'Creuser jusqu\'au bon sol, pas seulement à une profondeur « habituelle ».'], 'Le fond de fouille doit être propre, sec et horizontal. Pas de terre végétale ni de remblai sous les semelles.'],
+  ['Fondations', ['Béton de propreté (5 cm) avant de poser les fers.', 'Semelles et longrines selon le plan.', 'Amorces de poteaux bien ancrées dans les semelles.', 'Prévoir les passages des tuyaux d\'évacuation et la prise de terre (câble en fond de fouille).'], 'Avant de couler : vérifier dimensions, diamètres et nombre de fers, cales d\'enrobage, longrines entre toutes les semelles.'],
+  ['Poteaux, poutres et chaînages', ['Ferraillage conforme au plan, cadres resserrés près des nœuds.', 'Coffrages propres, bien étayés, humidifiés avant de couler.', 'Béton vibré pour éviter les vides.'], 'Photographier tout le ferraillage avant le coulage. Compter les cadres, mesurer leur espacement.'],
+  ['Planchers et escaliers', ['Poutrelles posées dans le bon sens, appuyées sur les poutres.', 'Treillis soudé + aciers chapeaux au-dessus des appuis.', 'Escalier coulé avec le plancher, marches toutes identiques.', 'Étais laissés au moins 21 jours.'], 'Arroser la dalle 7 jours. Ne pas la charger les premiers jours.'],
+  ['Maçonnerie', ['Murs montés d\'aplomb, joints remplis, blocs humidifiés par temps chaud.', 'Linteaux en béton armé au-dessus de chaque porte et fenêtre.'], 'Pas de mur sans chaînage en tête. Vérifier l\'aplomb avec un niveau.'],
+  ['Étanchéité, toiture et réservoir', ['Forme de pente vers les descentes d\'eau.', 'Étanchéité remontée sur les acrotères, puis protection.', 'Socle du réservoir au-dessus d\'un poteau ou d\'une poutre.'], 'Test : boucher les descentes et mettre 5 cm d\'eau pendant 48 h avant la protection.'],
+  ['Électricité', ['Gaines encastrées avant les enduits, fils de bonne section.', 'Tableau avec différentiels 30 mA et prise de terre.'], 'Photographier le passage des gaines avec un mètre visible.'],
+  ['Plomberie et eau potable', ['Alimentation en PPR / PER, robinet d\'arrêt par pièce d\'eau.', 'Évacuations en pente avec siphons, regards accessibles.'], 'Essai sous pression avant de fermer les saignées ; photographier les tuyaux.'],
+  ['Menuiseries (bois, aluminium, métal)', ['Précadres ou dormants posés avant les enduits, d\'aplomb et de niveau.', 'Appuis de fenêtre en pente vers l\'extérieur avec goutte d\'eau (rejet).', 'Calfeutrement mousse + silicone tout autour ; menuiseries extérieures posées après les enduits pour éviter les rayures.', 'Bois traité, alu de gamme connue, métal avec 2 couches d\'antirouille.'], 'Ouvrir et fermer chaque porte et fenêtre, vérifier qu\'elles ne frottent pas ; arroser la fenêtre fermée pour tester les fuites.'],
+  ['Enduits et finitions', ['Enduit en 2 couches sur mur humidifié.', 'Chape puis carrelage, menuiseries, peinture.'], 'Planéité à la règle de 2 m ; carrelage sans « creux » au tapotement.']
+];
+function renderGuide() {
+  $('#steps').innerHTML = STEPS.map(([t, l, c], i) => `<details${i === 0 ? ' open' : ''}><summary><span class="n">${i + 1}</span><span>${t}</span>${phBtn('step:' + i, 'Étape ' + (i + 1) + ' — ' + t)}</summary><div class="body"><ul>${l.map(x => '<li>' + x + '</li>').join('')}</ul><div class="ctl"><b>✔ À contrôler :</b> ${c}</div></div></details>`).join('');
+}
+const PIEGES = [
+  ['🔩 Fer à béton plus fin', 'On vous facture du Ø12 et on livre du Ø10, ou un acier de mauvaise qualité.', 'Mesurez le diamètre au pied à coulisse et pesez une barre (calculateur « Acier »). Une barre de 12 m en Ø12 doit peser ≈ 10,7 kg.'],
+  ['🧱 Sacs de ciment incomplets', 'Sacs de moins de 50 kg ou ciment éventé.', 'Pesez quelques sacs au hasard. Le ciment doit être fluide, sans grumeaux ; vérifiez la date.'],
+  ['🥄 Béton « allégé » en ciment', 'Moins de ciment, compensé par de l\'eau. Le béton perd beaucoup de résistance.', 'Comptez les sacs par gâchée. Refusez l\'ajout d\'eau. Pour le béton prêt à l\'emploi, exigez le bon de livraison avec la classe.'],
+  ['🏖️ Sable sale ou salé', 'Sable avec de la terre ou sable de mer non lavé (le sel fait rouiller les fers).', 'Test du bocal : sable + eau, secouez, attendez 1 h. Plus de 5 % de boue = trop sale. S\'il est salé au goût, refusez.'],
+  ['🚛 Camion pas plein', 'Vous payez X m³ de sable ou gravette mais il en contient moins.', 'Mesurez la benne (longueur × largeur × hauteur) avant le déchargement.'],
+  ['📏 Fers sans enrobage', 'Fers posés contre le coffrage ou le sol : ils rouillent en quelques années.', 'Exigez des cales de 2,5 à 3 cm sous et autour des fers avant le coulage.'],
+  ['🔁 Cadres espacés', 'Moins de cadres que sur le plan : les poteaux résistent mal aux séismes.', 'Comptez les cadres et mesurez l\'espacement avant de couler.'],
+  ['🔌 Fil électrique trop fin', 'Du 1,5 mm² posé à la place du 2,5 mm² sur les prises : il chauffe.', 'Lisez le marquage imprimé sur la gaine du fil et sur la bobine ; gardez les étiquettes.'],
+  ['🚿 Tuyaux non conformes', 'Tubes non alimentaires ou de récupération pour l\'eau potable.', 'Exigez des tubes marqués (norme, diamètre, pression) et un essai sous pression devant vous.'],
+  ['🪟 Aluminium trop fin', 'Profilés minces sans marque, vendus au prix d\'une gamme de qualité : ils se déforment et fuient.', 'Demandez la référence de la gamme sur le devis, mesurez l\'épaisseur des profilés et comparez avec la fiche du fabricant.'],
+  ['🪵 Faux bois massif', 'Aggloméré ou MDF plaqué vendu comme bois massif : il gonfle à la première humidité.', 'Regardez le chant et le dessous de la porte (fibres visibles = massif), soupesez-la : une porte massive est lourde.'],
+  ['🛡️ Étanchéité « une seule couche »', 'Bicouche facturé mais une seule couche posée, ou membrane sans primaire, ou relevés oubliés.', 'Comptez les rouleaux livrés (calculateur Étanchéité), photographiez chaque couche, et exigez le test de mise en eau de 48 h devant vous.'],
+  ['🏛️ Faux plafond économisé', 'Fourrures espacées de 80 cm ou plus, suspentes oubliées, plaques ordinaires en salle de bain : le plafond fissure ou s\'affaisse.', 'Avant de fermer, comptez les fourrures (50 à 60 cm d\'entraxe) et les suspentes, et vérifiez la couleur des plaques (vertes = hydrofuges) en pièce humide.'],
+  ['☀️ Panneaux solaires surévalués', 'Puissance annoncée supérieure à la réalité, panneaux sans marque ou d\'occasion.', 'Lisez l\'étiquette au dos de chaque panneau (puissance en Wc, marque, numéro de série) et comptez-les. Exigez la fiche technique et la garantie par écrit.'],
+  ['🚿 Robinetterie « chromée » en zamak', 'Robinets légers en alliage bon marché vendus comme du laiton : ils fuient et se cassent vite.', 'Soupesez : un mitigeur en laiton est lourd. Demandez la marque et la garantie (5 ans ou plus pour une bonne gamme).'],
+  ['🪨 Faux granit', 'Plan de travail en aggloméré de marbre ou en résine vendu au prix du granit naturel.', 'Regardez la tranche et le dessous : le granit naturel a des grains irréguliers et brillants. Faites écrire la pierre exacte et l\'épaisseur (2 ou 3 cm) sur la facture.'],
+  ['💸 Paiement d\'avance', 'Tout payer avant : le tâcheron disparaît ou bâcle.', 'Contrat écrit, paiement par tranches à l\'avancement, retenue de 5 à 10 % à la fin.'],
+  ['🧮 Métré gonflé', 'Surfaces ou volumes surévalués sur la facture.', 'Refaites les métrés avec le calculateur et comparez ligne par ligne au devis global.']
+];
+function renderPieges() {
+  $('#pieges').innerHTML = PIEGES.map(([t, p, s]) => `<div class="card"><h3>${t}</h3><p class="desc" style="margin-bottom:8px">${p}</p><div class="ctl" style="margin:0"><b>Comment vérifier :</b> ${s}</div></div>`).join('');
+}
+
+/* ================= sauvegarde manuelle ================= */
+$('#exportData').onclick = () => { const o = {}; KEYS.forEach(k => { if (k !== 'photos') o[k] = S[k]; }); copy(JSON.stringify(o)); };
+$('#importData').onclick = () => {
+  try {
+    const o = JSON.parse($('#importBox').value);
+    let n = 0; KEYS.forEach(k => { if (k !== 'photos' && o[k] !== undefined && typeof o[k] === typeof DEF[k]) { S[k] = o[k]; save(k); n++; } });
+    if (!n) throw 0;
+    renderAll(); $('#importBox').value = ''; toast('Sauvegarde restaurée ✔');
+  } catch (e) { toast('Sauvegarde invalide'); }
+};
+
+
+/* ================= import / export ================= */
+let XLSXP = null, DLP = null;
+function loadXLSX() {
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  if (XLSXP) return XLSXP;
+  XLSXP = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; sc.onload = () => res(window.XLSX); sc.onerror = () => { XLSXP = null; rej(new Error('lib')); }; document.head.appendChild(sc); });
+  return XLSXP;
+}
+function getDL() { if (!DLP) DLP = (window.claude && window.claude.use) ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null); return DLP; }
+async function saveFile(name, data, mime) {
+  const dl = await getDL();
+  if (dl) {
+    try { await dl.save({ filename: name, data }); toast('Fichier enregistré ✔'); return true; }
+    catch (e) { toast(e && e.code === 'declined' ? 'Téléchargement annulé' : 'Téléchargement impossible ici'); return false; }
+  }
+  try { const u = URL.createObjectURL(new Blob([data], { type: mime })); const a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 2000); toast('Fichier enregistré ✔'); return true; }
+  catch (e) { toast('Téléchargement impossible ici'); return false; }
+}
+const RLAB = { oui: 'Oui', non: 'Non', nsp: 'Je ne sais pas' };
+const r2 = n => Math.round((+n || 0) * 100) / 100;
+const fileBase = () => 'batir-sur' + (S.projet.nom ? '-' + S.projet.nom.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : '') + '-' + new Date().toISOString().slice(0, 10);
+function buildTables() {
+  const T = devisTotals(), P = S.projet;
+  return {
+    'Projet': [['Champ', 'Valeur'], ['Nom', P.nom], ['Propriétaire', P.proprio], ['Lieu', P.lieu], ["Main d'œuvre (%)", +P.mo || 0], ['Imprévus (%)', +P.imp || 0]],
+    'Devis': [['Lot', 'Désignation', 'Quantité', 'Unité', 'Prix unitaire', 'Total', 'Code', 'Coef']].concat(S.devis.map(d => [d.lot || 'Divers', d.l, r2(d.q), lineU(d), r2(linePU(d)), r2(linePU(d) * d.q), d.p || '', d.p ? (d.m || 1) : ''])),
+    'Récapitulatif': [['Lot', 'Total (DH)']].concat(Object.entries(T.by).map(([l, t]) => [l, Math.round(t)]), [['Total fournitures', Math.round(T.mat)], ["Main d'œuvre", Math.round(T.mo)], ['Imprévus', Math.round(T.imp)], ['TOTAL GÉNÉRAL', Math.round(T.tot)]]),
+    'Prix': [['Code', 'Désignation', 'Unité', 'Prix']].concat(Object.keys(PDEF).map(k => [k, PLAB[k], UNIT[k], PR(k)])),
+    'Calculs': [['Calculateur', 'Nom', 'Paramètre', 'Libellé', 'Valeur']].concat(CALCS.flatMap(C => C.f.map(f => { const sv = S.calcs[C.id]; const val = sv && sv[f.k] !== undefined ? sv[f.k] : f.v; return [C.id, C.t.replace(/^\S+\s/, ''), f.k, f.l || '', f.s ? String(val) : (val === '' ? '' : +val)]; }))),
+    'Journal': [['ID', 'Date', 'Étape', 'Observation', 'Photos']].concat(S.journal.map(e => [e.id, e.date, e.step, e.note, phCount('jr:' + e.id)])),
+    'Diagnostic': [['Code', 'Section', 'Question', 'Réponse', 'Gravité si problème']].concat(DIAG.flatMap((s, si) => s.q.map((q, qi) => [si + '-' + qi, s.t.replace(/^\S+\s/, ''), q[0], RLAB[S.diag[si + '-' + qi]] || '', q[2]])))
+  };
+}
+async function exportXlsx() {
+  let X; try { X = await loadXLSX(); } catch (e) { return toast('Impossible de charger le module Excel (connexion ?)'); }
+  const wb = X.utils.book_new(), T = buildTables();
+  const widths = { Projet: [22, 40], Devis: [24, 44, 11, 8, 13, 13, 12, 7], 'Récapitulatif': [28, 16], Prix: [13, 44, 8, 10], Calculs: [12, 30, 10, 40, 14], Journal: [15, 12, 34, 60, 8], Diagnostic: [8, 22, 80, 16, 16] };
+  for (const [n, rows] of Object.entries(T)) { const ws = X.utils.aoa_to_sheet(rows); ws['!cols'] = (widths[n] || []).map(w => ({ wch: w })); X.utils.book_append_sheet(wb, ws, n); }
+  const buf = X.write(wb, { bookType: 'xlsx', type: 'array' });
+  saveFile(fileBase() + '.xlsx', new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+function buildMd() {
+  const T = buildTables(), cell = c => String(c == null ? '' : c).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+  let md = `# Bâtir Sûr — ${S.projet.nom || 'Projet'}\n\n_Exporté le ${new Date().toLocaleDateString('fr-FR')}. Ce fichier peut être modifié puis réimporté : chaque section retourne à sa place._\n`;
+  for (const [n, rows] of Object.entries(T)) {
+    md += `\n## ${n}\n\n| ${rows[0].map(cell).join(' | ')} |\n|${rows[0].map(() => ' --- ').join('|')}|\n`;
+    rows.slice(1).forEach(r => { md += `| ${r.map(cell).join(' | ')} |\n`; });
+  }
+  return md;
+}
+function parseMd(txt) {
+  const T = {}, lines = txt.split(/\r?\n/), split = r => r.replace(/^\|/, '').replace(/\|\s*$/, '').split(/(?<!\\)\|/).map(c => c.trim().replace(/\\\|/g, '|'));
+  let cur = 'Feuille';
+  for (let i = 0; i < lines.length; i++) {
+    const L = lines[i].trim(), h = L.match(/^#{1,6}\s+(.*)$/);
+    if (h) { cur = h[1].trim(); continue; }
+    if (L.startsWith('|')) {
+      const rows = [];
+      while (i < lines.length && lines[i].trim().startsWith('|')) { const r = lines[i].trim(); if (!/^\|[\s:|-]+$/.test(r)) rows.push(split(r)); i++; }
+      i--; T[cur] = T[cur] ? T[cur].concat(rows.slice(1)) : rows; continue;
+    }
+    const kv = L.match(/^[-*]\s*\**([^:*]+?)\**\s*:\s*(.+)$/);
+    if (kv) { if (!T[cur]) T[cur] = [['Champ', 'Valeur']]; T[cur].push([kv[1].trim(), kv[2].trim()]); }
+  }
+  return T;
+}
+const nrm = x => String(x == null ? '' : x).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+const num = x => typeof x === 'number' ? x : (parseFloat(String(x).replace(/\s/g, '').replace(',', '.')) || 0);
+function toDate(x) {
+  if (typeof x === 'number' && x > 20000 && x < 80000) return new Date(Math.round((x - 25569) * 864e5)).toISOString().slice(0, 10);
+  const s = String(x || '').trim(), m = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : new Date().toISOString().slice(0, 10);
+}
+function kindOf(name, head) {
+  const n = nrm(name), h = head.map(nrm), has = k => h.some(x => x.includes(k));
+  if (n.includes('recap')) return null;
+  if (n.includes('devis') || (has('designation') && has('quantite'))) return 'devis';
+  if (n.includes('prix') || (has('code') && has('prix'))) return 'prix';
+  if (n.includes('calcul') || has('parametre')) return 'calcs';
+  if (n.includes('journal') || has('etape')) return 'journal';
+  if (n.includes('diag') || (has('question') && has('reponse'))) return 'diag';
+  if (n.includes('projet') || (has('champ') && has('valeur'))) return 'projet';
+  return null;
+}
+function routeTables(T) {
+  const plan = { projet: null, devis: [], prix: {}, calcs: {}, journal: [], diag: {} }, cnt = { projet: 0, devis: 0, prix: 0, calcs: 0, journal: 0, diag: 0 };
+  for (const [name, rows] of Object.entries(T)) {
+    if (!rows || rows.length < 2) continue;
+    const head = rows[0].map(String), kind = kindOf(name, head); if (!kind) continue;
+    const col = (...keys) => head.map(nrm).findIndex(h => keys.some(k => h.includes(k)));
+    const body = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ''));
+    if (kind === 'devis') {
+      const cL = col('lot'), cD = col('designation', 'libelle'), cQ = col('quantite', 'qte'), cU = col('unite'), cP = col('prixunitaire', 'pu', 'prix'), cC = col('code'), cM = col('coef');
+      body.forEach(r => {
+        const l = String(r[cD] ?? '').trim(); if (!l || /^total|^sous.?total/i.test(l)) return;
+        const lotRaw = cL >= 0 ? String(r[cL] || '').trim() : '', lot = LOTS.find(x => nrm(x) === nrm(lotRaw)) || lotRaw || 'Divers';
+        const code = cC >= 0 ? String(r[cC] || '').trim() : '', q = cQ >= 0 ? num(r[cQ]) : 1;
+        const mm = cM >= 0 ? num(r[cM]) : 1;
+        plan.devis.push(PDEF[code] !== undefined ? Object.assign({ l, q, p: code, lot }, mm && mm !== 1 ? { m: mm } : {}) : { l, q, u: cU >= 0 ? String(r[cU] || '') : 'u', pu: cP >= 0 ? num(r[cP]) : 0, lot });
+        cnt.devis++;
+      });
+    } else if (kind === 'prix') {
+      const cC = col('code'), cD = col('designation'), cP = h => h;
+      const cPr = head.map(nrm).findIndex(h => h === 'prix' || h.startsWith('prix'));
+      body.forEach(r => {
+        let k = cC >= 0 ? String(r[cC] || '').trim() : '';
+        if (PDEF[k] === undefined && cD >= 0) k = Object.keys(PLAB).find(x => nrm(PLAB[x]) === nrm(r[cD])) || '';
+        if (PDEF[k] !== undefined && cPr >= 0 && String(r[cPr]).trim() !== '') { plan.prix[k] = num(r[cPr]); cnt.prix++; }
+      });
+    } else if (kind === 'calcs') {
+      const cI = col('calculateur', 'id'), cK = col('parametre'), cV = col('valeur');
+      body.forEach(r => {
+        const C = CALCS.find(c => c.id === String(r[cI]).trim()); if (!C) return;
+        const f = C.f.find(x => x.k === String(r[cK]).trim()); if (!f) return;
+        (plan.calcs[C.id] = plan.calcs[C.id] || {})[f.k] = f.s ? String(r[cV]).trim() : num(r[cV]); cnt.calcs++;
+      });
+    } else if (kind === 'journal') {
+      const cI = col('id'), cDt = col('date'), cE = col('etape'), cO = col('observation', 'note', 'remarque');
+      body.forEach((r, i) => {
+        const step = cE >= 0 ? String(r[cE] || '').trim() : '', note = cO >= 0 ? String(r[cO] || '').trim() : ''; if (!step && !note) return;
+        plan.journal.push({ id: (cI >= 0 && num(r[cI])) || Date.now() + i, date: toDate(cDt >= 0 ? r[cDt] : ''), step: step || 'Autre', note }); cnt.journal++;
+      });
+    } else if (kind === 'diag') {
+      const cC = col('code'), cR = col('reponse');
+      body.forEach(r => {
+        const code = String(r[cC] || '').trim(), [a, b] = code.split('-').map(Number); if (!DIAG[a] || !DIAG[a].q[b]) return;
+        const v = nrm(r[cR]); plan.diag[code] = v === 'oui' ? 'oui' : v === 'non' ? 'non' : (v.includes('sais') || v === 'nsp') ? 'nsp' : null; cnt.diag++;
+      });
+    } else if (kind === 'projet') {
+      plan.projet = {}; const map = { nom: 'nom', projet: 'nom', proprietaire: 'proprio', lieu: 'lieu', maindoeuvre: 'mo', imprevus: 'imp' };
+      body.forEach(r => { const k = Object.keys(map).find(x => nrm(r[0]).startsWith(x)); if (k) { const f = map[k]; plan.projet[f] = (f === 'mo' || f === 'imp') ? num(r[1]) : String(r[1] ?? ''); cnt.projet++; } });
+    }
+  }
+  return { plan, cnt };
+}
+function openIO() {
+  curPh = null; $('#mBack').style.display = 'none'; openModal('📂 Importer / Exporter');
+  $('#mBody').innerHTML = `<p class="note" style="margin-top:0">Exportez tout votre projet dans un fichier, modifiez-le dans Excel ou un éditeur de texte, puis réimportez-le : <b>chaque feuille retourne à sa place</b> (Devis, Prix, Calculs, Journal, Diagnostic, Projet).</p>
+  <div class="pgroup">Exporter</div>
+  <div class="io">
+    <button id="xX"><span class="ic">📊</span>Excel (.xlsx)<small>7 feuilles : projet, devis, récapitulatif, prix, calculs, journal, diagnostic</small></button>
+    <button id="xM"><span class="ic">📝</span>Markdown (.md)<small>Texte lisible avec tableaux, facile à partager</small></button>
+    <button id="xC"><span class="ic">📋</span>Copier le Markdown<small>Pour coller dans un message ou un document</small></button>
+  </div>
+  <div class="pgroup">Importer</div>
+  <div class="io"><label><span class="ic">📥</span>Choisir un fichier<small>.xlsx, .xls, .csv, .md, .txt ou sauvegarde .json</small><input type="file" id="ioFile" accept=".xlsx,.xls,.csv,.md,.markdown,.txt,.json"></label></div>
+  <div id="ioPrev"></div>`;
+  $('#xX').onclick = exportXlsx;
+  $('#xM').onclick = () => saveFile(fileBase() + '.md', buildMd(), 'text/markdown');
+  $('#xC').onclick = () => copy(buildMd());
+  $('#ioFile').onchange = e => { const f = e.target.files[0]; if (f) readImport(f); e.target.value = ''; };
+}
+$('#ioBtn').onclick = openIO;
+async function readImport(f) {
+  const ext = f.name.toLowerCase().split('.').pop();
+  try {
+    let T;
+    if (ext === 'json') { const o = JSON.parse(await f.text()); const t = {}; if (o.projet) t.projet = o.projet; return previewImport(null, o); }
+    if (['xlsx', 'xls', 'csv'].includes(ext)) {
+      const X = await loadXLSX(); const wb = X.read(await f.arrayBuffer(), { type: 'array' });
+      T = {}; wb.SheetNames.forEach(n => { T[n] = X.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '', raw: true }); });
+      if (ext === 'csv') { const k = Object.keys(T)[0]; T[f.name.replace(/\.csv$/i, '')] = T[k]; delete T[k]; }
+    } else T = parseMd(await f.text());
+    previewImport(routeTables(T), null);
+  } catch (e) { $('#ioPrev').innerHTML = '<div class="alert bad">Ce fichier n\'a pas pu être lu. Vérifiez qu\'il vient bien de Bâtir Sûr ou qu\'il a des colonnes reconnaissables (Désignation, Quantité…).</div>'; }
+}
+function previewImport(R, json) {
+  if (json) {
+    const keys = KEYS.filter(k => k !== 'photos' && json[k] !== undefined && typeof json[k] === typeof DEF[k]);
+    if (!keys.length) { $('#ioPrev').innerHTML = '<div class="alert bad">Sauvegarde invalide.</div>'; return; }
+    $('#ioPrev').innerHTML = `<div class="alert info">Sauvegarde complète détectée (${keys.length} sections). Elle remplacera les données actuelles.</div><div class="actions"><button class="btn" id="ioGo">Restaurer</button></div>`;
+    $('#ioGo').onclick = () => { keys.forEach(k => { S[k] = json[k]; save(k); }); renderAll(); closeModal(); toast('Sauvegarde restaurée ✔'); };
+    return;
+  }
+  const { plan, cnt } = R, lab = { devis: '📋 Devis — lignes', prix: '💰 Prix', calcs: '🧮 Calculs — paramètres', journal: '📸 Journal — entrées', diag: '🛡️ Diagnostic — réponses', projet: '🏷️ Projet — champs' };
+  const found = Object.keys(cnt).filter(k => cnt[k]);
+  if (!found.length) { $('#ioPrev').innerHTML = '<div class="alert warn">Aucune donnée reconnue dans ce fichier. Les colonnes attendues sont celles d\'un export Bâtir Sûr (ex. Lot, Désignation, Quantité, Unité, Prix unitaire).</div>'; return; }
+  $('#ioPrev').innerHTML = `<div class="pgroup">Contenu trouvé — choisissez ce qu'il faut importer</div>` + found.map(k => `<label class="chk"><input type="checkbox" data-imp="${k}" checked><span>${lab[k]} : <b>${cnt[k]}</b></span>${k === 'devis' || k === 'journal' ? `<select data-mode="${k}"><option value="replace">Remplacer l'existant</option><option value="add">Ajouter à l'existant</option></select>` : ''}</label>`).join('') +
+    `<div class="actions"><button class="btn" id="ioGo">Importer</button></div>`;
+  $('#ioGo').onclick = () => {
+    const on = k => { const c = $('#ioPrev').querySelector(`[data-imp="${k}"]`); return c && c.checked; }, mode = k => { const s = $('#ioPrev').querySelector(`[data-mode="${k}"]`); return s ? s.value : 'replace'; };
+    if (on('devis')) { S.devis = mode('devis') === 'add' ? S.devis.concat(plan.devis) : plan.devis; save('devis'); }
+    if (on('prix')) { Object.assign(S.prices, plan.prix); save('prices'); }
+    if (on('calcs')) { for (const id in plan.calcs) S.calcs[id] = Object.assign({}, S.calcs[id] || {}, plan.calcs[id]); save('calcs'); }
+    if (on('journal')) { if (mode('journal') === 'add') { const ids = new Set(S.journal.map(e => String(e.id))); S.journal = S.journal.concat(plan.journal.filter(e => !ids.has(String(e.id)))); } else S.journal = plan.journal; save('journal'); }
+    if (on('diag')) { for (const k in plan.diag) { if (plan.diag[k]) S.diag[k] = plan.diag[k]; else delete S.diag[k]; } save('diag'); }
+    if (on('projet') && plan.projet) { Object.assign(S.projet, plan.projet); save('projet'); }
+    renderAll(); closeModal(); toast('Import terminé ✔');
+  };
+}
+
+/* ================= init ================= */
+function renderAll() { renderPrices(); renderCalcs(); renderDiag(); renderGuide(); renderJournal(); updateDevisCount(); if ($('#t-devis').classList.contains('on')) renderDevis(); fillSlots(); refreshPh(); }
+/* ===== PWA ===== */
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; $('#installBtn').style.display = ''; $('#sync').style.marginLeft = '0'; });
+$('#installBtn').onclick = async () => { if (!installEvt) return; installEvt.prompt(); try { await installEvt.userChoice; } catch (e) {} installEvt = null; $('#installBtn').style.display = 'none'; };
+window.addEventListener('appinstalled', () => toast('Application installée ✔'));
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+renderPieges(); initJournalForm(); renderAll(); setSync('local'); loadLocalPhotos(); initCloud();
+</script>
+</body>
+</html>
