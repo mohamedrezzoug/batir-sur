@@ -1461,6 +1461,15 @@ $('#installBtn').onclick = async () => { if (!installEvt) return; installEvt.pro
 window.addEventListener('appinstalled', () => toast('Application installée ✔'));
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 renderPieges(); initJournalForm(); renderAll(); setSync('local'); loadLocalPhotos(); initCloud();
+
+/* ===== liens directs (#calc, #devis, #journal…) ===== */
+const TABS = ['calc', 'devis', 'journal', 'diag', 'fiss', 'guide', 'pieges', 'prix'];
+function fromHash() { const h = location.hash.slice(1); if (TABS.includes(h)) goTab(h); }
+window.addEventListener('hashchange', fromHash); fromHash();
+
+/* ===== ouvrir un fichier .xlsx / .md / .csv / .json avec l'application ===== */
+if ('launchQueue' in window) window.launchQueue.setConsumer(async p => { if (p.files && p.files.length) { const f = await p.files[0].getFile(); openIO(); readImport(f); } });
+
 </script>
 </body>
 </html>

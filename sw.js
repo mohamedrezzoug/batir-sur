@@ -1,4 +1,4 @@
-const CACHE = 'batir-sur-v1';
+const CACHE = 'batir-sur-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon-180.png'];
 const EXTRA = ['https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'];
 self.addEventListener('install', e => {

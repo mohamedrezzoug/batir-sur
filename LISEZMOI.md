@@ -14,7 +14,7 @@ Ce dossier est une application web installable (PWA). Une fois installée, elle 
 ## 1. Mettre en ligne sur GitHub Pages (gratuit)
 
 1. Sur github.com, créez un dépôt public nommé `batir-sur`.
-2. **Add file → Upload files**, glissez **tous les fichiers de ce dossier** (pas le dossier lui-même), puis **Commit changes**.
+2. **Add file → Upload files**, glissez **tout le contenu de ce dossier**, y compris le dossier `screenshots`, puis **Commit changes**.
 3. **Settings → Pages** : Source = *Deploy from a branch*, Branch = `main`, dossier `/ (root)`, **Save**.
 4. Après 1 à 2 minutes, l'application est en ligne à l'adresse :
    `https://<votre-nom-github>.github.io/batir-sur/`
@@ -45,7 +45,7 @@ Ouvrez-la une fois avec internet : ensuite elle marche hors ligne. Ouvrez une fo
 
 ## 4. Mettre à jour
 
-Remplacez `index.html` sur GitHub, et changez `batir-sur-v1` en `batir-sur-v2` dans `sw.js` pour forcer la mise à jour sur les téléphones.
+Remplacez `index.html` sur GitHub, et augmentez le numéro de version (`batir-sur-v2` → `batir-sur-v3`…) dans `sw.js` pour forcer la mise à jour sur les téléphones.
 
 ## Vos données
 
