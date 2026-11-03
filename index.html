@@ -220,6 +220,7 @@ h4.mg{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.05
 <nav><div class="wrap" id="nav">
   <button data-t="calc" class="on">🧮 Calculateur</button>
   <button data-t="plans">📐 Devis depuis plans</button>
+  <button data-t="dba">🏗️ Dossier BA</button>
   <button data-t="devis">📋 Devis global <span class="badge" id="devisCount">0</span></button>
   <button data-t="journal">📸 Journal de chantier</button>
   <button data-t="diag">🛡️ Diagnostic maison</button>
@@ -242,11 +243,17 @@ h4.mg{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.05
 <section class="tab" id="t-plans">
   <p class="intro">Donnez à l'application vos <b>plans PDF</b> (plan d'architecte et plan de béton armé) : elle relève les mesures, calcule le <b>devis du gros œuvre</b>, puis vous ajoutez vous-même le <b>second œuvre</b> pour obtenir le devis global.</p>
   <div class="card" id="plFiles"></div>
+  <div class="card" id="plCad" style="margin-top:16px;display:none"></div>
   <div class="card" id="plRead" style="margin-top:16px"></div>
   <div class="card" id="plMetre" style="margin-top:16px"></div>
   <div class="card tablecard" id="plGO" style="margin-top:16px"></div>
   <div class="card" id="plSO" style="margin-top:16px"></div>
   <p class="disclaimer">Le relevé automatique peut se tromper : vérifiez toujours le métré avec vos plans. Les quantités d'acier les plus fiables sont celles de la nomenclature du plan de béton armé.</p>
+</section>
+
+<section class="tab" id="t-dba">
+  <p class="intro">Bureau d'études béton armé : axes et niveaux, coffrage, ferraillage (BAEL), coupes, façades et métré. Dans l'onglet <b>Métré</b>, le bouton <b>« Envoyer au devis Bâtir Sûr »</b> met le gros œuvre dans le devis global. La lecture du plan par IA utilise la clé enregistrée à l'étape 2 de « 📐 Devis depuis plans ». <a href="dossier-ba.html" target="_blank" rel="noopener">Ouvrir en plein écran ↗</a></p>
+  <iframe id="dbaFrame" title="Dossier BA" style="width:100%;height:calc(100vh - 150px);min-height:620px;border:1px solid var(--line);border-radius:var(--r);background:#E9EDEF"></iframe>
 </section>
 
 <section class="tab" id="t-devis">
@@ -458,6 +465,7 @@ function goTab(t) {
   document.querySelectorAll('section.tab').forEach(s => s.classList.toggle('on', s.id === 't-' + t));
   if (t === 'devis') renderDevis();
   if (t === 'plans') renderPlanSO();
+  if (t === 'dba' && !$('#dbaFrame').src) $('#dbaFrame').src = 'dossier-ba.html';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 document.querySelectorAll('#nav button').forEach(b => b.onclick = () => goTab(b.dataset.t));
@@ -1083,7 +1091,7 @@ function renderDevis() {
   lots.forEach(lot => {
     rows += `<tr class="lot"><td colspan="4">${esc(lot)}</td><td class="num">${dh(T.by[lot])}</td><td></td></tr>`;
     S.devis.forEach((d, i) => { if ((d.lot || 'Divers') !== lot) return;
-      rows += `<tr><td>${esc(d.l)}${d.src === 'plan' ? '<span class="tag">📐 plan</span>' : ''}</td><td class="num"><input class="q" type="number" step="any" min="0" data-qi="${i}" value="${d.q}"></td><td>${esc(lineU(d))}</td><td class="num">${fmt(linePU(d), 2)}</td><td class="num"><b>${dh(linePU(d) * d.q)}</b></td><td><button class="btn ghost sm" data-del="${i}" aria-label="Supprimer">✕</button></td></tr>`; });
+      rows += `<tr><td>${esc(d.l)}${d.src === 'plan' ? '<span class="tag">📐 plan</span>' : d.src === 'dba' ? '<span class="tag">🏗️ Dossier BA</span>' : ''}</td><td class="num"><input class="q" type="number" step="any" min="0" data-qi="${i}" value="${d.q}"></td><td>${esc(lineU(d))}</td><td class="num">${fmt(linePU(d), 2)}</td><td class="num"><b>${dh(linePU(d) * d.q)}</b></td><td><button class="btn ghost sm" data-del="${i}" aria-label="Supprimer">✕</button></td></tr>`; });
   });
   const recap = lots.map(l => `<tr><td>${esc(l)}</td><td style="width:40%"><div class="bar"><i style="width:${T.mat ? T.by[l] / T.mat * 100 : 0}%"></i></div></td><td class="num">${fmt(T.mat ? T.by[l] / T.mat * 100 : 0, 0)} %</td><td class="num">${dh(T.by[l])}</td></tr>`).join('');
   box.innerHTML = `<h3 style="justify-content:space-between">📋 Devis global ${phBtn('devis:docs', 'Devis & factures des fournisseurs')}</h3>
@@ -1573,6 +1581,7 @@ async function setPdf(k, file) {
   renderPlanFiles();
 }
 async function loadPlanPdfs() {
+  try { const c = await idbDo('readonly', st => st.get('cad_file')); if (c && c.blob) CADF.file = { blob: c.blob, name: c.name, size: c.blob.size }; } catch (e) {}
   for (const k in PLAN_KINDS) {
     try { const v = await idbDo('readonly', st => st.get('pdf_' + k)); if (v && v.blob) PDFS[k] = { blob: v.blob, name: v.name, size: v.blob.size }; } catch (e) {}
   }
@@ -1621,6 +1630,14 @@ function renderPlanFiles() {
       <div class="pthumbs" id="th_${k}"><span class="note">Chargement de l'aperçu…</span></div>` : ''}
     <div class="actions"><label class="btn${P ? ' ghost' : ''} sm">${P ? 'Changer' : '📤 Choisir le PDF'}<input type="file" accept="application/pdf,.pdf" data-pdf="${k}"></label>
     ${P ? `<button class="btn ghost sm" data-pdfdel="${k}">Retirer</button>` : ''}</div></div>`; }).join('')}</div>`;
+  box.insertAdjacentHTML('beforeend', `<div class="pdfbox${CADF.file ? ' has' : ''}" style="margin-top:14px">
+    <h4>📐 Fichier AutoCAD (DWG ou DXF) <span class="tag">nouveau</span></h4><p class="note" style="margin:0 0 8px">Plus précis qu'un PDF : l'application lit les vraies mesures du dessin, les calques, les pièces et les niveaux. Mesurez les murs directement sur le plan.</p>
+    ${CADF.file ? `<div style="font-weight:700;font-size:14px;word-break:break-all">📐 ${esc(CADF.file.name)}</div><small class="note">${CADF.file.size < 1048576 ? fmt(CADF.file.size / 1024, 0) + ' Ko' : fmt(CADF.file.size / 1048576, 1) + ' Mo'}</small>` : ''}
+    <div class="actions"><label class="btn${CADF.file ? ' ghost' : ''} sm">${CADF.file ? 'Changer' : '📤 Choisir le fichier .dwg / .dxf'}<input type="file" accept=".dwg,.dxf" id="cadIn"></label>
+    ${CADF.file ? `<button class="btn sm" id="cadOpen">${CADF.views ? 'Afficher le plan' : 'Ouvrir le plan'}</button><button class="btn ghost sm" id="cadDel">Retirer</button>` : ''}</div></div>`);
+  $('#cadIn').onchange = e => setCad(e.target.files[0]);
+  if ($('#cadOpen')) $('#cadOpen').onclick = () => { if (CADF.views) { CADF.open = true; renderCad(); } else openCad(); setTimeout(() => $('#plCad').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100); };
+  if ($('#cadDel')) $('#cadDel').onclick = async () => { CADF.file = null; CADF.views = null; CADF.open = false; try { await idbDo('readwrite', st => st.delete('cad_file')); } catch (e) {} renderPlanFiles(); renderCad(); };
   box.querySelectorAll('[data-pdf]').forEach(i => i.onchange = e => setPdf(i.dataset.pdf, e.target.files[0]));
   box.querySelectorAll('[data-pdfdel]').forEach(b => b.onclick = async () => { const k = b.dataset.pdfdel; delete PDFS[k]; try { await idbDo('readwrite', st => st.delete('pdf_' + k)); } catch (e) {} renderPlanFiles(); });
   for (const k in PDFS) renderThumbs(k);
@@ -1634,8 +1651,10 @@ const AI = {
 const aiKey = p => { try { return localStorage.getItem('bs_key_' + p) || ''; } catch (e) { return ''; } };
 const setAiKey = (p, v) => { try { v ? localStorage.setItem('bs_key_' + p, v) : localStorage.removeItem('bs_key_' + p); } catch (e) {} };
 const blob64 = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(b); });
-function aiPrompt(kinds) {
-  return `Tu es un métreur en bâtiment au Maroc. Voici ${kinds.length > 1 ? 'deux fichiers PDF' : 'un fichier PDF'} : ${kinds.map(k => k === 'archi' ? 'le PLAN D\'ARCHITECTE (plans de niveaux, coupes, façades)' : 'le PLAN DE BÉTON ARMÉ (fondations, coffrage, ferraillage, nomenclature des aciers)').join(' et ')}.
+function aiPrompt(kinds, cad) {
+  const src = kinds.map(k => k === 'archi' ? 'le PLAN D\'ARCHITECTE en PDF (plans de niveaux, coupes, façades)' : 'le PLAN DE BÉTON ARMÉ en PDF (fondations, coffrage, ferraillage, nomenclature des aciers)');
+  if (cad) src.push('des vues tirées du FICHIER AUTOCAD (plans de niveaux et coupes)');
+  return `Tu es un métreur en bâtiment au Maroc. Voici ${src.join(' et ')}.
 Fais le métré du GROS ŒUVRE et relève les informations utiles au second œuvre. Lis les cotes, les tableaux, les cartouches et les nomenclatures. Compte les éléments identiques (même référence).
 Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, avec exactement cette structure (nombres en notation décimale avec un point, 0 si l'information n'existe pas) :
 {
@@ -1666,19 +1685,20 @@ function parseJSON(t) {
   if (a < 0 || b < a) throw new Error('Réponse sans JSON');
   return JSON.parse(t.slice(a, b + 1));
 }
-async function aiCall(prov, key, model, kinds, b64) {
+async function aiCall(prov, key, model, prompt, docs) {
   let r, j;
   if (prov === 'gemini') {
-    const parts = [{ text: aiPrompt(kinds) }];
-    kinds.forEach((k, i) => { parts.push({ text: 'Fichier : ' + (k === 'archi' ? 'plan d\'architecte' : 'plan de béton armé') }); parts.push({ inline_data: { mime_type: 'application/pdf', data: b64[i] } }); });
+    const parts = [{ text: prompt }];
+    docs.forEach(d => { parts.push({ text: 'Fichier : ' + d.title }); parts.push({ inline_data: { mime_type: d.mime, data: d.data } }); });
     r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model.replace(/^models\//, '')) + ':generateContent?key=' + encodeURIComponent(key), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0.1, responseMimeType: 'application/json' } })
     });
     j = await r.json().catch(() => ({}));
   } else {
-    const content = kinds.map((k, i) => ({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64[i] }, title: k === 'archi' ? 'Plan d\'architecte' : 'Plan de béton armé' }));
-    content.push({ type: 'text', text: aiPrompt(kinds) });
+    const content = [];
+    docs.forEach(d => { content.push({ type: 'text', text: 'Fichier : ' + d.title }); content.push(d.mime === 'application/pdf' ? { type: 'document', source: { type: 'base64', media_type: d.mime, data: d.data } } : { type: 'image', source: { type: 'base64', media_type: d.mime, data: d.data } }); });
+    content.push({ type: 'text', text: prompt });
     r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({ model, max_tokens: 8000, messages: [{ role: 'user', content }] })
@@ -1705,18 +1725,21 @@ async function aiRun() {
   const A = S.plan.ai, prov = A.prov, key = aiKey(prov);
   let model = (A.model || AI[prov].model).trim();
   const kinds = Object.keys(PLAN_KINDS).filter(k => PDFS[k]);
-  if (!kinds.length) return toast('Ajoutez d\'abord au moins un plan PDF');
+  const useCad = !!(CADF.views && CADF.views.some(v => v.ai));
+  if (!kinds.length && !useCad) return toast(CADF.file && !CADF.views ? 'Ouvrez d\'abord le plan AutoCAD (étape 1)' : 'Ajoutez d\'abord au moins un plan PDF ou AutoCAD');
   if (!key) return toast('Collez votre clé API');
   const size = kinds.reduce((s, k) => s + PDFS[k].size, 0);
-  if (size > 19 * 1048576) return toast('Plans trop lourds (> 19 Mo) : exportez-les en PDF plus léger');
+  if (size > 17 * 1048576) return toast('Plans trop lourds (> 17 Mo) : exportez-les en PDF plus léger');
   const btn = $('#aiGo'), stat = t => { btn.innerHTML = '<span class="spin"></span> ' + t; };
   btn.disabled = true; stat('Lecture des plans… (30 s à 2 min)'); $('#aiErr').innerHTML = '';
   const tried = [], setModel = m => { model = m; A.model = m; save('plan'); if ($('#aiModel')) $('#aiModel').value = m; };
   try {
-    const b64 = await Promise.all(kinds.map(k => blob64(PDFS[k].blob)));
+    const docs = await Promise.all(kinds.map(async k => ({ mime: 'application/pdf', data: await blob64(PDFS[k].blob), title: k === 'archi' ? 'plan d\'architecte (PDF)' : 'plan de béton armé (PDF)' })));
+    if (useCad) { stat('Préparation des vues AutoCAD…'); docs.push(...await cadImages(6)); stat('Lecture des plans… (30 s à 2 min)'); }
+    const prompt = aiPrompt(kinds, useCad) + (useCad ? '\n\n' + cadSummary() + '\nLes images « AutoCAD » sont des vues dessinées à partir du fichier DWG/DXF (murs extérieurs en brun foncé, cloisons en orange, poteaux en rouge foncé, fenêtres en bleu). Utilise en priorité les cotes et les surfaces écrites.' : '');
     let text = null, lastErr = null, alts = null, waits = [8, 20];
     for (let step = 0; step < 8 && text === null; step++) {
-      try { tried.push(model); text = await aiCall(prov, key, model, kinds, b64); }
+      try { tried.push(model); text = await aiCall(prov, key, model, prompt, docs); }
       catch (e) {
         lastErr = e;
         const sug = e.message.match(/use\s+(?:models\/)?([a-z0-9][\w.-]*[a-z0-9])/i);
@@ -2019,7 +2042,462 @@ function renderPlanSO() {
   };
   $('#soDevis').onclick = () => goTab('devis');
 }
-function renderPlans() { planInit(); renderPlanRead(); renderMetre(); renderGO(); renderPlanSO(); }
+function renderPlans() { planInit(); renderPlanRead(); renderMetre(); renderGO(); renderPlanSO(); renderCad(); }
+
+/* Lecture DWG / DXF pour Bâtir Sûr : normalisation, explosion des blocs, dessin SVG, relevé */
+(function (root) {
+  const RAD = Math.PI / 180;
+  const groupOf = l => String(l || '0').replace(/_Stylo_No__\d+$/i, '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim() || '0';
+  const ROLES = {
+    mext: 'Murs extérieurs', mint: 'Cloisons / refends', pot: 'Poteaux', pout: 'Poutres / longrines', sem: 'Fondations',
+    fen: 'Fenêtres', porte: 'Portes', cot: 'Cotation', txt: 'Textes', mob: 'Mobilier / équipement', axe: 'Axes', ign: 'Ignorer', autre: 'Autre'
+  };
+  function guessRole(g) {
+    const s = g.toLowerCase();
+    if (/p[ée]riph|ext[ée]r|façade|facade|mur ext/.test(s) && /mur/.test(s)) return 'mext';
+    if (/refend|cloison|int[ée]r|mur/.test(s)) return 'mint';
+    if (/poteau|\bpot\b|column|colonne/.test(s)) return 'pot';
+    if (/pout|longr|chain|beam/.test(s)) return 'pout';
+    if (/semel|fond|footing/.test(s)) return 'sem';
+    if (/fen[eê]tre|window|vitr/.test(s)) return 'fen';
+    if (/porte|door/.test(s)) return 'porte';
+    if (/cot|dim/.test(s)) return 'cot';
+    if (/axe|axis|grid/.test(s)) return 'axe';
+    if (/texte|text|anot|annot/.test(s)) return 'txt';
+    if (/mobil|equip|fourniture|sanit/.test(s)) return 'mob';
+    if (/cartouche|defpoints|terrain|topo|dessins plac/.test(s)) return 'ign';
+    return 'autre';
+  }
+  // matrices affines [a,b,c,d,e,f] : x' = a x + c y + e ; y' = b x + d y + f
+  const mul = (m, n) => [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1], m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3], m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]];
+  const ap = (m, x, y) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
+  const ID = [1, 0, 0, 1, 0, 0];
+  const scaleOf = m => Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2])) || 1;
+  const rotOf = m => Math.atan2(m[1], m[0]);
+  function cleanText(s) {
+    return String(s == null ? '' : s).replace(/\\P/g, ' ').replace(/\\[A-Za-z][^;\\{}]*;/g, '').replace(/[{}]/g, '').replace(/%%[uUoOdDcCpP]/g, m => ({ '%%d': '°', '%%c': 'Ø', '%%p': '±' }[m.toLowerCase()] || '')).replace(/\s+/g, ' ').trim();
+  }
+  /* ---------- normalisation : libredwg-web (DWG) ---------- */
+  function fromLibredwg(db) {
+    const blocks = {};
+    (db.tables && db.tables.BLOCK_RECORD && db.tables.BLOCK_RECORD.entries || []).forEach(b => { blocks[b.name] = { base: b.basePoint || { x: 0, y: 0 }, ents: (b.entities || []).map(convLD).filter(Boolean) }; });
+    const ms = (db.entities || []).map(convLD).filter(Boolean);
+    return { blocks, ms, units: db.header && db.header.INSUNITS };
+  }
+  function convLD(e) {
+    const L = e.layer, p = q => [q.x, q.y];
+    switch (e.type) {
+      case 'LINE': return { t: 'L', L, a: p(e.startPoint), b: p(e.endPoint) };
+      case 'LWPOLYLINE': case 'POLYLINE2D': case 'POLYLINE': return { t: 'P', L, pts: (e.vertices || []).map(v => [v.x, v.y, v.bulge || 0]), closed: !!((e.flag || e.flags || 0) & 1) || !!e.closed };
+      case 'CIRCLE': return { t: 'C', L, c: p(e.center), r: e.radius };
+      case 'ARC': return { t: 'A', L, c: p(e.center), r: e.radius, a0: e.startAngle, a1: e.endAngle };
+      case 'ELLIPSE': return { t: 'E', L, c: p(e.center), M: p(e.majorAxisEndPoint), k: e.axisRatio, a0: e.startAngle, a1: e.endAngle };
+      case 'TEXT': return { t: 'T', L, p: p(e.startPoint), h: e.textHeight, rot: e.rotation || 0, s: cleanText(e.text) };
+      case 'MTEXT': return { t: 'T', L, p: p(e.insertionPoint), h: e.textHeight, rot: e.rotation || (e.direction ? Math.atan2(e.direction.y, e.direction.x) : 0), s: cleanText(e.text) };
+      case 'HATCH': return { t: 'H', L, polys: (e.boundaryPaths || []).filter(b => b.vertices && b.vertices.length > 2).map(b => b.vertices.map(v => [v.x, v.y])) };
+      case 'INSERT': return { t: 'I', L, name: e.name, p: p(e.insertionPoint), sx: e.xScale || 1, sy: e.yScale || 1, rot: e.rotation || 0, attrs: (e.attribs || []).map(a => a.text && cleanText(a.text.text)).filter(Boolean) };
+      case 'DIMENSION': return { t: 'D', L, name: e.name, m: e.measurement, txt: cleanText(e.text), p: e.textPoint ? p(e.textPoint) : null };
+      case 'SOLID': case 'TRACE': return e.corner1 ? { t: 'H', L, polys: [[e.corner1, e.corner2, e.corner4 || e.corner3, e.corner3].filter(Boolean).map(p)] } : null;
+      default: return null;
+    }
+  }
+  /* ---------- normalisation : dxf-parser (DXF) ---------- */
+  function fromDxfParser(d) {
+    const blocks = {};
+    Object.entries(d.blocks || {}).forEach(([n, b]) => { blocks[n] = { base: b.position || { x: 0, y: 0 }, ents: (b.entities || []).map(convDP).filter(Boolean) }; });
+    return { blocks, ms: (d.entities || []).map(convDP).filter(Boolean), units: d.header && d.header.$INSUNITS };
+  }
+  function convDP(e) {
+    const L = e.layer, p = q => [q.x, q.y];
+    switch (e.type) {
+      case 'LINE': return e.vertices && e.vertices.length > 1 ? { t: 'L', L, a: p(e.vertices[0]), b: p(e.vertices[1]) } : null;
+      case 'LWPOLYLINE': case 'POLYLINE': return { t: 'P', L, pts: (e.vertices || []).map(v => [v.x, v.y, v.bulge || 0]), closed: !!e.shape || !!e.closed };
+      case 'CIRCLE': return { t: 'C', L, c: p(e.center), r: e.radius };
+      case 'ARC': return { t: 'A', L, c: p(e.center), r: e.radius, a0: e.startAngle, a1: e.endAngle };
+      case 'ELLIPSE': return { t: 'E', L, c: p(e.center), M: p(e.majorAxisEndPoint), k: e.axisRatio, a0: e.startAngle, a1: e.endAngle };
+      case 'TEXT': return { t: 'T', L, p: p(e.startPoint || e.position || { x: 0, y: 0 }), h: e.textHeight, rot: (e.rotation || 0) * RAD, s: cleanText(e.text) };
+      case 'MTEXT': return { t: 'T', L, p: p(e.position || { x: 0, y: 0 }), h: e.height, rot: (e.rotation || 0) * RAD, s: cleanText(e.text) };
+      case 'INSERT': return { t: 'I', L, name: e.name, p: p(e.position || { x: 0, y: 0 }), sx: e.xScale || 1, sy: e.yScale || 1, rot: (e.rotation || 0) * RAD, attrs: [] };
+      case 'DIMENSION': return { t: 'D', L, name: e.block, m: e.actualMeasurement, txt: cleanText(e.text), p: e.middleOfText ? p(e.middleOfText) : null };
+      case 'SOLID': return e.points ? { t: 'H', L, polys: [e.points.map(p)] } : null;
+      default: return null;
+    }
+  }
+  /* ---------- explosion des blocs ---------- */
+  function explode(N, list, m, depth, out, layerOverride) {
+    for (const e of list) {
+      const L = (e.L === '0' && layerOverride) ? layerOverride : e.L;
+      if (e.t === 'I') {
+        const B = N.blocks[e.name]; if (!B || depth > 8 || /^\*(D|E)\d/.test(e.name) && depth > 6) continue;
+        const c = Math.cos(e.rot), s = Math.sin(e.rot);
+        const local = [c * e.sx, s * e.sx, -s * e.sy, c * e.sy, e.p[0], e.p[1]];
+        const mm = mul(m, mul(local, [1, 0, 0, 1, -B.base.x, -B.base.y]));
+        explode(N, B.ents, mm, depth + 1, out, L);
+        continue;
+      }
+      if (e.t === 'D') { if (e.name && N.blocks[e.name]) explode(N, N.blocks[e.name].ents, m, depth + 1, out, L); out.push({ t: 'D', L, m: e.m, txt: e.txt, p: e.p && ap(m, e.p[0], e.p[1]) }); continue; }
+      const k = scaleOf(m);
+      if (e.t === 'L') out.push({ t: 'L', L, a: ap(m, ...e.a), b: ap(m, ...e.b) });
+      else if (e.t === 'P') out.push({ t: 'P', L, closed: e.closed, pts: e.pts.map(q => ap(m, q[0], q[1]).concat(q[2] || 0)) });
+      else if (e.t === 'C') out.push({ t: 'C', L, c: ap(m, ...e.c), r: e.r * k });
+      else if (e.t === 'A') { const r = rotOf(m); out.push({ t: 'A', L, c: ap(m, ...e.c), r: e.r * k, a0: e.a0 + r, a1: e.a1 + r }); }
+      else if (e.t === 'E') { const c0 = ap(m, ...e.c), tip = ap(m, e.c[0] + e.M[0], e.c[1] + e.M[1]); out.push({ t: 'E', L, c: c0, M: [tip[0] - c0[0], tip[1] - c0[1]], k: e.k, a0: e.a0, a1: e.a1 }); }
+      else if (e.t === 'T') out.push({ t: 'T', L, p: ap(m, ...e.p), h: (e.h || 0.2) * k, rot: e.rot + rotOf(m), s: e.s });
+      else if (e.t === 'H') out.push({ t: 'H', L, polys: e.polys.map(pl => pl.map(q => ap(m, q[0], q[1]))) });
+    }
+    return out;
+  }
+  /* vues : chaque bloc inséré au premier niveau = une vue ; le reste = la feuille */
+  function views(N) {
+    const vs = [], rest = [];
+    N.ms.forEach(e => {
+      if (e.t === 'I' && N.blocks[e.name] && !/^\*/.test(e.name) && N.blocks[e.name].ents.length > 30) {
+        vs.push({ name: e.name, ents: explode(N, [e], ID, 0, []) });
+      } else rest.push(e);
+    });
+    const r = explode(N, rest, ID, 0, []);
+    if (r.length > 20 || !vs.length) vs.push({ name: vs.length ? 'Feuille (autres dessins)' : 'Dessin', ents: r });
+    vs.forEach(v => { v.box = bbox(v.ents); v.title = viewTitle(v); });
+    return vs;
+  }
+  function viewTitle(v) {
+    const t = v.ents.filter(e => e.t === 'T' && e.s && e.h > 0).sort((a, b) => b.h - a.h)[0];
+    return v.name;
+  }
+  function bbox(ents) {
+    const xs = [], ys = [];
+    const add = q => { if (q && isFinite(q[0]) && isFinite(q[1])) { xs.push(q[0]); ys.push(q[1]); } };
+    ents.forEach(e => { if (e.t === 'L') { add(e.a); add(e.b); } else if (e.t === 'P') e.pts.forEach(add); else if (e.t === 'C' || e.t === 'A' || e.t === 'E') add(e.c); else if (e.t === 'H') e.polys.forEach(pl => pl.forEach(add)); else if (e.t === 'T') add(e.p); });
+    if (!xs.length) return { x0: 0, y0: 0, x1: 1, y1: 1 };
+    xs.sort((a, b) => a - b); ys.sort((a, b) => a - b);
+    const q = (a, f) => a[Math.min(a.length - 1, Math.max(0, Math.round(f * (a.length - 1))))];
+    // ignore les 0,3 % de points les plus éloignés (cartouches, points perdus)
+    let x0 = q(xs, 0.003), x1 = q(xs, 0.997), y0 = q(ys, 0.003), y1 = q(ys, 0.997);
+    const pad = Math.max(x1 - x0, y1 - y0) * 0.03 || 1;
+    return { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad };
+  }
+  /* ---------- dessin SVG ---------- */
+  const COL = { mext: '#b8522a', mint: '#d9822b', pot: '#7a1f1f', pout: '#2f6390', sem: '#5b3fa0', fen: '#1f8aa8', porte: '#8a6d3b', cot: '#2c7a4b', txt: '#222', mob: '#9aa3a6', axe: '#c0544a', ign: '#c9c9c9', autre: '#555' };
+  const escx = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function arcPath(c, r, a0, a1) {
+    let d = a1 - a0; while (d <= 0) d += 2 * Math.PI;
+    const p0 = [c[0] + r * Math.cos(a0), -(c[1] + r * Math.sin(a0))], p1 = [c[0] + r * Math.cos(a0 + d), -(c[1] + r * Math.sin(a0 + d))];
+    return `M${p0[0]} ${p0[1]}A${r} ${r} 0 ${d > Math.PI ? 1 : 0} 0 ${p1[0]} ${p1[1]}`;
+  }
+  function svg(v, roleOf, hidden, opts) {
+    opts = opts || {};
+    const b = v.box, W = b.x1 - b.x0, H = b.y1 - b.y0, K = 1000 / Math.max(W, H), sw = 0.75;
+    const X = x => Math.round((x - b.x0) * K * 100) / 100, Y = y => Math.round((b.y1 - y) * K * 100) / 100, S = d => Math.round(d * K * 100) / 100;
+    const VW = Math.round(W * K), VH = Math.round(H * K);
+    let h = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VW} ${VH}" ${opts.size ? `width="${opts.size}" height="${Math.round(opts.size * VH / VW)}"` : ''} style="background:#fff" stroke-linecap="round"><g fill="none" stroke-width="${sw}">`;
+    for (const e of v.ents) {
+      const g = groupOf(e.L), r = roleOf(g); if (hidden[g]) continue;
+      const c = COL[r] || '#555', strong = r === 'mext' || r === 'mint' || r === 'pot';
+      const st = `stroke="${c}"${strong ? ` stroke-width="${sw * 2}"` : ''}`;
+      if (e.t === 'L') h += `<line x1="${X(e.a[0])}" y1="${Y(e.a[1])}" x2="${X(e.b[0])}" y2="${Y(e.b[1])}" ${st}/>`;
+      else if (e.t === 'P') h += `<path d="${e.pts.map((q, i) => (i ? 'L' : 'M') + X(q[0]) + ' ' + Y(q[1])).join('') + (e.closed ? 'Z' : '')}" ${st}/>`;
+      else if (e.t === 'C') h += `<circle cx="${X(e.c[0])}" cy="${Y(e.c[1])}" r="${S(e.r)}" ${st}/>`;
+      else if (e.t === 'A') { let d = e.a1 - e.a0; while (d <= 0) d += 2 * Math.PI; const r0 = S(e.r);
+        h += `<path d="M${X(e.c[0] + e.r * Math.cos(e.a0))} ${Y(e.c[1] + e.r * Math.sin(e.a0))}A${r0} ${r0} 0 ${d > Math.PI ? 1 : 0} 0 ${X(e.c[0] + e.r * Math.cos(e.a0 + d))} ${Y(e.c[1] + e.r * Math.sin(e.a0 + d))}" ${st}/>`; }
+      else if (e.t === 'E') { const R = Math.hypot(e.M[0], e.M[1]), ang = Math.atan2(e.M[1], e.M[0]); h += `<ellipse cx="${X(e.c[0])}" cy="${Y(e.c[1])}" rx="${S(R)}" ry="${S(R * e.k)}" transform="rotate(${Math.round(-ang / RAD * 100) / 100} ${X(e.c[0])} ${Y(e.c[1])})" ${st}/>`; }
+      else if (e.t === 'H') h += e.polys.map(pl => `<polygon points="${pl.map(q => X(q[0]) + ',' + Y(q[1])).join(' ')}" fill="${c}" fill-opacity="${strong ? 0.55 : 0.18}" stroke="none"/>`).join('');
+      else if (e.t === 'T' && e.s) h += `<text x="${X(e.p[0])}" y="${Y(e.p[1])}" font-size="${S(e.h)}" font-family="Arial,sans-serif" fill="${r === 'cot' ? COL.cot : '#222'}" stroke="none"${e.rot ? ` transform="rotate(${Math.round(-e.rot / RAD * 100) / 100} ${X(e.p[0])} ${Y(e.p[1])})"` : ''}>${escx(e.s)}</text>`;
+    }
+    return h + '</g></svg>';
+  }
+  /* conversion écran (coordonnées du SVG 0..1000) -> dessin */
+  function toModel(v, sx, sy) { const b = v.box, K = 1000 / Math.max(b.x1 - b.x0, b.y1 - b.y0); return [b.x0 + sx / K, b.y1 - sy / K]; }
+  function toSvg(v, x, y) { const b = v.box, K = 1000 / Math.max(b.x1 - b.x0, b.y1 - b.y0); return [(x - b.x0) * K, (b.y1 - y) * K]; }
+  /* ---------- relevé ---------- */
+  const polyArea = pl => { let a = 0; for (let i = 0; i < pl.length; i++) { const p = pl[i], q = pl[(i + 1) % pl.length]; a += p[0] * q[1] - q[0] * p[1]; } return Math.abs(a / 2); };
+  const polyLen = (pts, closed) => { let s = 0; for (let i = 1; i < pts.length; i++) s += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (closed && pts.length > 2) s += Math.hypot(pts[0][0] - pts.at(-1)[0], pts[0][1] - pts.at(-1)[1]); return s; };
+  function unitFactor(v, units) {
+    // 1 unité du dessin = f mètres. Estimation par la taille du dessin si l'en-tête est douteux.
+    const b = v.box, size = Math.max(b.x1 - b.x0, b.y1 - b.y0);
+    if (size > 2000) return 0.001; if (size > 200) return 0.01; if (size > 2) return 1;
+    return { 4: 0.001, 5: 0.01, 6: 1 }[units] || 1;
+  }
+  const NUM = s => parseFloat(String(s).replace(/\s/g, '').replace(',', '.'));
+  const ROOM_RX = [[/chambre|\bch\b|suite|parent|enfant|غرفة|bedroom/i, 'chambre'], [/salon|s[ée]jour|living|r[ée]ception|bureau|coin feu|صالون/i, 'salon'], [/cuisine|kitchen|مطبخ/i, 'cuisine'], [/s\.?d\.?b|bain|douche|hammam|حمام/i, 'sdb'], [/\bwc\b|w\.c|toilette|مرحاض/i, 'wc'], [/hall|d[ée]gagement|couloir|circulation|escalier|palier|entr[ée]e|sas|dressing/i, 'circ']];
+  function analyse(v, roleOf, units) {
+    const f = unitFactor(v, units), g = {};
+    const G = n => g[n] || (g[n] = { n, role: roleOf(n), len: 0, area: 0, count: 0, ents: 0 });
+    const texts = [];
+    v.ents.forEach(e => {
+      const x = G(groupOf(e.L)); x.ents++;
+      if (e.t === 'L') x.len += Math.hypot(e.b[0] - e.a[0], e.b[1] - e.a[1]) * f;
+      else if (e.t === 'P') { x.len += polyLen(e.pts, e.closed) * f; if (e.closed) x.area += polyArea(e.pts) * f * f; }
+      else if (e.t === 'H') x.area += e.polys.reduce((s, pl) => s + polyArea(pl), 0) * f * f;
+      else if (e.t === 'C') x.count++;
+      else if (e.t === 'T' && e.s) texts.push(e);
+    });
+    // surfaces écrites : « 26,04 m » suivi de « 2 », ou « 12,5 m² » ; le nom est juste au-dessus
+    const rooms = [], areas = [];
+    texts.forEach((t, i) => {
+      const m = t.s.match(/^(\d+(?:[.,]\d+)?)\s*m(?:²|2)?$/i);
+      if (m && /[.,]/.test(m[1]) && (/m(²|2)$/i.test(t.s) || /m$/i.test(t.s))) areas.push({ v: NUM(m[1]), p: t.p, h: t.h });
+    });
+    const STOP = /alignement|nord|coupe|façade|facade|fondation|sous sol|^rdc$|^etage$|^étage$|^terrasse$|^vide|cour anglaise/i;
+    const names = texts.filter(t => t.s === '-' || /[a-zà-ü]{2,}/i.test(t.s) && !STOP.test(t.s) && t.s.length < 30 && !/^\d/.test(t.s));
+    areas.forEach(a => {
+      const lim = Math.max(a.h * 12, 1.2 / f);
+      const near = names.filter(n => n.p[1] > a.p[1] - a.h * 0.2 && n.p[1] - a.p[1] < lim && Math.abs(n.p[0] - a.p[0]) < lim * 1.2)
+        .sort((x, y) => (x.p[1] - a.p[1]) - (y.p[1] - a.p[1]));
+      // on garde la pile de noms continue au-dessus de la surface
+      const pile = []; let lastY = a.p[1];
+      for (const n of near) { if (pile.length && n.p[1] - lastY > Math.max(n.h, a.h) * 3.2) break; pile.push(n); lastY = n.p[1]; }
+      const nom = pile.reverse().map(n => n.s).filter(x => x !== '-').join(' - ').trim() || 'Pièce';
+      const type = (ROOM_RX.find(([rx]) => rx.test(nom)) || [0, 'autre'])[1];
+      rooms.push({ nom, type, S: a.v });
+    });
+    const levels = texts.map(t => t.s.match(/^([+-]\d+[.,]\d{2})$/)).filter(Boolean).map(m => NUM(m[1]));
+    const sections = {}; texts.forEach(t => { const m = t.s.match(/^(\d{2,3})\s*[xX×*]\s*(\d{2,3})$/); if (m) { const k = m[1] + '×' + m[2]; sections[k] = (sections[k] || 0) + 1; } });
+    const b = v.box;
+    return { f, groups: Object.values(g).sort((a, b) => b.len - a.len), rooms, levels: [...new Set(levels)].sort((a, b) => a - b), sections, texts: texts.map(t => t.s),
+      W: (b.x1 - b.x0) * f, H: (b.y1 - b.y0) * f };
+  }
+  /* murs : longueur ≈ (longueur des traits du calque) / 2, car un mur est dessiné par ses deux faces */
+  function wallsOf(A) {
+    const s = r => A.groups.filter(x => x.role === r).reduce((t, x) => t + x.len, 0) / 2;
+    const ar = r => A.groups.filter(x => x.role === r).reduce((t, x) => t + x.area, 0);
+    return { ext: s('mext'), int: s('mint'), extHatch: ar('mext'), intHatch: ar('mint') };
+  }
+  /* aimantation : extrémités les plus proches */
+  function snapPoints(v) { const P = []; v.ents.forEach(e => { if (e.t === 'L') { P.push(e.a, e.b); } else if (e.t === 'P') e.pts.forEach(q => P.push([q[0], q[1]])); }); return P; }
+  function levelOf(v) {
+    const T = (v.name + ' ' + v.ents.filter(e => e.t === 'T').map(e => e.s).join(' ')).toLowerCase();
+    const n = v.name.toLowerCase();
+    const k = s => /sous[ -]?sol/.test(s) ? 'Sous-sol' : /\brdc\b|rez/.test(s) ? 'RDC' : /[ée]tage|r\+1/.test(s) ? 'Étage' : /terrasse/.test(s) ? 'Terrasse' : '';
+    if (/^feuille|^dessin$/i.test(v.name)) return { kind: 'autre' };
+    if (/coupe/.test(T) && !k(n)) return { kind: 'coupe' };
+    const lv = k(n) || (/^feuille|^dessin$/i.test(v.name) ? '' : k(T.slice(0, 400)));
+    return lv ? { kind: 'plan', level: lv } : { kind: /façade|facade/.test(T) ? 'facade' : 'autre' };
+  }
+  root.CAD = { levelOf, fromLibredwg, fromDxfParser, views, svg, analyse, wallsOf, groupOf, guessRole, ROLES, COL, polyArea, polyLen, snapPoints, unitFactor, toModel, toSvg };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+/* ---------- fichier AutoCAD (DWG / DXF) ---------- */
+const LDW_URL = 'https://cdn.jsdelivr.net/npm/@mlightcad/libredwg-web@0.8.3/';
+const DXFP_URL = 'https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js';
+const CADF = { file: null, views: null, cur: 0, busy: false, err: '', vb: {}, mode: 'pan', pts: [], closed: false, units: null, open: false };
+let ldwP = null, dxfP = null;
+function libredwg() {
+  if (!ldwP) ldwP = (async () => { const m = await import(LDW_URL + 'dist/libredwg-web.js'); const lib = await m.LibreDwg.create(LDW_URL + 'wasm'); return { lib, T: m.Dwg_File_Type }; })().catch(e => { ldwP = null; throw e; });
+  return ldwP;
+}
+function dxfParser() {
+  if (!dxfP) dxfP = new Promise((res, rej) => { if (window.DxfParser) return res(window.DxfParser); const s = document.createElement('script'); s.src = DXFP_URL; s.onload = () => res(window.DxfParser); s.onerror = () => { dxfP = null; rej(new Error('dxf-parser')); }; document.head.appendChild(s); });
+  return dxfP;
+}
+const cadRole = g => (S.plan.cadRoles && S.plan.cadRoles[g]) || CAD.guessRole(g);
+async function setCad(file) {
+  if (!file) return;
+  if (!/\.(dwg|dxf)$/i.test(file.name)) return toast('Choisissez un fichier .dwg ou .dxf');
+  CADF.file = { blob: file, name: file.name, size: file.size }; CADF.views = null; CADF.err = '';
+  try { await idbDo('readwrite', st => st.put({ blob: file, name: file.name }, 'cad_file')); } catch (e) {}
+  renderPlanFiles(); openCad();
+}
+async function openCad() {
+  if (!CADF.file || CADF.busy) return;
+  CADF.busy = true; CADF.err = ''; CADF.open = true; renderCad();
+  try {
+    const buf = await CADF.file.blob.arrayBuffer();
+    let N;
+    if (/\.dxf$/i.test(CADF.file.name)) {
+      const P = await dxfParser(), txt = new TextDecoder('utf-8').decode(buf);
+      N = CAD.fromDxfParser(new P().parseSync(txt));
+    } else {
+      const head = new TextDecoder('ascii').decode(buf.slice(0, 6));
+      if (!/^AC10\d\d/.test(head)) throw new Error('Ce fichier n\'est pas un DWG valide.');
+      const { lib, T } = await libredwg();
+      const dwg = lib.dwg_read_data(buf, T.DWG); if (!dwg) throw new Error('Lecture du DWG impossible.');
+      const db = lib.convert(dwg); try { lib.dwg_free(dwg); } catch (e) {}
+      N = CAD.fromLibredwg(db);
+    }
+    const vs = CAD.views(N).filter(v => v.ents.length);
+    if (!vs.length) throw new Error('Aucun dessin trouvé dans le fichier.');
+    vs.forEach(v => { v.lv = CAD.levelOf(v); v.A = CAD.analyse(v, cadRole, N.units); v.ai = v.lv.kind === 'plan' || v.lv.kind === 'coupe'; });
+    const order = { plan: 0, coupe: 1, facade: 2, autre: 3 }, LO = ['Sous-sol', 'RDC', 'Étage', 'Terrasse'];
+    vs.sort((a, b) => (order[a.lv.kind] - order[b.lv.kind]) || (LO.indexOf(a.lv.level) - LO.indexOf(b.lv.level)));
+    CADF.views = vs; CADF.units = N.units; CADF.cur = 0; CADF.vb = {}; CADF.pts = [];
+  } catch (e) {
+    CADF.err = /import|fetch|network|dxf-parser|wasm/i.test(String(e.message)) && !navigator.onLine ? 'Le lecteur AutoCAD doit être téléchargé une première fois avec internet.' : String(e.message || e);
+  }
+  CADF.busy = false; renderCad();
+}
+const curView = () => CADF.views && CADF.views[CADF.cur];
+const uf = v => S.plan.cadUnit ? +S.plan.cadUnit : v.A.f;
+function lvLabel(v) { return v.lv.kind === 'plan' ? (v.lv.level || 'Plan') : v.lv.kind === 'coupe' ? 'Coupe' : v.lv.kind === 'facade' ? 'Façade' : 'Autre'; }
+function renderCad() {
+  const box = $('#plCad'); if (!box) return;
+  if (!CADF.file || !CADF.open) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = '';
+  if (CADF.busy) { box.innerHTML = `<div class="pstep"><span class="n">📐</span><h3>Plan AutoCAD — ${esc(CADF.file.name)}</h3></div><p class="note"><span class="spin" style="border-color:var(--terra);border-right-color:transparent"></span> Lecture du fichier… La première fois, le lecteur DWG (≈ 4 Mo) se télécharge : cela peut prendre une minute.</p>`; return; }
+  if (CADF.err || !CADF.views) { box.innerHTML = `<div class="pstep"><span class="n">📐</span><h3>Plan AutoCAD — ${esc(CADF.file.name)}</h3></div><div class="alert bad">${esc(CADF.err || 'Fichier non lu.')}<br>Si le fichier vient d'une version récente d'AutoCAD, enregistrez-le en DXF (Fichier → Enregistrer sous → DXF) et réessayez.</div><div class="actions"><button class="btn ghost sm" id="cadRetry">Réessayer</button></div>`; $('#cadRetry').onclick = openCad; return; }
+  const v = curView(), A = v.A, f = uf(v);
+  const plans = CADF.views.filter(x => x.lv.kind === 'plan' && x.A.rooms.length);
+  const lvls = [...new Set(CADF.views.filter(x => x.lv.kind === 'coupe').flatMap(x => x.A.levels))].sort((a, b) => a - b);
+  const groups = A.groups.filter(g => g.ents > 0);
+  box.innerHTML = `<div class="pstep"><span class="n">📐</span><h3>Plan AutoCAD — ${esc(CADF.file.name)}</h3></div>
+  <p class="desc">${CADF.views.length} vue(s) trouvée(s). Touchez une vue pour l'afficher ; zoomez avec deux doigts ou la molette. Avec 📏 et ⬛, cliquez sur les angles du plan pour mesurer : les clics s'aimantent aux extrémités des traits.</p>
+  <div class="chips" style="margin-bottom:8px">${CADF.views.map((x, i) => `<button data-cv="${i}" style="${i === CADF.cur ? 'background:var(--ink);color:#fff;border-color:var(--ink)' : ''}">${esc(x.name)} <small style="opacity:.7">· ${lvLabel(x)}</small></button>`).join('')}</div>
+  <div class="actions" style="margin:0 0 8px">
+    <span class="seg" style="display:inline-flex">${[['pan', '✋ Déplacer'], ['len', '📏 Longueur'], ['area', '⬛ Surface']].map(([k, l]) => `<button data-cm="${k}" class="${CADF.mode === k ? 'sel good' : ''}">${l}</button>`).join('')}</span>
+    <button class="btn ghost sm" data-cz="1.6">➕</button><button class="btn ghost sm" data-cz="0.625">➖</button><button class="btn ghost sm" data-cz="0">Ajuster</button>
+    <label class="fld" style="flex-direction:row;align-items:center;gap:6px;margin-left:auto">Unité du dessin <select id="cadUnit" style="width:auto;padding:5px 8px">${[['', 'auto (' + ({ 1: 'm', 0.01: 'cm', 0.001: 'mm' }[A.f] || 'm') + ')'], ['1', 'mètre'], ['0.01', 'centimètre'], ['0.001', 'millimètre']].map(([k, l]) => `<option value="${k}"${String(S.plan.cadUnit || '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+  </div>
+  <div id="cadView" style="height:62vh;min-height:360px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;touch-action:none;position:relative;cursor:${CADF.mode === 'pan' ? 'grab' : 'crosshair'}"></div>
+  <div id="cadMeasBox"></div>
+  <details style="margin-top:10px"><summary>🗂️ Calques de cette vue (${groups.length}) — rôle et affichage</summary><div class="body"><div class="tablecard"><table class="mtbl"><tr><th>Voir</th><th>Calque</th><th>Rôle</th><th class="num">Traits (m)</th><th class="num">Hachures (m²)</th></tr>
+    ${groups.map(g => `<tr><td><input type="checkbox" data-ch="${esc(g.n)}"${(S.plan.cadHide || {})[g.n] ? '' : ' checked'}></td><td>${esc(g.n)}</td><td><select data-cr="${esc(g.n)}">${Object.entries(CAD.ROLES).map(([k, l]) => `<option value="${k}"${cadRole(g.n) === k ? ' selected' : ''}>${l}</option>`).join('')}</select></td><td class="num">${fmt(g.len * f / A.f, 1)}</td><td class="num">${fmt(g.area * (f / A.f) * (f / A.f), 2)}</td></tr>`).join('')}
+  </table></div><p class="note">Les longueurs par calque sont indicatives : un mur est dessiné par ses deux faces, et certains logiciels (ArchiCAD) mettent aussi les motifs de sol sur le calque des murs. Pour les murs, mesurez avec 📏.</p></div></details>
+  <h4 class="mg">Relevé automatique</h4>
+  ${plans.length ? `<div class="tablecard"><table><tr><th>Niveau</th><th>Pièce (texte du plan)</th><th class="num">Surface</th></tr>${plans.map(p => p.A.rooms.map(r => `<tr><td>${esc(p.lv.level || p.name)}</td><td>${esc(r.nom)}</td><td class="num">${fmt(r.S, 2)} m²</td></tr>`).join('')).join('')}</table></div>` : '<p class="note">Aucune surface de pièce écrite sur les plans.</p>'}
+  ${lvls.length ? `<p class="note">Niveaux lus sur les coupes : ${lvls.map(x => (x > 0 ? '+' : '') + fmt(x, 2)).join(' · ')} m.</p>` : ''}
+  <div class="actions"><button class="btn ghost sm" id="cadFill">📋 Mettre niveaux et pièces dans le métré</button>
+    <label class="chk" style="border:0;padding:0"><input type="checkbox" id="cadAi"${CADF.views.some(x => x.ai) ? ' checked' : ''}> Joindre les plans et coupes à la lecture par IA (étape 2)</label></div>`;
+  box.querySelectorAll('[data-cv]').forEach(b => b.onclick = () => { CADF.cur = +b.dataset.cv; CADF.pts = []; renderCad(); });
+  box.querySelectorAll('[data-cm]').forEach(b => b.onclick = () => { CADF.mode = b.dataset.cm; CADF.pts = []; renderCad(); });
+  box.querySelectorAll('[data-cz]').forEach(b => b.onclick = () => cadZoom(+b.dataset.cz));
+  $('#cadUnit').onchange = e => { S.plan.cadUnit = e.target.value; save('plan'); renderCad(); };
+  box.querySelectorAll('[data-ch]').forEach(i => i.onchange = () => { S.plan.cadHide = S.plan.cadHide || {}; if (i.checked) delete S.plan.cadHide[i.dataset.ch]; else S.plan.cadHide[i.dataset.ch] = 1; save('plan'); drawCad(); });
+  box.querySelectorAll('[data-cr]').forEach(s => s.onchange = () => { S.plan.cadRoles = S.plan.cadRoles || {}; S.plan.cadRoles[s.dataset.cr] = s.value; save('plan'); CADF.views.forEach(x => { x.A = CAD.analyse(x, cadRole, CADF.units); }); drawCad(); });
+  $('#cadFill').onclick = cadFill;
+  $('#cadAi').onchange = e => { CADF.views.forEach(x => { x.ai = e.target.checked && (x.lv.kind === 'plan' || x.lv.kind === 'coupe'); }); };
+  drawCad(); renderMeasBox();
+}
+function drawCad() {
+  const v = curView(), el = $('#cadView'); if (!v || !el) return;
+  el.innerHTML = CAD.svg(v, cadRole, S.plan.cadHide || {}).replace('<svg ', '<svg id="cadSvg" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" ');
+  const sv = $('#cadSvg'), full = sv.viewBox.baseVal, key = CADF.cur;
+  if (!CADF.vb[key]) CADF.vb[key] = [full.x, full.y, full.width, full.height];
+  CADF.full = [full.x, full.y, full.width, full.height];
+  sv.insertAdjacentHTML('beforeend', '<g id="cadMeas"></g>');
+  applyVb(); bindCadPointer(sv);
+  if (!v._snap) { const P = CAD.snapPoints(v).map(p => CAD.toSvg(v, p[0], p[1])), G = new Map(); P.forEach(p => { const k = Math.floor(p[0] / 8) + ',' + Math.floor(p[1] / 8); (G.get(k) || G.set(k, []).get(k)).push(p); }); v._snap = G; }
+}
+function applyVb() { const sv = $('#cadSvg'); if (!sv) return; sv.setAttribute('viewBox', CADF.vb[CADF.cur].join(' ')); drawMeas(); }
+function cadZoom(k, cx, cy) {
+  const b = CADF.vb[CADF.cur]; if (!b) return;
+  if (!k) { CADF.vb[CADF.cur] = CADF.full.slice(); return applyVb(); }
+  if (cx === undefined) { cx = b[0] + b[2] / 2; cy = b[1] + b[3] / 2; }
+  const w = Math.min(CADF.full[2] * 4, Math.max(2, b[2] / k)), h = w * b[3] / b[2];
+  CADF.vb[CADF.cur] = [cx - (cx - b[0]) * w / b[2], cy - (cy - b[1]) * h / b[3], w, h]; applyVb();
+}
+function svgPt(sv, x, y) { const p = sv.createSVGPoint(); p.x = x; p.y = y; const m = sv.getScreenCTM(); return m ? p.matrixTransform(m.inverse()) : p; }
+function bindCadPointer(sv) {
+  const ptrs = new Map(); let start = null, moved = false, pinch = null;
+  sv.addEventListener('wheel', e => { e.preventDefault(); const p = svgPt(sv, e.clientX, e.clientY); cadZoom(e.deltaY < 0 ? 1.25 : 0.8, p.x, p.y); }, { passive: false });
+  sv.addEventListener('pointerdown', e => { sv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = false; start = { x: e.clientX, y: e.clientY, vb: CADF.vb[CADF.cur].slice() };
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), vb: CADF.vb[CADF.cur].slice() }; } });
+  sv.addEventListener('pointermove', e => {
+    if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+    const m = sv.getScreenCTM(); if (!m) return;
+    if (ptrs.size === 2 && pinch) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); CADF.vb[CADF.cur] = pinch.vb.slice(); const c = svgPt(sv, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2); cadZoom(d / pinch.d, c.x, c.y); moved = true; return; }
+    const dx = e.clientX - start.x, dy = e.clientY - start.y;
+    if (Math.hypot(dx, dy) > 5) moved = true;
+    if (moved && ptrs.size === 1) { const k = 1 / m.a; CADF.vb[CADF.cur] = [start.vb[0] - dx * k, start.vb[1] - dy * k, start.vb[2], start.vb[3]]; applyVb(); }
+  });
+  const up = e => {
+    if (!ptrs.has(e.pointerId)) return; ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null;
+    if (!moved && CADF.mode !== 'pan' && e.button === 0) {
+      const p = svgPt(sv, e.clientX, e.clientY), m = sv.getScreenCTM(), tol = 14 / (m ? m.a : 1), v = curView();
+      let best = [p.x, p.y], bd = tol;
+      const gx = Math.floor(p.x / 8), gy = Math.floor(p.y / 8), r = Math.ceil(tol / 8);
+      for (let i = gx - r; i <= gx + r; i++) for (let j = gy - r; j <= gy + r; j++) (v._snap.get(i + ',' + j) || []).forEach(q => { const d = Math.hypot(q[0] - p.x, q[1] - p.y); if (d < bd) { bd = d; best = q; } });
+      if (CADF.closed) { CADF.pts = []; CADF.closed = false; }
+      CADF.pts.push(best); drawMeas(); renderMeasBox();
+    }
+  };
+  sv.addEventListener('pointerup', up); sv.addEventListener('pointercancel', up);
+}
+function measVal() {
+  const v = curView(), f = uf(v), P = CADF.pts.map(p => CAD.toModel(v, p[0], p[1]));
+  if (CADF.mode === 'len') return CAD.polyLen(P, false) * f;
+  return P.length > 2 ? CAD.polyArea(P) * f * f : 0;
+}
+function drawMeas() {
+  const g = $('#cadMeas'), sv = $('#cadSvg'); if (!g || !sv) return;
+  const m = sv.getScreenCTM(), k = 1 / (m ? m.a : 1), P = CADF.pts;
+  if (!P.length) { g.innerHTML = ''; return; }
+  const pts = P.map(p => p.join(',')).join(' ');
+  g.innerHTML = (CADF.mode === 'area' && P.length > 2 ? `<polygon points="${pts}" fill="#2f6390" fill-opacity=".18" stroke="none"/>` : '') +
+    `<polyline points="${pts}${CADF.mode === 'area' && CADF.closed ? ' ' + P[0].join(',') : ''}" fill="none" stroke="#2f6390" stroke-width="${2.5 * k}"/>` +
+    P.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="${4 * k}" fill="#fff" stroke="#2f6390" stroke-width="${2 * k}"/>`).join('');
+}
+const CAD_TARGETS = {
+  len: [['murs.ext', 'Murs extérieurs (ajouter)'], ['murs.int', 'Cloisons intérieures (ajouter)'], ['longrines.ml', 'Longrines (ajouter)'], ['chain.ml', 'Chaînages (ajouter)'], ['filante.ml', 'Semelle filante (ajouter)']],
+  area: [['piece', 'Nouvelle pièce'], ['niveau', 'Surface du niveau'], ['plancher', 'Nouveau plancher (hourdis 16+4)'], ['dallage', 'Dallage RDC'], ['emprise', 'Emprise au sol']]
+};
+function renderMeasBox() {
+  const box = $('#cadMeasBox'); if (!box) return;
+  if (CADF.mode === 'pan') { box.innerHTML = ''; return; }
+  const v = curView(), val = measVal(), n = CADF.pts.length, isA = CADF.mode === 'area';
+  box.innerHTML = `<div class="res" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+    <b style="font-size:17px;color:var(--terra-d);min-width:120px">${isA ? fmt(val, 2) + ' m²' : fmt(val, 2) + ' m'}</b>
+    <small class="note" style="margin:0">${n} point(s)${isA ? ' — au moins 3 points' : ''}</small>
+    <button class="btn ghost sm" id="cmUndo"${n ? '' : ' disabled'}>↶ Annuler le point</button><button class="btn ghost sm" id="cmClear"${n ? '' : ' disabled'}>Effacer</button>
+    <select id="cmTarget" style="width:auto;flex:1;min-width:190px">${CAD_TARGETS[CADF.mode].map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select>
+    <input id="cmName" placeholder="Nom de la pièce" style="width:160px;${isA ? '' : 'display:none'}">
+    <button class="btn sm" id="cmAdd"${val > 0 ? '' : ' disabled'}>➕ Ajouter au métré</button></div>`;
+  $('#cmUndo').onclick = () => { CADF.pts.pop(); CADF.closed = false; drawMeas(); renderMeasBox(); };
+  $('#cmClear').onclick = () => { CADF.pts = []; CADF.closed = false; drawMeas(); renderMeasBox(); };
+  const tg = $('#cmTarget'); tg.onchange = () => { $('#cmName').style.display = tg.value === 'piece' ? '' : 'none'; };
+  $('#cmAdd').onclick = () => {
+    const m = S.plan.m, t = tg.value, x = Math.round(val * 100) / 100, lvn = v.lv.level || v.name;
+    if (CADF.mode === 'len') { setP(m, t, Math.round(((getP(m, t) || 0) + x) * 100) / 100); }
+    else if (t === 'piece') { const nm = $('#cmName').value.trim() || 'Pièce'; m.pieces.push({ nom: nm, niv: lvn, type: (ROOM_RX.find(([rx]) => rx.test(nm)) || [0, 'autre'])[1], S: x }); }
+    else if (t === 'niveau') { const r = m.niveaux.find(n => n.nom === lvn); if (r) r.S = x; else m.niveaux.push({ nom: lvn, S: x, h: 2.9 }); }
+    else if (t === 'plancher') m.planchers.push({ niv: 'Haut ' + lvn, type: '16+4', S: x, ep: 15 });
+    else if (t === 'dallage') m.dallage.S = x; else if (t === 'emprise') m.emprise = x;
+    save('plan'); renderMetre(); renderGO(); toast('Ajouté au métré : ' + fmt(x, 2) + (CADF.mode === 'len' ? ' m' : ' m²'));
+    CADF.pts = []; CADF.closed = false; drawMeas(); renderMeasBox();
+  };
+}
+function cadFill() {
+  const m = S.plan.m, plans = CADF.views.filter(x => x.lv.kind === 'plan' && x.lv.level);
+  const lvls = [...new Set(CADF.views.filter(x => x.lv.kind === 'coupe').flatMap(x => x.A.levels))].sort((a, b) => a - b);
+  const rooms = plans.flatMap(p => p.A.rooms.map(r => ({ nom: r.nom, niv: p.lv.level, type: r.type, S: r.S })));
+  if (rooms.length) m.pieces = rooms;
+  const habit = plans.filter(p => p.lv.level !== 'Terrasse');
+  habit.forEach((p, i) => {
+    const h = lvls.length > i + 1 ? Math.round((lvls[i + 1] - lvls[i]) * 100) / 100 : 0;
+    const S2 = Math.round(p.A.rooms.reduce((s, r) => s + r.S, 0) * 100) / 100;
+    const r = m.niveaux.find(n => n.nom === p.lv.level);
+    if (r) { if (!r.S) r.S = S2; if (h > 1.8 && h < 6) r.h = h; } else m.niveaux.push({ nom: p.lv.level, S: S2, h: h > 1.8 && h < 6 ? h : 2.9 });
+  });
+  const hs = m.niveaux.map(n => n.h).filter(Boolean); if (hs.length) m.murs.h = Math.round((hs.reduce((a, b) => a + b, 0) / hs.length - 0.2) * 100) / 100;
+  S.plan.notes = ['📐 Métré pré-rempli depuis ' + CADF.file.name + ' : ' + rooms.length + ' pièce(s), ' + habit.length + ' niveau(x)' + (lvls.length > 1 ? ', hauteurs d\'après les coupes' : '') + '. La surface du niveau est la somme des pièces écrites : remplacez-la par la surface couverte (mesurez-la avec ⬛).'];
+  save('plan'); renderPlans(); toast('Métré pré-rempli ✔');
+}
+/* images des vues pour l'IA */
+async function cadImages(max) {
+  if (!CADF.views) return [];
+  const out = [], vs = CADF.views.filter(v => v.ai).slice(0, max || 6);
+  for (const v of vs) {
+    const hide = Object.assign({}, S.plan.cadHide || {});
+    v.A.groups.forEach(g => { if (['ign', 'mob'].includes(cadRole(g.n))) hide[g.n] = 1; });
+    const s = CAD.svg(v, cadRole, hide), bl = new Blob([s], { type: 'image/svg+xml' }), u = URL.createObjectURL(bl);
+    try {
+      const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = u; });
+      const vb = s.match(/viewBox="0 0 (\d+) (\d+)"/), W = +vb[1], H = +vb[2], sc = 2000 / Math.max(W, H);
+      const cv = document.createElement('canvas'); cv.width = Math.round(W * sc); cv.height = Math.round(H * sc);
+      const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(im, 0, 0, cv.width, cv.height);
+      const b = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.85));
+      if (b) out.push({ mime: 'image/jpeg', data: await blob64(b), title: 'AutoCAD — ' + v.name + ' (' + lvLabel(v) + ', ' + fmt(v.A.W * uf(v) / v.A.f, 1) + ' × ' + fmt(v.A.H * uf(v) / v.A.f, 1) + ' m)' });
+    } catch (e) {} finally { URL.revokeObjectURL(u); }
+  }
+  return out;
+}
+function cadSummary() {
+  if (!CADF.views) return '';
+  const L = ['Données EXACTES lues dans le fichier AutoCAD ' + CADF.file.name + ' (unité : mètre) :'];
+  CADF.views.forEach(v => {
+    const A = v.A, k = uf(v) / A.f;
+    L.push('- Vue « ' + v.name + ' » (' + lvLabel(v) + ', ' + fmt(A.W * k, 1) + ' × ' + fmt(A.H * k, 1) + ' m)' + (A.rooms.length ? ' — pièces : ' + A.rooms.map(r => r.nom + ' ' + fmt(r.S, 2) + ' m²').join(' ; ') : '') + (A.levels.length ? ' — niveaux : ' + A.levels.join(' ; ') : '') + (Object.keys(A.sections).length ? ' — sections : ' + Object.entries(A.sections).map(([a, b]) => a + ' ×' + b).join(', ') : ''));
+  });
+  return L.join('\n');
+}
 
 /* ================= init ================= */
 function renderAll() { renderPrices(); renderCalcs(); renderPlans(); renderDiag(); renderGuide(); renderJournal(); updateDevisCount(); if ($('#t-devis').classList.contains('on')) renderDevis(); fillSlots(); refreshPh(); }
@@ -2031,8 +2509,16 @@ window.addEventListener('appinstalled', () => toast('Application installée ✔'
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 renderPieges(); initJournalForm(); renderAll(); loadPlanPdfs(); setSync('local'); loadLocalPhotos(); initCloud();
 
+/* ===== devis envoyé par le Dossier BA ===== */
+function reloadDevisFromStore() {
+  S.devis = store.get('bs_devis', []); if (DB) save('devis');
+  updateDevisCount(); renderPlanSO(); renderGO(); if ($('#t-devis').classList.contains('on')) renderDevis();
+}
+window.addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'bs-devis') reloadDevisFromStore(); });
+window.addEventListener('storage', e => { if (e.key === 'bs_devis') reloadDevisFromStore(); });
+
 /* ===== liens directs (#calc, #devis, #journal…) ===== */
-const TABS = ['calc', 'plans', 'devis', 'journal', 'diag', 'fiss', 'guide', 'pieges', 'prix'];
+const TABS = ['calc', 'plans', 'dba', 'devis', 'journal', 'diag', 'fiss', 'guide', 'pieges', 'prix'];
 function fromHash() { const h = location.hash.slice(1); if (TABS.includes(h)) goTab(h); }
 window.addEventListener('hashchange', fromHash); fromHash();
 
