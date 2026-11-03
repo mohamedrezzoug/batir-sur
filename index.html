@@ -177,6 +177,31 @@ td input.q{width:90px;text-align:right;padding:5px 7px;font-size:14px}
 .jentry .mini{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
 .jentry .mini img{width:52px;height:52px;object-fit:cover;border-radius:7px;cursor:pointer}
 .tot td{font-weight:800}
+/* plans */
+.pstep{display:flex;align-items:center;gap:10px;margin:0 0 4px}
+.pstep .n{width:30px;height:30px;border-radius:50%;background:var(--terra);color:#fff;display:grid;place-items:center;font-weight:800;flex:none}
+.pdfs{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:12px}
+.pdfbox{border:2px dashed #d0c3b2;border-radius:12px;padding:14px;background:#fff}
+.pdfbox.has{border-style:solid;border-color:var(--line)}
+.pdfbox h4{margin:0 0 6px;font-size:15px}
+.pdfbox label.btn{display:inline-block}
+.pdfbox input[type=file]{display:none}
+.pthumbs{display:flex;gap:8px;overflow-x:auto;margin-top:10px;padding-bottom:4px}
+.pthumbs canvas{height:110px;border:1px solid var(--line);border-radius:6px;cursor:zoom-in;background:#fff;flex:none}
+.pview{overflow:auto;max-height:72vh;background:#ddd;border-radius:10px}
+.pview canvas{display:block;margin:0 auto}
+.mtbl input,.mtbl select{padding:6px 7px;font-size:14px}
+.mtbl td{padding:4px 5px}
+.mtbl td.x{width:34px}
+.mtbl select{min-width:130px}
+h4.mg{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--terra-d);margin:18px 0 6px}
+.fields.f4{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.solots{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin-top:10px}
+.solots div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.solots b{font-variant-numeric:tabular-nums;color:var(--terra-d)}
+.tag{display:inline-block;font-size:10.5px;font-weight:800;background:var(--blue-l);color:var(--blue);border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:middle}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;animation:sp 1s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -194,6 +219,7 @@ td input.q{width:90px;text-align:right;padding:5px 7px;font-size:14px}
 
 <nav><div class="wrap" id="nav">
   <button data-t="calc" class="on">🧮 Calculateur</button>
+  <button data-t="plans">📐 Devis depuis plans</button>
   <button data-t="devis">📋 Devis global <span class="badge" id="devisCount">0</span></button>
   <button data-t="journal">📸 Journal de chantier</button>
   <button data-t="diag">🛡️ Diagnostic maison</button>
@@ -211,6 +237,16 @@ td input.q{width:90px;text-align:right;padding:5px 7px;font-size:14px}
   <div class="chips" id="calcNav"></div>
   <div class="grid" id="calcs"></div>
   <p class="disclaimer">Les quantités sont des estimations basées sur des ratios courants. Pour la structure (poteaux, poutres, dalles, fondations, escaliers, réservoirs), seul le plan d'un ingénieur en béton armé fait foi. L'électricité et le gaz doivent être réalisés par des professionnels qualifiés.</p>
+</section>
+
+<section class="tab" id="t-plans">
+  <p class="intro">Donnez à l'application vos <b>plans PDF</b> (plan d'architecte et plan de béton armé) : elle relève les mesures, calcule le <b>devis du gros œuvre</b>, puis vous ajoutez vous-même le <b>second œuvre</b> pour obtenir le devis global.</p>
+  <div class="card" id="plFiles"></div>
+  <div class="card" id="plRead" style="margin-top:16px"></div>
+  <div class="card" id="plMetre" style="margin-top:16px"></div>
+  <div class="card tablecard" id="plGO" style="margin-top:16px"></div>
+  <div class="card" id="plSO" style="margin-top:16px"></div>
+  <p class="disclaimer">Le relevé automatique peut se tromper : vérifiez toujours le métré avec vos plans. Les quantités d'acier les plus fiables sont celles de la nomenclature du plan de béton armé.</p>
 </section>
 
 <section class="tab" id="t-devis">
@@ -362,7 +398,7 @@ async function copy(text) { try { await navigator.clipboard.writeText(text); toa
 function confirmBtn(btn, fn, label = 'Confirmer ?') { let armed = false; btn.onclick = () => { if (!armed) { armed = true; btn.textContent = label; setTimeout(() => { armed = false; }, 4000); return; } fn(); }; }
 
 /* ================= état & sauvegarde ================= */
-const DEF = { prices: {}, calcs: {}, devis: [], diag: {}, journal: [], photos: {}, projet: { nom: '', proprio: '', lieu: '', mo: 0, imp: 10 } };
+const DEF = { prices: {}, calcs: {}, devis: [], diag: {}, journal: [], photos: {}, plan: {}, projet: { nom: '', proprio: '', lieu: '', mo: 0, imp: 10 } };
 const KEYS = Object.keys(DEF);
 const S = {};
 KEYS.forEach(k => { S[k] = store.get('bs_' + k, clone(DEF[k])); });
@@ -421,6 +457,7 @@ function goTab(t) {
   document.querySelectorAll('#nav button').forEach(x => x.classList.toggle('on', x.dataset.t === t));
   document.querySelectorAll('section.tab').forEach(s => s.classList.toggle('on', s.id === 't-' + t));
   if (t === 'devis') renderDevis();
+  if (t === 'plans') renderPlanSO();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 document.querySelectorAll('#nav button').forEach(b => b.onclick = () => goTab(b.dataset.t));
@@ -515,6 +552,7 @@ const PRICE_DEF = [
   ['brique6', 'Brique 6 trous', 'u', 2.5], ['brique12', 'Brique 12 trous', 'u', 3.5],
   ['agglo10', 'Agglo 10 cm', 'u', 4.5], ['agglo15', 'Agglo 15 cm', 'u', 5.5], ['agglo20', 'Agglo 20 cm', 'u', 6.5],
   ['hourdis', 'Hourdis', 'u', 5], ['poutrelle', 'Poutrelle', 'ml', 25],
+  ['mo_go', 'Main d\'œuvre gros œuvre (tâcheron, par m² plancher)', 'm²', 500],
   ['Finitions'],
   ['carrelage', 'Carrelage', 'm²', 120], ['colle', 'Colle carrelage (sac 25 kg)', 'sac', 60], ['joint', 'Joint carrelage', 'kg', 10],
   ['peinture', 'Peinture', 'L', 45], ['impression', 'Sous-couche / impression', 'L', 35],
@@ -1027,6 +1065,7 @@ function renderCalcs() {
 
 /* ================= devis global ================= */
 const LOTS = ['Terrassement', 'Gros œuvre', 'Maçonnerie', 'Enduits & chapes', 'Étanchéité', 'Électricité', 'Plomberie & eau', 'Énergie solaire', 'Menuiserie', 'Plâtrerie & faux plafond', 'Sanitaires', 'Cuisine', 'Revêtements', 'Peinture', 'Clôture & portail', 'Assainissement', 'Main d\'œuvre & services', 'Divers', 'Estimation (indicatif)'];
+const GO_LOTS = ['Terrassement', 'Gros œuvre', 'Maçonnerie'];
 const lineU = d => d.p ? UNIT[d.p] || '' : (d.u || '');
 const linePU = d => d.p ? PR(d.p) * (d.m || 1) : (+d.pu || 0);
 function updateDevisCount() { $('#devisCount').textContent = S.devis.length; }
@@ -1034,7 +1073,8 @@ function devisTotals() {
   const by = {}; let mat = 0;
   S.devis.forEach(d => { const t = linePU(d) * d.q, lot = d.lot || 'Divers'; by[lot] = (by[lot] || 0) + t; mat += t; });
   const P = S.projet, mo = mat * (+P.mo || 0) / 100, imp = (mat + mo) * (+P.imp || 0) / 100;
-  return { by, mat, mo, imp, tot: mat + mo + imp };
+  const go = GO_LOTS.reduce((s, l) => s + (by[l] || 0), 0), so = mat - go - (by['Estimation (indicatif)'] || 0);
+  return { by, mat, mo, imp, tot: mat + mo + imp, go, so };
 }
 function renderDevis() {
   const P = S.projet, box = $('#devisBox'), T = devisTotals();
@@ -1043,7 +1083,7 @@ function renderDevis() {
   lots.forEach(lot => {
     rows += `<tr class="lot"><td colspan="4">${esc(lot)}</td><td class="num">${dh(T.by[lot])}</td><td></td></tr>`;
     S.devis.forEach((d, i) => { if ((d.lot || 'Divers') !== lot) return;
-      rows += `<tr><td>${esc(d.l)}</td><td class="num"><input class="q" type="number" step="any" min="0" data-qi="${i}" value="${d.q}"></td><td>${esc(lineU(d))}</td><td class="num">${fmt(linePU(d), 2)}</td><td class="num"><b>${dh(linePU(d) * d.q)}</b></td><td><button class="btn ghost sm" data-del="${i}" aria-label="Supprimer">✕</button></td></tr>`; });
+      rows += `<tr><td>${esc(d.l)}${d.src === 'plan' ? '<span class="tag">📐 plan</span>' : ''}</td><td class="num"><input class="q" type="number" step="any" min="0" data-qi="${i}" value="${d.q}"></td><td>${esc(lineU(d))}</td><td class="num">${fmt(linePU(d), 2)}</td><td class="num"><b>${dh(linePU(d) * d.q)}</b></td><td><button class="btn ghost sm" data-del="${i}" aria-label="Supprimer">✕</button></td></tr>`; });
   });
   const recap = lots.map(l => `<tr><td>${esc(l)}</td><td style="width:40%"><div class="bar"><i style="width:${T.mat ? T.by[l] / T.mat * 100 : 0}%"></i></div></td><td class="num">${fmt(T.mat ? T.by[l] / T.mat * 100 : 0, 0)} %</td><td class="num">${dh(T.by[l])}</td></tr>`).join('');
   box.innerHTML = `<h3 style="justify-content:space-between">📋 Devis global ${phBtn('devis:docs', 'Devis & factures des fournisseurs')}</h3>
@@ -1069,6 +1109,8 @@ function renderDevis() {
   ${S.devis.length ? `<h3 style="font-size:16px;margin-top:22px">Récapitulatif</h3>
   <table style="margin-top:6px">${recap}
     <tr class="tot"><td colspan="3">Total fournitures</td><td class="num">${dh(T.mat)}</td></tr>
+    <tr><td colspan="3" style="padding-left:22px">dont gros œuvre (terrassement, structure, maçonnerie)</td><td class="num">${dh(T.go)}</td></tr>
+    <tr><td colspan="3" style="padding-left:22px">dont second œuvre (finitions, réseaux, équipements…)</td><td class="num">${dh(T.so)}</td></tr>
     <tr><td colspan="3">Main d'œuvre (${fmt(+P.mo || 0)} %)</td><td class="num">${dh(T.mo)}</td></tr>
     <tr><td colspan="3">Imprévus (${fmt(+P.imp || 0)} %)</td><td class="num">${dh(T.imp)}</td></tr>
     <tr class="tot"><td colspan="3" style="font-size:17px">TOTAL GÉNÉRAL</td><td class="num" style="font-size:18px;color:var(--terra-d)">${dh(T.tot)}</td></tr>
@@ -1087,7 +1129,7 @@ function renderDevis() {
       let t = `DEVIS GLOBAL — ${P.nom || 'Projet'}\n${P.proprio ? 'Propriétaire : ' + P.proprio + '\n' : ''}${P.lieu ? 'Lieu : ' + P.lieu + '\n' : ''}Date : ${new Date().toLocaleDateString('fr-FR')}\n`;
       lots.forEach(lot => { t += `\n== ${lot.toUpperCase()} — ${dh(T.by[lot])} ==\n`;
         S.devis.forEach(d => { if ((d.lot || 'Divers') === lot) t += `- ${d.l} : ${fmt(d.q, 2)} ${lineU(d)} × ${fmt(linePU(d), 2)} DH = ${dh(linePU(d) * d.q)}\n`; }); });
-      t += `\nTotal fournitures : ${dh(T.mat)}\nMain d'œuvre (${P.mo} %) : ${dh(T.mo)}\nImprévus (${P.imp} %) : ${dh(T.imp)}\nTOTAL GÉNÉRAL : ${dh(T.tot)}`;
+      t += `\nTotal fournitures : ${dh(T.mat)}\n  dont gros œuvre : ${dh(T.go)}\n  dont second œuvre : ${dh(T.so)}\nMain d'œuvre (${P.mo} %) : ${dh(T.mo)}\nImprévus (${P.imp} %) : ${dh(T.imp)}\nTOTAL GÉNÉRAL : ${dh(T.tot)}`;
       copy(t);
     };
     confirmBtn($('#clearDevis'), () => { S.devis = []; save('devis'); updateDevisCount(); renderDevis(); }, 'Confirmer : tout effacer ?');
@@ -1452,18 +1494,513 @@ function previewImport(R, json) {
   };
 }
 
+/* ================= devis depuis plans PDF ================= */
+const PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+const PDFW_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const PLAN_KINDS = { archi: { t: '🏠 Plan d\'architecte', d: 'Plans des niveaux, coupes, façades : surfaces des pièces, murs, portes et fenêtres.' }, ba: { t: '🏗️ Plan de béton armé', d: 'Fondations, poteaux, poutres, planchers et nomenclature des aciers.' } };
+const PTYPES = { chambre: 'Chambre', salon: 'Salon / séjour', cuisine: 'Cuisine', sdb: 'Salle de bain', wc: 'WC', circ: 'Hall / couloir / escalier', autre: 'Autre' };
+const PLTYPES = { '16+4': 'Hourdis 16+4', '20+5': 'Hourdis 20+5', '12+4': 'Hourdis 12+4', dalle: 'Dalle pleine' };
+const ACIER_D = [6, 8, 10, 12, 14, 16, 20];
+const METRE_DEF = {
+  emprise: 0, prof: 1.5, profr: 0.8,
+  niveaux: [], pieces: [],
+  murs: { ext: 0, int: 0, h: 2.9, ouv: 0, bext: 'b12', bint: 'b6' },
+  menuis: { pi: 0, pe: 0, nf: 0, fw: 1.2, fh: 1.2 },
+  semelles: [], longrines: { ml: 0, b: 25, h: 40 }, filante: { ml: 0, b: 0.6, h: 0.4 },
+  poteaux: [], poutres: [], chain: { ml: 0, b: 20, h: 25 },
+  planchers: [], dallage: { S: 0, ep: 10 }, escaliers: { n: 0, V: 1.8 },
+  acier: { 6: 0, 8: 0, 10: 0, 12: 0, 14: 0, 16: 0, 20: 0 }, mo: 0
+};
+const TB = {
+  niveaux: { t: 'Niveaux', c: [['nom', 'Niveau', 't'], ['S', 'Surface plancher (m²)'], ['h', 'Hauteur d\'étage (m)']], d: { nom: 'RDC', S: 0, h: 2.9 } },
+  pieces: { t: 'Pièces', c: [['nom', 'Pièce', 't'], ['niv', 'Niveau', 't'], ['type', 'Type', PTYPES], ['S', 'Surface (m²)']], d: { nom: '', niv: 'RDC', type: 'chambre', S: 0 } },
+  semelles: { t: 'Semelles isolées', c: [['ref', 'Réf.', 't'], ['L', 'Longueur (m)'], ['l', 'Largeur (m)'], ['h', 'Hauteur (m)'], ['n', 'Nombre']], d: { ref: 'S1', L: 1.2, l: 1.2, h: 0.4, n: 1 } },
+  poteaux: { t: 'Poteaux (amorces comprises)', c: [['ref', 'Réf.', 't'], ['a', 'a (cm)'], ['b', 'b (cm)'], ['h', 'Hauteur (m)'], ['n', 'Nombre']], d: { ref: 'P1', a: 25, b: 25, h: 3, n: 1 } },
+  poutres: { t: 'Poutres', c: [['ref', 'Réf.', 't'], ['b', 'Largeur (cm)'], ['h', 'Hauteur (cm)'], ['L', 'Longueur (m)'], ['n', 'Nombre']], d: { ref: 'N1', b: 25, h: 40, L: 4, n: 1 } },
+  planchers: { t: 'Planchers', c: [['niv', 'Niveau', 't'], ['type', 'Type', PLTYPES], ['S', 'Surface (m²)'], ['ep', 'Ép. si dalle pleine (cm)']], d: { niv: 'Haut RDC', type: '16+4', S: 0, ep: 15 } }
+};
+const pnum = v => { const n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return isFinite(n) && n > 0 ? n : 0; };
+function normMetre(j) {
+  const m = clone(METRE_DEF); j = j || {};
+  ['emprise', 'prof', 'profr', 'mo'].forEach(k => { if (j[k] !== undefined) m[k] = pnum(j[k]); });
+  if (!m.prof) m.prof = 1.5; if (!m.profr) m.profr = 0.8;
+  ['murs', 'menuis', 'longrines', 'filante', 'chain', 'dallage', 'escaliers', 'acier'].forEach(g => {
+    const src = j[g] || {}; for (const k in m[g]) if (src[k] !== undefined) m[g][k] = typeof m[g][k] === 'string' ? String(src[k]) : pnum(src[k]);
+  });
+  if (!BLOCKS[m.murs.bext]) m.murs.bext = 'b12'; if (!BLOCKS[m.murs.bint]) m.murs.bint = 'b6';
+  for (const k in TB) m[k] = (Array.isArray(j[k]) ? j[k] : []).map(r => {
+    const o = clone(TB[k].d);
+    TB[k].c.forEach(([c, , t]) => { if (r && r[c] !== undefined) o[c] = t === 't' ? String(r[c]) : typeof t === 'object' ? (t[r[c]] ? r[c] : o[c]) : pnum(r[c]); });
+    return o;
+  });
+  return m;
+}
+if (!S.plan || typeof S.plan !== 'object') S.plan = {};
+function planInit() {
+  S.plan.m = normMetre(S.plan.m);
+  S.plan.ai = Object.assign({ prov: 'gemini', model: '' }, S.plan.ai || {});
+  S.plan.notes = Array.isArray(S.plan.notes) ? S.plan.notes : [];
+}
+planInit();
+let planSaveT = null;
+const savePlan = () => { clearTimeout(planSaveT); planSaveT = setTimeout(() => save('plan'), 500); };
+const sumR = (a, f) => a.reduce((s, r) => s + (f(r) || 0), 0);
+
+/* ---------- PDF ---------- */
+const PDFS = {};
+let pdfLibP = null;
+function pdfjs() {
+  if (pdfLibP) return pdfLibP;
+  pdfLibP = new Promise((res, rej) => {
+    const ok = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFW_URL; res(window.pdfjsLib); };
+    if (window.pdfjsLib) return ok();
+    const s = document.createElement('script'); s.src = PDFJS_URL; s.onload = ok;
+    s.onerror = () => { pdfLibP = null; rej(new Error('pdf.js indisponible')); };
+    document.head.appendChild(s);
+  });
+  return pdfLibP;
+}
+async function pdfDoc(k) {
+  const P = PDFS[k]; if (!P) return null;
+  if (!P.doc) { const lib = await pdfjs(); P.doc = await lib.getDocument({ data: new Uint8Array(await P.blob.arrayBuffer()) }).promise; }
+  return P.doc;
+}
+async function setPdf(k, file) {
+  if (!file) return;
+  if (!/pdf$/i.test(file.type) && !/\.pdf$/i.test(file.name)) return toast('Choisissez un fichier PDF');
+  PDFS[k] = { blob: file, name: file.name, size: file.size };
+  try { await idbDo('readwrite', st => st.put({ blob: file, name: file.name }, 'pdf_' + k)); } catch (e) {}
+  renderPlanFiles();
+}
+async function loadPlanPdfs() {
+  for (const k in PLAN_KINDS) {
+    try { const v = await idbDo('readonly', st => st.get('pdf_' + k)); if (v && v.blob) PDFS[k] = { blob: v.blob, name: v.name, size: v.blob.size }; } catch (e) {}
+  }
+  renderPlanFiles();
+}
+async function renderThumbs(k) {
+  const box = $('#th_' + k); if (!box) return;
+  try {
+    const doc = await pdfDoc(k), n = Math.min(doc.numPages, 12);
+    $('#pg_' + k).textContent = doc.numPages + ' page' + (doc.numPages > 1 ? 's' : '');
+    box.innerHTML = '';
+    for (let i = 1; i <= n; i++) {
+      const pg = await doc.getPage(i), vp0 = pg.getViewport({ scale: 1 }), sc = 220 / vp0.height, vp = pg.getViewport({ scale: sc });
+      const cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height; cv.title = 'Page ' + i;
+      box.appendChild(cv);
+      await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+      cv.onclick = () => viewPage(k, i);
+    }
+  } catch (e) { box.innerHTML = '<p class="note">Aperçu impossible hors ligne (le lecteur PDF n\'est pas encore en mémoire). La lecture par IA reste possible avec internet.</p>'; }
+}
+let viewZoom = 1;
+async function viewPage(k, i) {
+  curPh = null; $('#mBack').style.display = 'none';
+  const doc = await pdfDoc(k);
+  openModal(PLAN_KINDS[k].t.replace(/^\S+\s/, '') + ' — page ' + i + ' / ' + doc.numPages);
+  $('#mBody').innerHTML = `<div class="actions" style="margin:0 0 10px"><button class="btn ghost sm" data-z="-1">➖</button><button class="btn ghost sm" data-z="1">➕</button>
+    <button class="btn ghost sm" data-pgo="${i - 1}"${i <= 1 ? ' disabled' : ''}>← Page précédente</button><button class="btn ghost sm" data-pgo="${i + 1}"${i >= doc.numPages ? ' disabled' : ''}>Page suivante →</button></div><div class="pview" id="pview"></div>`;
+  const draw = async () => {
+    const pg = await doc.getPage(i), vp0 = pg.getViewport({ scale: 1 }), w = Math.max(320, $('#pview').clientWidth || 700);
+    const sc = w / vp0.width * viewZoom * Math.min(2, window.devicePixelRatio || 1), vp = pg.getViewport({ scale: sc });
+    const cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height; cv.style.width = (w * viewZoom) + 'px';
+    $('#pview').innerHTML = ''; $('#pview').appendChild(cv);
+    await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+  };
+  $('#mBody').querySelectorAll('[data-z]').forEach(b => b.onclick = () => { viewZoom = Math.min(6, Math.max(1, viewZoom + (+b.dataset.z))); draw(); });
+  $('#mBody').querySelectorAll('[data-pgo]').forEach(b => b.onclick = () => viewPage(k, +b.dataset.pgo));
+  draw();
+}
+function renderPlanFiles() {
+  const box = $('#plFiles'); if (!box) return;
+  box.innerHTML = `<div class="pstep"><span class="n">1</span><h3>Vos plans en PDF</h3></div>
+  <p class="desc">Les fichiers restent sur cet appareil. Touchez une page pour l'agrandir.</p>
+  <div class="pdfs">${Object.entries(PLAN_KINDS).map(([k, K]) => { const P = PDFS[k]; return `<div class="pdfbox${P ? ' has' : ''}">
+    <h4>${K.t}</h4><p class="note" style="margin:0 0 8px">${K.d}</p>
+    ${P ? `<div style="font-weight:700;font-size:14px;word-break:break-all">📄 ${esc(P.name)}</div><small class="note">${P.size < 1048576 ? fmt(P.size / 1024, 0) + ' Ko' : fmt(P.size / 1048576, 1) + ' Mo'} · <span id="pg_${k}">…</span></small>
+      <div class="pthumbs" id="th_${k}"><span class="note">Chargement de l'aperçu…</span></div>` : ''}
+    <div class="actions"><label class="btn${P ? ' ghost' : ''} sm">${P ? 'Changer' : '📤 Choisir le PDF'}<input type="file" accept="application/pdf,.pdf" data-pdf="${k}"></label>
+    ${P ? `<button class="btn ghost sm" data-pdfdel="${k}">Retirer</button>` : ''}</div></div>`; }).join('')}</div>`;
+  box.querySelectorAll('[data-pdf]').forEach(i => i.onchange = e => setPdf(i.dataset.pdf, e.target.files[0]));
+  box.querySelectorAll('[data-pdfdel]').forEach(b => b.onclick = async () => { const k = b.dataset.pdfdel; delete PDFS[k]; try { await idbDo('readwrite', st => st.delete('pdf_' + k)); } catch (e) {} renderPlanFiles(); });
+  for (const k in PDFS) renderThumbs(k);
+}
+
+/* ---------- lecture : IA ou texte ---------- */
+const AI = {
+  gemini: { n: 'Google Gemini (clé gratuite)', model: 'gemini-2.5-flash', link: 'https://aistudio.google.com/apikey', keyHelp: 'Créez une clé gratuite sur aistudio.google.com → « Get API key ».' },
+  claude: { n: 'Anthropic Claude', model: 'claude-sonnet-5-5', link: 'https://console.anthropic.com/settings/keys', keyHelp: 'Clé API payante créée sur console.anthropic.com.' }
+};
+const aiKey = p => { try { return localStorage.getItem('bs_key_' + p) || ''; } catch (e) { return ''; } };
+const setAiKey = (p, v) => { try { v ? localStorage.setItem('bs_key_' + p, v) : localStorage.removeItem('bs_key_' + p); } catch (e) {} };
+const blob64 = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(b); });
+function aiPrompt(kinds) {
+  return `Tu es un métreur en bâtiment au Maroc. Voici ${kinds.length > 1 ? 'deux fichiers PDF' : 'un fichier PDF'} : ${kinds.map(k => k === 'archi' ? 'le PLAN D\'ARCHITECTE (plans de niveaux, coupes, façades)' : 'le PLAN DE BÉTON ARMÉ (fondations, coffrage, ferraillage, nomenclature des aciers)').join(' et ')}.
+Fais le métré du GROS ŒUVRE et relève les informations utiles au second œuvre. Lis les cotes, les tableaux, les cartouches et les nomenclatures. Compte les éléments identiques (même référence).
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, avec exactement cette structure (nombres en notation décimale avec un point, 0 si l'information n'existe pas) :
+{
+ "emprise": surface au sol du bâtiment en m²,
+ "prof": profondeur des fouilles des semelles en m (1.5 si non indiqué),
+ "profr": profondeur des tranchées des longrines en m (0.8 si non indiqué),
+ "niveaux": [{"nom": "RDC", "S": surface plancher couverte du niveau en m², "h": hauteur d'étage en m}],
+ "pieces": [{"nom": "Chambre 1", "niv": "RDC", "type": "chambre|salon|cuisine|sdb|wc|circ|autre", "S": surface en m²}],
+ "murs": {"ext": longueur cumulée des murs extérieurs de tous les niveaux en m, "int": longueur cumulée des cloisons intérieures de tous les niveaux en m, "h": hauteur moyenne des murs en m, "ouv": surface totale des fenêtres et portes extérieures en m², "bext": "b12|b6|a10|a15|a20" (b = brique 6 ou 12 trous, a = agglo), "bint": idem pour les cloisons},
+ "menuis": {"pi": nombre de portes intérieures, "pe": nombre de portes d'entrée/extérieures, "nf": nombre de fenêtres, "fw": largeur moyenne d'une fenêtre en m, "fh": hauteur moyenne d'une fenêtre en m},
+ "semelles": [{"ref": "S1", "L": longueur en m, "l": largeur en m, "h": hauteur en m, "n": nombre}],
+ "longrines": {"ml": longueur totale en m, "b": largeur en cm, "h": hauteur en cm},
+ "filante": {"ml": longueur totale de semelle filante en m, "b": largeur en m, "h": hauteur en m},
+ "poteaux": [{"ref": "P1 RDC", "a": côté en cm, "b": côté en cm, "h": hauteur en m, "n": nombre}],
+ "poutres": [{"ref": "N1", "b": largeur en cm, "h": hauteur totale en cm, "L": longueur en m, "n": nombre}],
+ "chain": {"ml": longueur totale des chaînages (horizontaux, acrotères) en m, "b": largeur en cm, "h": hauteur en cm},
+ "planchers": [{"niv": "Haut RDC", "type": "16+4|20+5|12+4|dalle", "S": surface en m², "ep": épaisseur en cm si dalle pleine}],
+ "dallage": {"S": surface du dallage au sol (RDC) en m², "ep": épaisseur en cm},
+ "escaliers": {"n": nombre de volées, "V": volume de béton par volée en m³},
+ "acier": {"6": kg, "8": kg, "10": kg, "12": kg, "14": kg, "16": kg, "20": kg} poids total par diamètre d'après la nomenclature (0 partout si elle n'existe pas),
+ "remarques": ["phrases courtes en français : ce qui manque, ce qui est incertain, les hypothèses faites"]
+}
+Les poteaux de chaque niveau sont des lignes séparées (avec leur hauteur), amorces comprises. Ne mets pas de commentaires dans le JSON.`;
+}
+function parseJSON(t) {
+  t = String(t || '').replace(/```(json)?/g, '');
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b < a) throw new Error('Réponse sans JSON');
+  return JSON.parse(t.slice(a, b + 1));
+}
+async function aiRun() {
+  const A = S.plan.ai, prov = A.prov, key = aiKey(prov), model = (A.model || AI[prov].model).trim();
+  const kinds = Object.keys(PLAN_KINDS).filter(k => PDFS[k]);
+  if (!kinds.length) return toast('Ajoutez d\'abord au moins un plan PDF');
+  if (!key) return toast('Collez votre clé API');
+  const size = kinds.reduce((s, k) => s + PDFS[k].size, 0);
+  if (size > 19 * 1048576) return toast('Plans trop lourds (> 19 Mo) : exportez-les en PDF plus léger');
+  const btn = $('#aiGo'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Lecture des plans… (30 s à 2 min)';
+  try {
+    const b64 = await Promise.all(kinds.map(k => blob64(PDFS[k].blob)));
+    let text = '';
+    if (prov === 'gemini') {
+      const parts = [{ text: aiPrompt(kinds) }];
+      kinds.forEach((k, i) => { parts.push({ text: 'Fichier : ' + (k === 'archi' ? 'plan d\'architecte' : 'plan de béton armé') }); parts.push({ inline_data: { mime_type: 'application/pdf', data: b64[i] } }); });
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model.replace(/^models\//, '')) + ':generateContent?key=' + encodeURIComponent(key), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0.1, responseMimeType: 'application/json' } })
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error((j.error && j.error.message) || ('Erreur ' + r.status));
+      text = ((j.candidates || [])[0] || {}).content ? j.candidates[0].content.parts.map(p => p.text || '').join('') : '';
+    } else {
+      const content = kinds.map((k, i) => ({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64[i] }, title: k === 'archi' ? 'Plan d\'architecte' : 'Plan de béton armé' }));
+      content.push({ type: 'text', text: aiPrompt(kinds) });
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model, max_tokens: 8000, messages: [{ role: 'user', content }] })
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error((j.error && j.error.message) || ('Erreur ' + r.status));
+      text = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
+    }
+    const J = parseJSON(text);
+    S.plan.m = normMetre(J);
+    S.plan.notes = ['🤖 Métré relevé par ' + AI[prov].n.replace(/ \(.*/, '') + ' le ' + new Date().toLocaleDateString('fr-FR') + ' : vérifiez chaque ligne.'].concat((J.remarques || []).map(String).slice(0, 15));
+    save('plan'); renderPlans(); toast('Métré rempli ✔ Vérifiez-le');
+    $('#plMetre').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e) {
+    const msg = String(e.message || e);
+    toast('Échec de la lecture');
+    $('#aiErr').innerHTML = `<div class="alert bad">La lecture a échoué : ${esc(msg)}${/fetch|network/i.test(msg) ? '<br>Vérifiez la connexion internet.' : /key|API|permission|401|403/i.test(msg) ? '<br>Vérifiez la clé API.' : /model|not found|404/i.test(msg) ? '<br>Choisissez un autre modèle (bouton « Lister les modèles »).' : ''}</div>`;
+  } finally { btn.disabled = false; btn.textContent = '🤖 Lire les plans avec l\'IA'; }
+}
+async function aiModels() {
+  const key = aiKey('gemini'); if (!key) return toast('Collez d\'abord la clé Gemini');
+  try {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + encodeURIComponent(key)), j = await r.json();
+    if (!r.ok) throw new Error((j.error && j.error.message) || r.status);
+    const ms = (j.models || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && /gemini/.test(m.name)).map(m => m.name.replace('models/', ''));
+    $('#aiModels').innerHTML = ms.map(m => `<option value="${esc(m)}">`).join('');
+    toast(ms.length + ' modèles disponibles : touchez le champ Modèle');
+  } catch (e) { toast('Liste impossible : ' + e.message); }
+}
+const ROOM_RX = [[/chambre|\bch\b|suite|parent|enfant|غرفة|bedroom/i, 'chambre'], [/salon|s[ée]jour|living|r[ée]ception|صالون|بيت الضيوف/i, 'salon'], [/cuisine|kitchen|مطبخ/i, 'cuisine'], [/s\.?d\.?b|bain|douche|حمام|toilettes? douche/i, 'sdb'], [/\bwc\b|w\.c|toilette|مرحاض/i, 'wc'], [/hall|d[ée]gagement|couloir|circulation|escalier|palier|entr[ée]e|دروج|ممر/i, 'circ']];
+async function textScan() {
+  const kinds = Object.keys(PDFS); if (!kinds.length) return toast('Ajoutez d\'abord un plan PDF');
+  const btn = $('#txGo'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Lecture…';
+  const m = S.plan.m, notes = [], rooms = [], secs = {}, refs = {};
+  let chars = 0;
+  try {
+    for (const k of kinds) {
+      const doc = await pdfDoc(k);
+      for (let i = 1; i <= doc.numPages; i++) {
+        const tc = await (await doc.getPage(i)).getTextContent(), it = tc.items.map(x => String(x.str || '').trim()).filter(Boolean);
+        chars += it.join('').length;
+        it.forEach((s, j) => {
+          const mm = s.match(/(\d+(?:[.,]\d{1,2})?)\s*m(?:²|2)(?![a-z0-9])/i);
+          if (mm && k === 'archi') {
+            const v = pnum(mm[1]); let name = s.replace(mm[0], '').replace(/[:=]|S\s*$/g, '').trim();
+            for (let b = 1; !/[a-zà-ü؀-ۿ]{3,}/i.test(name) && b <= 4 && j - b >= 0; b++) { const p = it[j - b]; if (!/\d+[.,]?\d*\s*m(?:²|2)/i.test(p)) name = p.replace(/[:=]/g, '').trim(); }
+            if (v > 0 && v <= 150 && /[a-zà-ü؀-ۿ]{2,}/i.test(name) && !/total|couvert|construit|plancher|terrain|parcelle|lot\b|bâti|surface s/i.test(name)) {
+              const t = (ROOM_RX.find(([rx]) => rx.test(name)) || [0, 'autre'])[1];
+              rooms.push({ nom: name.slice(0, 40), niv: 'p.' + i, type: t, S: v });
+            }
+          }
+          if (k === 'ba') {
+            const sx = s.match(/\b(\d{2})\s*[xX×*]\s*(\d{2,3})\b/); if (sx && +sx[1] >= 15 && +sx[1] <= 80) { const key = sx[1] + '×' + sx[2]; secs[key] = (secs[key] || 0) + 1; }
+            const rf = s.match(/^(P|S|N|L|PT|C|A)\s?-?\s?(\d{1,2})$/); if (rf) { const key = rf[1] + rf[2]; refs[key] = (refs[key] || 0) + 1; }
+          }
+        });
+      }
+    }
+    if (chars < 30) notes.push('⚠️ Ce PDF ne contient presque pas de texte (plan scanné ou image) : utilisez la lecture par IA ou remplissez le métré à la main.');
+    if (rooms.length) {
+      const seen = new Set(), uniq = rooms.filter(r => { const id = r.nom.toLowerCase() + r.S; if (seen.has(id)) return false; seen.add(id); return true; });
+      m.pieces = uniq; notes.push('🔎 ' + uniq.length + ' pièce(s) trouvée(s) avec leur surface dans le plan d\'architecte (total ' + fmt(sumR(uniq, r => r.S), 2) + ' m²). Corrigez le niveau et le type si besoin.');
+    } else if (PDFS.archi) notes.push('🔎 Aucune surface de pièce lisible dans le plan d\'architecte.');
+    const sl = Object.entries(secs).sort((a, b) => b[1] - a[1]).slice(0, 10), rl = Object.entries(refs).sort((a, b) => a[0].localeCompare(b[0], 'fr', { numeric: true })).slice(0, 30);
+    if (sl.length) notes.push('🏗️ Sections lues dans le plan BA : ' + sl.map(([a, b]) => a + ' (×' + b + ')').join(', ') + '.');
+    if (rl.length) notes.push('🏷️ Repères trouvés (nombre d\'apparitions) : ' + rl.map(([a, b]) => a + ' ×' + b).join(', ') + '. Servez-vous en pour remplir les semelles, poteaux et poutres.');
+    if (PDFS.ba) notes.push('Le texte seul ne suffit pas pour compter fondations et poteaux : complétez les tableaux, ou utilisez la lecture par IA.');
+    S.plan.notes = notes; save('plan'); renderPlans(); toast('Lecture terminée');
+  } catch (e) { toast('Lecture du texte impossible'); }
+  finally { btn.disabled = false; btn.textContent = '🔎 Lire le texte du PDF (sans IA)'; }
+}
+function renderPlanRead() {
+  const box = $('#plRead'); if (!box) return;
+  const A = S.plan.ai, I = AI[A.prov];
+  box.innerHTML = `<div class="pstep"><span class="n">2</span><h3>Lire les plans</h3></div>
+  <p class="desc">Trois façons de remplir le métré (étape 3) : l'IA lit les plans pour vous, l'application lit le texte du PDF, ou vous saisissez les mesures en regardant les plans.</p>
+  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">
+    <div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff">
+      <b>🤖 Lecture automatique par IA</b> <small class="note">(recommandé, internet)</small>
+      <div class="fields" style="margin-top:10px">
+        <label class="fld"><span>Service</span><select id="aiProv">${Object.entries(AI).map(([k, v]) => `<option value="${k}"${k === A.prov ? ' selected' : ''}>${v.n}</option>`).join('')}</select></label>
+        <label class="fld"><span>Modèle</span><input id="aiModel" list="aiModels" placeholder="${I.model}" value="${esc(A.model)}"><datalist id="aiModels"></datalist></label>
+        <label class="fld full"><span>Clé API (gardée sur cet appareil)</span><input id="aiKey" type="password" autocomplete="off" value="${esc(aiKey(A.prov))}" placeholder="Collez votre clé"></label>
+      </div>
+      <p class="note">${I.keyHelp} <a href="${I.link}" target="_blank" rel="noopener">Obtenir une clé</a>${A.prov === 'gemini' ? ' · <a href="#" id="aiList">Lister les modèles</a>' : ''}</p>
+      <div class="actions"><button class="btn" id="aiGo">🤖 Lire les plans avec l'IA</button></div>
+      <div id="aiErr"></div>
+    </div>
+    <div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff">
+      <b>🔎 Lecture du texte</b> <small class="note">(sans IA, hors ligne)</small>
+      <p class="note">Pour les PDF exportés d'AutoCAD ou ArchiCAD : récupère les pièces et leurs surfaces, et liste les sections et repères du plan BA. Ne marche pas sur un plan scanné.</p>
+      <div class="actions"><button class="btn ghost" id="txGo">🔎 Lire le texte du PDF (sans IA)</button></div>
+      <b style="display:block;margin-top:14px">✍️ Saisie manuelle</b>
+      <p class="note">Ouvrez les pages des plans (étape 1) et remplissez le métré ci-dessous.</p>
+    </div>
+  </div>
+  ${S.plan.notes.length ? `<div class="alert info" style="margin-top:12px">${S.plan.notes.map(n => '<div>' + esc(n) + '</div>').join('')}</div>` : ''}`;
+  $('#aiProv').onchange = e => { A.prov = e.target.value; A.model = ''; save('plan'); renderPlanRead(); };
+  $('#aiModel').onchange = e => { A.model = e.target.value.trim(); save('plan'); };
+  $('#aiKey').onchange = e => setAiKey(A.prov, e.target.value.trim());
+  $('#aiGo').onclick = () => { setAiKey(A.prov, $('#aiKey').value.trim()); A.model = $('#aiModel').value.trim(); save('plan'); aiRun(); };
+  $('#txGo').onclick = textScan;
+  if ($('#aiList')) $('#aiList').onclick = e => { e.preventDefault(); setAiKey('gemini', $('#aiKey').value.trim()); aiModels(); };
+}
+
+/* ---------- métré éditable ---------- */
+const getP = (o, p) => p.split('.').reduce((a, k) => a && a[k], o);
+const setP = (o, p, v) => { const ks = p.split('.'), l = ks.pop(); ks.reduce((a, k) => a[k], o)[l] = v; };
+function fScal(path, label, opts) {
+  const v = getP(S.plan.m, path);
+  return `<label class="fld"><span>${label}</span>${opts ? `<select data-mp="${path}">${Object.entries(opts).map(([k, l]) => `<option value="${k}"${k === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : `<input type="number" inputmode="decimal" step="any" min="0" data-mp="${path}" value="${v || ''}" placeholder="0">`}</label>`;
+}
+function fTable(key) {
+  const T = TB[key], rows = S.plan.m[key];
+  return `<h4 class="mg">${T.t}</h4><div class="tablecard"><table class="mtbl"><tr>${T.c.map(c => `<th>${c[1]}</th>`).join('')}<th></th></tr>
+    ${rows.map((r, i) => `<tr>${T.c.map(([c, , t]) => `<td>${typeof t === 'object' ? `<select data-mt="${key}.${i}.${c}">${Object.entries(t).map(([k, l]) => `<option value="${k}"${k === r[c] ? ' selected' : ''}>${l}</option>`).join('')}</select>` :
+      `<input data-mt="${key}.${i}.${c}" ${t === 't' ? 'type="text"' : 'type="number" inputmode="decimal" step="any" min="0"'} value="${esc(r[c] === 0 ? '' : r[c])}" placeholder="${t === 't' ? '' : '0'}" style="min-width:${t === 't' ? 90 : 64}px">`}</td>`).join('')}
+      <td class="x"><button class="btn ghost sm" data-mdel="${key}.${i}" aria-label="Supprimer">✕</button></td></tr>`).join('')}
+  </table></div>${rows.length ? '' : '<p class="note" style="margin:4px 0">Aucune ligne.</p>'}
+  <div class="actions" style="margin-top:6px"><button class="btn ghost sm" data-madd="${key}">➕ Ajouter</button>${rows.length ? `<small class="note">Total : ${key === 'pieces' || key === 'niveaux' || key === 'planchers' ? fmt(sumR(rows, r => r.S), 2) + ' m²' : fmt(sumR(rows, r => r.n), 0) + ' élément(s)'}</small>` : ''}</div>`;
+}
+function renderMetre() {
+  const box = $('#plMetre'); if (!box) return;
+  const m = S.plan.m, BL = Object.fromEntries(Object.entries(BLOCKS).map(([k, b]) => [k, b.n]));
+  box.innerHTML = `<div class="pstep"><span class="n">3</span><h3>Métré — à vérifier</h3></div>
+  <p class="desc">Les mesures relevées sur les plans. Corrigez ou complétez : le devis du gros œuvre (étape 4) se recalcule tout de suite.</p>
+  <h4 class="mg" style="margin-top:6px">🏠 Plan d'architecte</h4>
+  ${fTable('niveaux')}${fTable('pieces')}
+  <h4 class="mg">Murs (tous niveaux cumulés)</h4><div class="fields f4">
+    ${fScal('murs.ext', 'Murs extérieurs (ml)')}${fScal('murs.int', 'Cloisons intérieures (ml)')}${fScal('murs.h', 'Hauteur des murs (m)')}${fScal('murs.ouv', 'Ouvertures extérieures (m²)')}
+    ${fScal('murs.bext', 'Bloc murs extérieurs', BL)}${fScal('murs.bint', 'Bloc cloisons', BL)}</div>
+  <h4 class="mg">Menuiseries</h4><div class="fields f4">
+    ${fScal('menuis.pi', 'Portes intérieures')}${fScal('menuis.pe', 'Portes extérieures')}${fScal('menuis.nf', 'Fenêtres')}${fScal('menuis.fw', 'Largeur fenêtre (m)')}${fScal('menuis.fh', 'Hauteur fenêtre (m)')}</div>
+  <h4 class="mg" style="margin-top:24px">🏗️ Plan de béton armé</h4>
+  <h4 class="mg">Terrassement</h4><div class="fields f4">${fScal('emprise', 'Emprise au sol (m²)')}${fScal('prof', 'Profondeur fouilles semelles (m)')}${fScal('profr', 'Profondeur tranchées longrines (m)')}</div>
+  ${fTable('semelles')}
+  <h4 class="mg">Longrines, semelle filante, chaînages</h4><div class="fields f4">
+    ${fScal('longrines.ml', 'Longrines : longueur (ml)')}${fScal('longrines.b', 'Longrines : largeur (cm)')}${fScal('longrines.h', 'Longrines : hauteur (cm)')}
+    ${fScal('filante.ml', 'Semelle filante (ml)')}${fScal('filante.b', 'Filante : largeur (m)')}${fScal('filante.h', 'Filante : hauteur (m)')}
+    ${fScal('chain.ml', 'Chaînages (ml)')}${fScal('chain.b', 'Chaînages : largeur (cm)')}${fScal('chain.h', 'Chaînages : hauteur (cm)')}</div>
+  ${fTable('poteaux')}${fTable('poutres')}${fTable('planchers')}
+  <h4 class="mg">Dallage & escaliers</h4><div class="fields f4">${fScal('dallage.S', 'Dallage RDC (m²)')}${fScal('dallage.ep', 'Épaisseur dallage (cm)')}${fScal('escaliers.n', 'Volées d\'escalier')}${fScal('escaliers.V', 'Béton par volée (m³)')}</div>
+  <h4 class="mg">Nomenclature des aciers (kg) — si elle figure sur le plan BA</h4>
+  <div class="fields f4">${ACIER_D.map(d => fScal('acier.' + d, 'HA Ø' + d + ' (kg)')).join('')}</div>
+  <p class="note">Vide = l'acier est estimé avec des ratios moyens (kg/m³ de béton). Rempli = les poids de la nomenclature sont utilisés (+5 % de chutes).</p>
+  <label class="chk"><input type="checkbox" id="moGo"${m.mo ? ' checked' : ''}> Ajouter la main d'œuvre du gros œuvre au m² de plancher (prix modifiable dans « Prix & réglages ») — dans ce cas, mettez 0 % de main d'œuvre générale ou baissez-la.</label>
+  <div class="actions"><button class="btn ghost sm" id="mReset">Vider le métré</button></div>`;
+  box.querySelectorAll('[data-mp]').forEach(i => i.addEventListener(i.tagName === 'SELECT' ? 'change' : 'input', () => { setP(m, i.dataset.mp, i.tagName === 'SELECT' ? i.value : pnum(i.value)); savePlan(); renderGO(); }));
+  box.querySelectorAll('[data-mt]').forEach(i => i.addEventListener(i.tagName === 'SELECT' ? 'change' : 'input', () => {
+    const [k, r, c] = i.dataset.mt.split('.'); m[k][+r][c] = i.tagName === 'SELECT' || i.type === 'text' ? i.value : pnum(i.value); savePlan(); renderGO();
+  }));
+  box.querySelectorAll('[data-madd]').forEach(b => b.onclick = () => { const k = b.dataset.madd, last = m[k][m[k].length - 1]; m[k].push(last ? clone(last) : clone(TB[k].d)); save('plan'); renderMetre(); renderGO(); });
+  box.querySelectorAll('[data-mdel]').forEach(b => b.onclick = () => { const [k, r] = b.dataset.mdel.split('.'); m[k].splice(+r, 1); save('plan'); renderMetre(); renderGO(); });
+  $('#moGo').onchange = e => { m.mo = e.target.checked ? 1 : 0; save('plan'); renderGO(); };
+  confirmBtn($('#mReset'), () => { S.plan.m = normMetre({}); S.plan.notes = []; save('plan'); renderPlans(); }, 'Confirmer : tout vider ?');
+}
+
+/* ---------- calcul du gros œuvre ---------- */
+function computeGO(m) {
+  const vols = []; let ck = 0, sa = 0, gr = 0, acR = 0;
+  const conc = (nom, V, dos, steel) => { if (!(V > 0)) return; const c = concrete(V, dos); ck += c.ck; sa += c.sa; gr += c.gr; acR += V * steel; vols.push([nom, V, dos, V * steel]); };
+  const L = m.longrines, F = m.filante, C = m.chain;
+  conc('Béton de propreté', sumR(m.semelles, r => (r.L + 0.1) * (r.l + 0.1) * 0.05 * r.n) + F.ml * (F.b + 0.1) * 0.05 + L.ml * (L.b / 100 + 0.1) * 0.05, 200, 0);
+  conc('Semelles isolées', sumR(m.semelles, r => r.L * r.l * r.h * r.n), 350, 60);
+  conc('Semelle filante', F.ml * F.b * F.h, 350, 50);
+  conc('Longrines', L.ml * L.b * L.h / 1e4, 350, 100);
+  conc('Poteaux', sumR(m.poteaux, r => r.a * r.b / 1e4 * r.h * r.n), 350, 150);
+  conc('Poutres', sumR(m.poutres, r => r.b * r.h / 1e4 * r.L * r.n), 350, 120);
+  conc('Chaînages', C.ml * C.b * C.h / 1e4, 350, 100);
+  let hourd = 0, poutr = 0, trei = 0;
+  m.planchers.forEach(p => {
+    if (!p.S) return;
+    if (p.type === 'dalle') conc('Dalle pleine ' + (p.niv || ''), p.S * (p.ep || 15) / 100, 350, 90);
+    else { conc('Plancher ' + p.type + ' ' + (p.niv || ''), p.S * (PLANCHER[p.type] || 0.075), 350, 0); hourd += Math.ceil(p.S * 8.3 * 1.05); poutr += p.S / 0.6 * 1.05; trei += p.S * 1.1; }
+  });
+  if (m.dallage.S) { conc('Dallage RDC', m.dallage.S * (m.dallage.ep || 10) / 100, 300, 0); trei += m.dallage.S * 1.1; }
+  conc('Escaliers', m.escaliers.n * m.escaliers.V, 350, 100);
+  const items = [];
+  const it = (l, q, p, lot) => { if (q > 0) items.push({ l, q: Math.round(q * 100) / 100, p, lot }); };
+  // terrassement
+  const empr = m.emprise || (m.niveaux[0] && m.niveaux[0].S) || m.dallage.S || 0;
+  const vd = empr * 0.2, vp = sumR(m.semelles, r => (r.L + 0.3) * (r.l + 0.3) * m.prof * r.n), vr = L.ml * (L.b / 100 + 0.3) * m.profr + F.ml * (F.b + 0.3) * m.prof, vt = vd + vp + vr;
+  it('Décapage et fouilles (semelles, tranchées)', vt, 'terr_m3', 'Terrassement');
+  it('Évacuation des terres (camion 8 m³)', vt ? Math.ceil(vt * 1.25 / 8) : 0, 'camion', 'Terrassement');
+  it('Hérisson sous dallage', m.dallage.S * 0.2, 'herisson', 'Terrassement');
+  // béton armé
+  it('Ciment — béton armé et propreté', sacs(ck), 'ciment', 'Gros œuvre');
+  it('Sable — béton', sa, 'sable', 'Gros œuvre');
+  it('Gravette — béton', gr, 'gravette', 'Gros œuvre');
+  const nom = ACIER_D.reduce((s, d) => s + (m.acier[d] || 0), 0);
+  if (nom > 0) ACIER_D.forEach(d => it('Acier HA Ø' + d + ' (nomenclature + 5 %)', m.acier[d] * 1.05, 'acier', 'Gros œuvre'));
+  else it('Acier (estimé par ratios moyens)', acR, 'acier', 'Gros œuvre');
+  it('Treillis soudé (planchers, dallage)', trei, 'treillis', 'Gros œuvre');
+  it('Hourdis', hourd, 'hourdis', 'Gros œuvre');
+  it('Poutrelles', poutr, 'poutrelle', 'Gros œuvre');
+  // maçonnerie
+  const W = m.murs, BE = BLOCKS[W.bext], BI = BLOCKS[W.bint];
+  const se = Math.max(0, W.ext * W.h - W.ouv), si = Math.max(0, W.int * W.h - m.menuis.pi * 1.9);
+  it(BE.n + ' — murs extérieurs (+5 %)', Math.ceil(se * BE.m2 * 1.05), BE.p, 'Maçonnerie');
+  it(BI.n + ' — cloisons (+5 %)', Math.ceil(si * BI.m2 * 1.05), BI.p, 'Maçonnerie');
+  const mort = se * BE.mort + si * BI.mort;
+  it('Ciment — mortier de pose', mort ? sacs(mort * 300) : 0, 'ciment', 'Maçonnerie');
+  it('Sable — mortier de pose', mort * 1.1, 'sable', 'Maçonnerie');
+  const Spl = sumR(m.niveaux, r => r.S) || (sumR(m.planchers, r => r.S) + (m.dallage.S || 0));
+  if (m.mo) it('Main d\'œuvre gros œuvre (au m² de plancher)', Spl, 'mo_go', 'Gros œuvre');
+  const Vb = vols.reduce((s, v) => s + v[1], 0), acier = nom > 0 ? nom * 1.05 : acR;
+  return { items, vols, Vb, acier, vt, se, si, Spl };
+}
+function renderGO() {
+  const box = $('#plGO'); if (!box) return;
+  const R = computeGO(S.plan.m), tot = R.items.reduce((s, d) => s + PR(d.p) * d.q, 0);
+  const inDev = S.devis.filter(d => d.src === 'plan').length;
+  const lots = GO_LOTS.filter(l => R.items.some(d => d.lot === l));
+  box.innerHTML = `<div class="pstep"><span class="n">4</span><h3>Devis du gros œuvre</h3></div>
+  <p class="desc">Calculé à partir du métré, avec vos prix de l'onglet « Prix & réglages » (pertes incluses).</p>
+  ${R.items.length ? `<div class="res" style="margin-top:0">
+    <div class="row big"><span>Béton total</span><b>${fmt(R.Vb, 2)} m³</b></div>
+    ${R.vols.map(v => `<div class="row"><span>${esc(v[0])} (dosé ${v[2]})</span><b>${fmt(v[1], 2)} m³</b></div>`).join('')}
+    <div class="row big"><span>Acier</span><b>${fmt(R.acier, 0)} kg${R.Vb ? ' · ' + fmt(R.acier / R.Vb, 0) + ' kg/m³' : ''}</b></div>
+    <div class="row"><span>Déblais</span><b>${fmt(R.vt, 1)} m³</b></div>
+    <div class="row"><span>Maçonnerie (murs ext. / cloisons)</span><b>${fmt(R.se, 1)} / ${fmt(R.si, 1)} m²</b></div>
+  </div>
+  <table style="margin-top:12px"><tr><th>Désignation</th><th class="num">Qté</th><th>Unité</th><th class="num">P.U.</th><th class="num">Total</th></tr>
+  ${lots.map(l => { const L = R.items.filter(d => d.lot === l); return `<tr class="lot"><td colspan="4">${l}</td><td class="num">${dh(L.reduce((s, d) => s + PR(d.p) * d.q, 0))}</td></tr>` +
+    L.map(d => `<tr><td>${esc(d.l)}</td><td class="num">${fmt(d.q, 2)}</td><td>${UNIT[d.p]}</td><td class="num">${fmt(PR(d.p), 2)}</td><td class="num"><b>${dh(PR(d.p) * d.q)}</b></td></tr>`).join(''); }).join('')}
+  <tr class="tot"><td colspan="4" style="font-size:16px">TOTAL GROS ŒUVRE (fournitures${S.plan.m.mo ? ' + main d\'œuvre' : ''})</td><td class="num" style="font-size:17px;color:var(--terra-d)">${dh(tot)}</td></tr>
+  ${R.Spl ? `<tr><td colspan="4">Soit par m² de plancher (${fmt(R.Spl, 1)} m²)</td><td class="num">${dh(tot / R.Spl)}</td></tr>` : ''}</table>
+  ${R.Vb && (R.acier / R.Vb < 50 || R.acier / R.Vb > 160) ? `<div class="alert warn">Ratio acier de ${fmt(R.acier / R.Vb, 0)} kg/m³ : inhabituel pour une maison (souvent 80 à 120 kg/m³). Vérifiez la nomenclature ou les éléments.</div>` : ''}
+  <div class="actions"><button class="btn" id="goPush">${inDev ? '🔄 Mettre à jour dans le devis global' : '➕ Mettre dans le devis global'}</button>
+  ${inDev ? `<small class="note">${inDev} ligne(s) « plan » déjà dans le devis : elles seront remplacées.</small>` : ''}</div>` :
+  '<p class="empty">Remplissez le métré (étape 3) pour voir le devis du gros œuvre.</p>'}`;
+  if ($('#goPush')) $('#goPush').onclick = () => {
+    const n = R.items.length;
+    S.devis = S.devis.filter(d => d.src !== 'plan').concat(R.items.map(d => Object.assign({ src: 'plan' }, d)));
+    save('devis'); updateDevisCount(); renderGO(); renderPlanSO();
+    toast(n + ' lignes du gros œuvre dans le devis ✔');
+    $('#plSO').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+}
+
+/* ---------- second œuvre ---------- */
+const SO_CALC = [['Enduits & chapes', 'enduit'], ['Étanchéité', 'etanch'], ['Électricité', 'elec'], ['Plomberie & eau', 'plomb'], ['Menuiserie', 'menuis'], ['Plâtrerie & faux plafond', 'platre'],
+  ['Sanitaires', 'sanit'], ['Cuisine', 'cuisine'], ['Revêtements', 'carrelage'], ['Peinture', 'peinture'], ['Énergie solaire', 'solaire'], ['Clôture & portail', 'cloture'], ['Assainissement', 'assain']];
+function goCalc(id) {
+  goTab('calc');
+  setTimeout(() => { const c = $('#card_' + id); if (!c) return; c.scrollIntoView({ behavior: 'smooth', block: 'start' }); window.scrollBy(0, -70); c.classList.add('flash'); setTimeout(() => c.classList.remove('flash'), 1400); }, 350);
+}
+function prefillSO() {
+  const m = S.plan.m, W = m.murs, cnt = t => m.pieces.filter(p => p.type === t).length;
+  const Shab = sumR(m.pieces, r => r.S) || sumR(m.niveaux, r => r.S) * 0.85, niv = Math.max(1, m.niveaux.length);
+  const r1 = x => Math.round(x * 10) / 10, done = [];
+  const put = (id, o) => { const C = CALCS.find(c => c.id === id); if (!C) return; const v = {}; for (const k in o) if (o[k] > 0) v[k] = o[k]; if (!Object.keys(v).length) return;
+    S.calcs[id] = Object.assign({}, S.calcs[id] || Object.fromEntries(C.f.map(f => [f.k, f.v])), v); done.push(C.t.replace(/^\S+\s/, '')); };
+  put('carrelage', { S: r1(Shab) });
+  put('enduit', { S: r1(Math.max(0, (W.ext + W.int) * W.h * 2 - W.ouv * 2)) });
+  put('peinture', { S: r1(Math.max(0, W.ext * W.h + W.int * W.h * 2 - W.ouv) + Shab) });
+  put('menuis', { pi: m.menuis.pi, pe: m.menuis.pe, nf: m.menuis.nf, fw: m.menuis.nf ? m.menuis.fw : 0, fh: m.menuis.nf ? m.menuis.fh : 0 });
+  put('elec', { ch: cnt('chambre'), sal: cnt('salon'), cui: cnt('cuisine'), sdb: cnt('sdb') + cnt('wc'), niv });
+  put('plomb', { sdb: cnt('sdb'), wc: cnt('wc'), cui: cnt('cuisine'), niv });
+  put('sanit', { sdb: cnt('sdb'), wcs: cnt('wc') });
+  if (!done.length) return toast('Métré vide : rien à pré-remplir');
+  save('calcs'); renderCalcs(); refreshPh();
+  toast('Pré-rempli : ' + done.join(', '));
+}
+function renderPlanSO() {
+  const box = $('#plSO'); if (!box) return;
+  const T = devisTotals(), Shab = sumR(S.plan.m.pieces, r => r.S) || sumR(S.plan.m.niveaux, r => r.S);
+  box.innerHTML = `<div class="pstep"><span class="n">5</span><h3>Second œuvre — à vous de l'ajouter</h3></div>
+  <p class="desc">Ajoutez vous-même les finitions et équipements : avec les calculateurs (pré-remplis avec les mesures du plan), ou avec un forfait que vous connaissez (prix d'un artisan, devis reçu…).</p>
+  <div class="actions" style="margin-top:0"><button class="btn ghost" id="soFill">📏 Pré-remplir les calculateurs avec les mesures du plan</button></div>
+  <div class="solots">${SO_CALC.map(([lot, id]) => `<div><span style="font-weight:700">${lot}</span><b>${T.by[lot] ? dh(T.by[lot]) : '<span style="color:var(--muted);font-weight:500">— pas encore</span>'}</b>
+    <button class="btn ghost sm" data-socalc="${id}">Ouvrir le calculateur →</button></div>`).join('')}</div>
+  <h4 class="mg">Forfait rapide</h4>
+  <div class="proj">
+    <label class="fld"><span>Lot</span><select id="soLot">${SO_CALC.map(([l]) => `<option>${l}</option>`).join('')}<option>Main d'œuvre & services</option><option>Divers</option></select></label>
+    <label class="fld"><span>Désignation</span><input id="soL" placeholder="Électricité complète (artisan)"></label>
+    <label class="fld"><span>Quantité</span><input id="soQ" type="number" step="any" min="0" value="${Shab ? Math.round(Shab * 10) / 10 : 1}"></label>
+    <label class="fld"><span>Unité</span><input id="soU" value="${Shab ? 'm²' : 'forfait'}"></label>
+    <label class="fld"><span>Prix unitaire (DH)</span><input id="soP" type="number" step="any" min="0"></label>
+  </div>
+  <div class="actions"><button class="btn ghost sm" id="soAdd">Ajouter au devis</button></div>
+  <table style="margin-top:16px">
+    <tr><td>Gros œuvre</td><td class="num">${dh(T.go)}</td></tr>
+    <tr><td>Second œuvre</td><td class="num">${dh(T.so)}</td></tr>
+    <tr><td>Main d'œuvre (${fmt(+S.projet.mo || 0)} %) et imprévus (${fmt(+S.projet.imp || 0)} %)</td><td class="num">${dh(T.mo + T.imp)}</td></tr>
+    <tr class="tot"><td style="font-size:17px">TOTAL GÉNÉRAL</td><td class="num" style="font-size:18px;color:var(--terra-d)">${dh(T.tot)}</td></tr>
+  </table>
+  <div class="actions"><button class="btn" id="soDevis">📋 Voir le devis global</button></div>`;
+  $('#soFill').onclick = prefillSO;
+  box.querySelectorAll('[data-socalc]').forEach(b => b.onclick = () => goCalc(b.dataset.socalc));
+  $('#soAdd').onclick = () => {
+    const l = $('#soL').value.trim(); if (!l) return toast('Indiquez une désignation');
+    S.devis.push({ l, lot: $('#soLot').value, q: parseFloat($('#soQ').value) || 0, u: $('#soU').value, pu: parseFloat($('#soP').value) || 0 });
+    save('devis'); updateDevisCount(); renderPlanSO(); toast('Ajouté au lot « ' + $('#soLot').value + ' »');
+  };
+  $('#soDevis').onclick = () => goTab('devis');
+}
+function renderPlans() { planInit(); renderPlanRead(); renderMetre(); renderGO(); renderPlanSO(); }
+
 /* ================= init ================= */
-function renderAll() { renderPrices(); renderCalcs(); renderDiag(); renderGuide(); renderJournal(); updateDevisCount(); if ($('#t-devis').classList.contains('on')) renderDevis(); fillSlots(); refreshPh(); }
+function renderAll() { renderPrices(); renderCalcs(); renderPlans(); renderDiag(); renderGuide(); renderJournal(); updateDevisCount(); if ($('#t-devis').classList.contains('on')) renderDevis(); fillSlots(); refreshPh(); }
 /* ===== PWA ===== */
 let installEvt = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; $('#installBtn').style.display = ''; $('#sync').style.marginLeft = '0'; });
 $('#installBtn').onclick = async () => { if (!installEvt) return; installEvt.prompt(); try { await installEvt.userChoice; } catch (e) {} installEvt = null; $('#installBtn').style.display = 'none'; };
 window.addEventListener('appinstalled', () => toast('Application installée ✔'));
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
-renderPieges(); initJournalForm(); renderAll(); setSync('local'); loadLocalPhotos(); initCloud();
+renderPieges(); initJournalForm(); renderAll(); loadPlanPdfs(); setSync('local'); loadLocalPhotos(); initCloud();
 
 /* ===== liens directs (#calc, #devis, #journal…) ===== */
-const TABS = ['calc', 'devis', 'journal', 'diag', 'fiss', 'guide', 'pieges', 'prix'];
+const TABS = ['calc', 'plans', 'devis', 'journal', 'diag', 'fiss', 'guide', 'pieges', 'prix'];
 function fromHash() { const h = location.hash.slice(1); if (TABS.includes(h)) goTab(h); }
 window.addEventListener('hashchange', fromHash); fromHash();
 
