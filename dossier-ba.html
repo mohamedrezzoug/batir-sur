@@ -133,6 +133,277 @@ label.filebtn{display:inline-flex;align-items:center;cursor:pointer}
 <div id="toast" class="toast" role="status" hidden></div>
 
 <script>
+/* Lecture DWG / DXF pour Bâtir Sûr : normalisation, explosion des blocs, dessin SVG, relevé */
+(function (root) {
+  const RAD = Math.PI / 180;
+  const groupOf = l => String(l || '0').replace(/_Stylo_No__\d+$/i, '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim() || '0';
+  const ROLES = {
+    mext: 'Murs extérieurs', mint: 'Cloisons / refends', pot: 'Poteaux', pout: 'Poutres / longrines', sem: 'Fondations',
+    fen: 'Fenêtres', porte: 'Portes', cot: 'Cotation', txt: 'Textes', mob: 'Mobilier / équipement', axe: 'Axes', ign: 'Ignorer', autre: 'Autre'
+  };
+  function guessRole(g) {
+    const s = g.toLowerCase();
+    if (/p[ée]riph|ext[ée]r|façade|facade|mur ext/.test(s) && /mur/.test(s)) return 'mext';
+    if (/refend|cloison|int[ée]r|mur/.test(s)) return 'mint';
+    if (/poteau|\bpot\b|column|colonne/.test(s)) return 'pot';
+    if (/pout|longr|chain|beam/.test(s)) return 'pout';
+    if (/semel|fond|footing/.test(s)) return 'sem';
+    if (/fen[eê]tre|window|vitr/.test(s)) return 'fen';
+    if (/porte|door/.test(s)) return 'porte';
+    if (/cot|dim/.test(s)) return 'cot';
+    if (/axe|axis|grid/.test(s)) return 'axe';
+    if (/texte|text|anot|annot/.test(s)) return 'txt';
+    if (/mobil|equip|fourniture|sanit/.test(s)) return 'mob';
+    if (/cartouche|defpoints|terrain|topo|dessins plac/.test(s)) return 'ign';
+    return 'autre';
+  }
+  // matrices affines [a,b,c,d,e,f] : x' = a x + c y + e ; y' = b x + d y + f
+  const mul = (m, n) => [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1], m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3], m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]];
+  const ap = (m, x, y) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
+  const ID = [1, 0, 0, 1, 0, 0];
+  const scaleOf = m => Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2])) || 1;
+  const rotOf = m => Math.atan2(m[1], m[0]);
+  function cleanText(s) {
+    return String(s == null ? '' : s).replace(/\\P/g, ' ').replace(/\\[A-Za-z][^;\\{}]*;/g, '').replace(/[{}]/g, '').replace(/%%[uUoOdDcCpP]/g, m => ({ '%%d': '°', '%%c': 'Ø', '%%p': '±' }[m.toLowerCase()] || '')).replace(/\s+/g, ' ').trim();
+  }
+  /* ---------- normalisation : libredwg-web (DWG) ---------- */
+  function fromLibredwg(db) {
+    const blocks = {};
+    (db.tables && db.tables.BLOCK_RECORD && db.tables.BLOCK_RECORD.entries || []).forEach(b => { blocks[b.name] = { base: b.basePoint || { x: 0, y: 0 }, ents: (b.entities || []).map(convLD).filter(Boolean) }; });
+    const ms = (db.entities || []).map(convLD).filter(Boolean);
+    return { blocks, ms, units: db.header && db.header.INSUNITS };
+  }
+  function convLD(e) {
+    const L = e.layer, p = q => [q.x, q.y];
+    switch (e.type) {
+      case 'LINE': return { t: 'L', L, a: p(e.startPoint), b: p(e.endPoint) };
+      case 'LWPOLYLINE': case 'POLYLINE2D': case 'POLYLINE': return { t: 'P', L, pts: (e.vertices || []).map(v => [v.x, v.y, v.bulge || 0]), closed: !!((e.flag || e.flags || 0) & 1) || !!e.closed };
+      case 'CIRCLE': return { t: 'C', L, c: p(e.center), r: e.radius };
+      case 'ARC': return { t: 'A', L, c: p(e.center), r: e.radius, a0: e.startAngle, a1: e.endAngle };
+      case 'ELLIPSE': return { t: 'E', L, c: p(e.center), M: p(e.majorAxisEndPoint), k: e.axisRatio, a0: e.startAngle, a1: e.endAngle };
+      case 'TEXT': return { t: 'T', L, p: p(e.startPoint), h: e.textHeight, rot: e.rotation || 0, s: cleanText(e.text) };
+      case 'MTEXT': return { t: 'T', L, p: p(e.insertionPoint), h: e.textHeight, rot: e.rotation || (e.direction ? Math.atan2(e.direction.y, e.direction.x) : 0), s: cleanText(e.text) };
+      case 'HATCH': return { t: 'H', L, polys: (e.boundaryPaths || []).filter(b => b.vertices && b.vertices.length > 2).map(b => b.vertices.map(v => [v.x, v.y])) };
+      case 'INSERT': return { t: 'I', L, name: e.name, p: p(e.insertionPoint), sx: e.xScale || 1, sy: e.yScale || 1, rot: e.rotation || 0, attrs: (e.attribs || []).map(a => a.text && cleanText(a.text.text)).filter(Boolean) };
+      case 'DIMENSION': return { t: 'D', L, name: e.name, m: e.measurement, txt: cleanText(e.text), p: e.textPoint ? p(e.textPoint) : null };
+      case 'SOLID': case 'TRACE': return e.corner1 ? { t: 'H', L, polys: [[e.corner1, e.corner2, e.corner4 || e.corner3, e.corner3].filter(Boolean).map(p)] } : null;
+      default: return null;
+    }
+  }
+  /* ---------- normalisation : dxf-parser (DXF) ---------- */
+  function fromDxfParser(d) {
+    const blocks = {};
+    Object.entries(d.blocks || {}).forEach(([n, b]) => { blocks[n] = { base: b.position || { x: 0, y: 0 }, ents: (b.entities || []).map(convDP).filter(Boolean) }; });
+    return { blocks, ms: (d.entities || []).map(convDP).filter(Boolean), units: d.header && d.header.$INSUNITS };
+  }
+  function convDP(e) {
+    const L = e.layer, p = q => [q.x, q.y];
+    switch (e.type) {
+      case 'LINE': return e.vertices && e.vertices.length > 1 ? { t: 'L', L, a: p(e.vertices[0]), b: p(e.vertices[1]) } : null;
+      case 'LWPOLYLINE': case 'POLYLINE': return { t: 'P', L, pts: (e.vertices || []).map(v => [v.x, v.y, v.bulge || 0]), closed: !!e.shape || !!e.closed };
+      case 'CIRCLE': return { t: 'C', L, c: p(e.center), r: e.radius };
+      case 'ARC': return { t: 'A', L, c: p(e.center), r: e.radius, a0: e.startAngle, a1: e.endAngle };
+      case 'ELLIPSE': return { t: 'E', L, c: p(e.center), M: p(e.majorAxisEndPoint), k: e.axisRatio, a0: e.startAngle, a1: e.endAngle };
+      case 'TEXT': return { t: 'T', L, p: p(e.startPoint || e.position || { x: 0, y: 0 }), h: e.textHeight, rot: (e.rotation || 0) * RAD, s: cleanText(e.text) };
+      case 'MTEXT': return { t: 'T', L, p: p(e.position || { x: 0, y: 0 }), h: e.height, rot: (e.rotation || 0) * RAD, s: cleanText(e.text) };
+      case 'INSERT': return { t: 'I', L, name: e.name, p: p(e.position || { x: 0, y: 0 }), sx: e.xScale || 1, sy: e.yScale || 1, rot: (e.rotation || 0) * RAD, attrs: [] };
+      case 'DIMENSION': return { t: 'D', L, name: e.block, m: e.actualMeasurement, txt: cleanText(e.text), p: e.middleOfText ? p(e.middleOfText) : null };
+      case 'SOLID': return e.points ? { t: 'H', L, polys: [e.points.map(p)] } : null;
+      default: return null;
+    }
+  }
+  /* ---------- explosion des blocs ---------- */
+  function explode(N, list, m, depth, out, layerOverride) {
+    for (const e of list) {
+      const L = (e.L === '0' && layerOverride) ? layerOverride : e.L;
+      if (e.t === 'I') {
+        const B = N.blocks[e.name]; if (!B || depth > 8 || /^\*(D|E)\d/.test(e.name) && depth > 6) continue;
+        const c = Math.cos(e.rot), s = Math.sin(e.rot);
+        const local = [c * e.sx, s * e.sx, -s * e.sy, c * e.sy, e.p[0], e.p[1]];
+        const mm = mul(m, mul(local, [1, 0, 0, 1, -B.base.x, -B.base.y]));
+        explode(N, B.ents, mm, depth + 1, out, L);
+        continue;
+      }
+      if (e.t === 'D') { if (e.name && N.blocks[e.name]) explode(N, N.blocks[e.name].ents, m, depth + 1, out, L); out.push({ t: 'D', L, m: e.m, txt: e.txt, p: e.p && ap(m, e.p[0], e.p[1]) }); continue; }
+      const k = scaleOf(m);
+      if (e.t === 'L') out.push({ t: 'L', L, a: ap(m, ...e.a), b: ap(m, ...e.b) });
+      else if (e.t === 'P') out.push({ t: 'P', L, closed: e.closed, pts: e.pts.map(q => ap(m, q[0], q[1]).concat(q[2] || 0)) });
+      else if (e.t === 'C') out.push({ t: 'C', L, c: ap(m, ...e.c), r: e.r * k });
+      else if (e.t === 'A') { const r = rotOf(m); out.push({ t: 'A', L, c: ap(m, ...e.c), r: e.r * k, a0: e.a0 + r, a1: e.a1 + r }); }
+      else if (e.t === 'E') { const c0 = ap(m, ...e.c), tip = ap(m, e.c[0] + e.M[0], e.c[1] + e.M[1]); out.push({ t: 'E', L, c: c0, M: [tip[0] - c0[0], tip[1] - c0[1]], k: e.k, a0: e.a0, a1: e.a1 }); }
+      else if (e.t === 'T') out.push({ t: 'T', L, p: ap(m, ...e.p), h: (e.h || 0.2) * k, rot: e.rot + rotOf(m), s: e.s });
+      else if (e.t === 'H') out.push({ t: 'H', L, polys: e.polys.map(pl => pl.map(q => ap(m, q[0], q[1]))) });
+    }
+    return out;
+  }
+  /* vues : chaque bloc inséré au premier niveau = une vue ; le reste = la feuille */
+  function views(N) {
+    const vs = [], rest = [];
+    N.ms.forEach(e => {
+      if (e.t === 'I' && N.blocks[e.name] && !/^\*/.test(e.name) && N.blocks[e.name].ents.length > 30) {
+        vs.push({ name: e.name, ents: explode(N, [e], ID, 0, []) });
+      } else rest.push(e);
+    });
+    const r = explode(N, rest, ID, 0, []);
+    if (r.length > 20 || !vs.length) vs.push({ name: vs.length ? 'Feuille (autres dessins)' : 'Dessin', ents: r });
+    vs.forEach(v => { v.box = bbox(v.ents); v.title = viewTitle(v); });
+    return vs;
+  }
+  function viewTitle(v) {
+    const t = v.ents.filter(e => e.t === 'T' && e.s && e.h > 0).sort((a, b) => b.h - a.h)[0];
+    return v.name;
+  }
+  function bbox(ents) {
+    const xs = [], ys = [];
+    const add = q => { if (q && isFinite(q[0]) && isFinite(q[1])) { xs.push(q[0]); ys.push(q[1]); } };
+    ents.forEach(e => { if (e.t === 'L') { add(e.a); add(e.b); } else if (e.t === 'P') e.pts.forEach(add); else if (e.t === 'C' || e.t === 'A' || e.t === 'E') add(e.c); else if (e.t === 'H') e.polys.forEach(pl => pl.forEach(add)); else if (e.t === 'T') add(e.p); });
+    if (!xs.length) return { x0: 0, y0: 0, x1: 1, y1: 1 };
+    xs.sort((a, b) => a - b); ys.sort((a, b) => a - b);
+    const q = (a, f) => a[Math.min(a.length - 1, Math.max(0, Math.round(f * (a.length - 1))))];
+    // ignore les 0,3 % de points les plus éloignés (cartouches, points perdus)
+    let x0 = q(xs, 0.003), x1 = q(xs, 0.997), y0 = q(ys, 0.003), y1 = q(ys, 0.997);
+    const pad = Math.max(x1 - x0, y1 - y0) * 0.03 || 1;
+    return { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad };
+  }
+  /* ---------- dessin SVG ---------- */
+  const COL = { mext: '#b8522a', mint: '#d9822b', pot: '#7a1f1f', pout: '#2f6390', sem: '#5b3fa0', fen: '#1f8aa8', porte: '#8a6d3b', cot: '#2c7a4b', txt: '#222', mob: '#9aa3a6', axe: '#c0544a', ign: '#c9c9c9', autre: '#555' };
+  const escx = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function arcPath(c, r, a0, a1) {
+    let d = a1 - a0; while (d <= 0) d += 2 * Math.PI;
+    const p0 = [c[0] + r * Math.cos(a0), -(c[1] + r * Math.sin(a0))], p1 = [c[0] + r * Math.cos(a0 + d), -(c[1] + r * Math.sin(a0 + d))];
+    return `M${p0[0]} ${p0[1]}A${r} ${r} 0 ${d > Math.PI ? 1 : 0} 0 ${p1[0]} ${p1[1]}`;
+  }
+  function svg(v, roleOf, hidden, opts) {
+    opts = opts || {};
+    const b = v.box, W = b.x1 - b.x0, H = b.y1 - b.y0, K = 1000 / Math.max(W, H), sw = 0.75;
+    const X = x => Math.round((x - b.x0) * K * 100) / 100, Y = y => Math.round((b.y1 - y) * K * 100) / 100, S = d => Math.round(d * K * 100) / 100;
+    const VW = Math.round(W * K), VH = Math.round(H * K);
+    let h = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VW} ${VH}" ${opts.size ? `width="${opts.size}" height="${Math.round(opts.size * VH / VW)}"` : ''} style="background:#fff" stroke-linecap="round"><g fill="none" stroke-width="${sw}">`;
+    for (const e of v.ents) {
+      const g = groupOf(e.L), r = roleOf(g); if (hidden[g]) continue;
+      const c = COL[r] || '#555', strong = r === 'mext' || r === 'mint' || r === 'pot';
+      const st = `stroke="${c}"${strong ? ` stroke-width="${sw * 2}"` : ''}`;
+      if (e.t === 'L') h += `<line x1="${X(e.a[0])}" y1="${Y(e.a[1])}" x2="${X(e.b[0])}" y2="${Y(e.b[1])}" ${st}/>`;
+      else if (e.t === 'P') h += `<path d="${e.pts.map((q, i) => (i ? 'L' : 'M') + X(q[0]) + ' ' + Y(q[1])).join('') + (e.closed ? 'Z' : '')}" ${st}/>`;
+      else if (e.t === 'C') h += `<circle cx="${X(e.c[0])}" cy="${Y(e.c[1])}" r="${S(e.r)}" ${st}/>`;
+      else if (e.t === 'A') { let d = e.a1 - e.a0; while (d <= 0) d += 2 * Math.PI; const r0 = S(e.r);
+        h += `<path d="M${X(e.c[0] + e.r * Math.cos(e.a0))} ${Y(e.c[1] + e.r * Math.sin(e.a0))}A${r0} ${r0} 0 ${d > Math.PI ? 1 : 0} 0 ${X(e.c[0] + e.r * Math.cos(e.a0 + d))} ${Y(e.c[1] + e.r * Math.sin(e.a0 + d))}" ${st}/>`; }
+      else if (e.t === 'E') { const R = Math.hypot(e.M[0], e.M[1]), ang = Math.atan2(e.M[1], e.M[0]); h += `<ellipse cx="${X(e.c[0])}" cy="${Y(e.c[1])}" rx="${S(R)}" ry="${S(R * e.k)}" transform="rotate(${Math.round(-ang / RAD * 100) / 100} ${X(e.c[0])} ${Y(e.c[1])})" ${st}/>`; }
+      else if (e.t === 'H') h += e.polys.map(pl => `<polygon points="${pl.map(q => X(q[0]) + ',' + Y(q[1])).join(' ')}" fill="${c}" fill-opacity="${strong ? 0.55 : 0.18}" stroke="none"/>`).join('');
+      else if (e.t === 'T' && e.s) h += `<text x="${X(e.p[0])}" y="${Y(e.p[1])}" font-size="${S(e.h)}" font-family="Arial,sans-serif" fill="${r === 'cot' ? COL.cot : '#222'}" stroke="none"${e.rot ? ` transform="rotate(${Math.round(-e.rot / RAD * 100) / 100} ${X(e.p[0])} ${Y(e.p[1])})"` : ''}>${escx(e.s)}</text>`;
+    }
+    return h + '</g></svg>';
+  }
+  /* conversion écran (coordonnées du SVG 0..1000) -> dessin */
+  function toModel(v, sx, sy) { const b = v.box, K = 1000 / Math.max(b.x1 - b.x0, b.y1 - b.y0); return [b.x0 + sx / K, b.y1 - sy / K]; }
+  function toSvg(v, x, y) { const b = v.box, K = 1000 / Math.max(b.x1 - b.x0, b.y1 - b.y0); return [(x - b.x0) * K, (b.y1 - y) * K]; }
+  /* ---------- relevé ---------- */
+  const polyArea = pl => { let a = 0; for (let i = 0; i < pl.length; i++) { const p = pl[i], q = pl[(i + 1) % pl.length]; a += p[0] * q[1] - q[0] * p[1]; } return Math.abs(a / 2); };
+  const polyLen = (pts, closed) => { let s = 0; for (let i = 1; i < pts.length; i++) s += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (closed && pts.length > 2) s += Math.hypot(pts[0][0] - pts.at(-1)[0], pts[0][1] - pts.at(-1)[1]); return s; };
+  function unitFactor(v, units) {
+    // 1 unité du dessin = f mètres. Estimation par la taille du dessin si l'en-tête est douteux.
+    const b = v.box, size = Math.max(b.x1 - b.x0, b.y1 - b.y0);
+    if (size > 2000) return 0.001; if (size > 200) return 0.01; if (size > 2) return 1;
+    return { 4: 0.001, 5: 0.01, 6: 1 }[units] || 1;
+  }
+  const NUM = s => parseFloat(String(s).replace(/\s/g, '').replace(',', '.'));
+  const ROOM_RX = [[/chambre|\bch\b|suite|parent|enfant|غرفة|bedroom/i, 'chambre'], [/salon|s[ée]jour|living|r[ée]ception|bureau|coin feu|صالون/i, 'salon'], [/cuisine|kitchen|مطبخ/i, 'cuisine'], [/s\.?d\.?b|bain|douche|hammam|حمام/i, 'sdb'], [/\bwc\b|w\.c|toilette|مرحاض/i, 'wc'], [/hall|d[ée]gagement|couloir|circulation|escalier|palier|entr[ée]e|sas|dressing/i, 'circ']];
+  function analyse(v, roleOf, units) {
+    const f = unitFactor(v, units), g = {};
+    const G = n => g[n] || (g[n] = { n, role: roleOf(n), len: 0, area: 0, count: 0, ents: 0 });
+    const texts = [];
+    v.ents.forEach(e => {
+      const x = G(groupOf(e.L)); x.ents++;
+      if (e.t === 'L') x.len += Math.hypot(e.b[0] - e.a[0], e.b[1] - e.a[1]) * f;
+      else if (e.t === 'P') { x.len += polyLen(e.pts, e.closed) * f; if (e.closed) x.area += polyArea(e.pts) * f * f; }
+      else if (e.t === 'H') x.area += e.polys.reduce((s, pl) => s + polyArea(pl), 0) * f * f;
+      else if (e.t === 'C') x.count++;
+      else if (e.t === 'T' && e.s) texts.push(e);
+    });
+    // surfaces écrites : « 26,04 m » suivi de « 2 », ou « 12,5 m² » ; le nom est juste au-dessus
+    const rooms = [], areas = [];
+    texts.forEach((t, i) => {
+      const m = t.s.match(/^(\d+(?:[.,]\d+)?)\s*m(?:²|2)?$/i);
+      if (m && /[.,]/.test(m[1]) && (/m(²|2)$/i.test(t.s) || /m$/i.test(t.s))) areas.push({ v: NUM(m[1]), p: t.p, h: t.h });
+    });
+    const STOP = /alignement|nord|coupe|façade|facade|fondation|sous sol|^rdc$|^etage$|^étage$|^terrasse$|^vide|cour anglaise/i;
+    const names = texts.filter(t => t.s === '-' || /[a-zà-ü]{2,}/i.test(t.s) && !STOP.test(t.s) && t.s.length < 30 && !/^\d/.test(t.s));
+    areas.forEach(a => {
+      const lim = Math.max(a.h * 12, 1.2 / f);
+      const near = names.filter(n => n.p[1] > a.p[1] - a.h * 0.2 && n.p[1] - a.p[1] < lim && Math.abs(n.p[0] - a.p[0]) < lim * 1.2)
+        .sort((x, y) => (x.p[1] - a.p[1]) - (y.p[1] - a.p[1]));
+      // on garde la pile de noms continue au-dessus de la surface
+      const pile = []; let lastY = a.p[1];
+      for (const n of near) { if (pile.length && n.p[1] - lastY > Math.max(n.h, a.h) * 3.2) break; pile.push(n); lastY = n.p[1]; }
+      const nom = pile.reverse().map(n => n.s).filter(x => x !== '-').join(' - ').trim() || 'Pièce';
+      const type = (ROOM_RX.find(([rx]) => rx.test(nom)) || [0, 'autre'])[1];
+      rooms.push({ nom, type, S: a.v });
+    });
+    const levels = texts.map(t => t.s.match(/^([+-]\d+[.,]\d{2})$/)).filter(Boolean).map(m => NUM(m[1]));
+    const sections = {}; texts.forEach(t => { const m = t.s.match(/^(\d{2,3})\s*[xX×*]\s*(\d{2,3})$/); if (m) { const k = m[1] + '×' + m[2]; sections[k] = (sections[k] || 0) + 1; } });
+    const b = v.box;
+    return { f, groups: Object.values(g).sort((a, b) => b.len - a.len), rooms, levels: [...new Set(levels)].sort((a, b) => a - b), sections, texts: texts.map(t => t.s),
+      W: (b.x1 - b.x0) * f, H: (b.y1 - b.y0) * f };
+  }
+  /* murs : longueur ≈ (longueur des traits du calque) / 2, car un mur est dessiné par ses deux faces */
+  function wallsOf(A) {
+    const s = r => A.groups.filter(x => x.role === r).reduce((t, x) => t + x.len, 0) / 2;
+    const ar = r => A.groups.filter(x => x.role === r).reduce((t, x) => t + x.area, 0);
+    return { ext: s('mext'), int: s('mint'), extHatch: ar('mext'), intHatch: ar('mint') };
+  }
+  /* aimantation : extrémités les plus proches */
+  function snapPoints(v) { const P = []; v.ents.forEach(e => { if (e.t === 'L') { P.push(e.a, e.b); } else if (e.t === 'P') e.pts.forEach(q => P.push([q[0], q[1]])); }); return P; }
+  function levelOf(v) {
+    const T = (v.name + ' ' + v.ents.filter(e => e.t === 'T').map(e => e.s).join(' ')).toLowerCase();
+    const n = v.name.toLowerCase();
+    const k = s => /sous[ -]?sol/.test(s) ? 'Sous-sol' : /\brdc\b|rez/.test(s) ? 'RDC' : /[ée]tage|r\+1/.test(s) ? 'Étage' : /terrasse/.test(s) ? 'Terrasse' : '';
+    if (/coupe/.test(T) && !k(n)) return { kind: 'coupe' };
+    const lv = k(n) || (/^feuille|^dessin$/i.test(v.name) ? '' : k(T.slice(0, 400)));
+    return lv ? { kind: 'plan', level: lv } : { kind: /façade|facade/.test(T) ? 'facade' : 'autre' };
+  }
+  root.CAD = { levelOf, fromLibredwg, fromDxfParser, views, svg, analyse, wallsOf, groupOf, guessRole, ROLES, COL, polyArea, polyLen, snapPoints, unitFactor, toModel, toSvg };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+/* Bâtir Sûr : DWG / DXF -> images des plans et coupes + textes exacts */
+window.BSCAD = (function () {
+  var LDW = 'https://cdn.jsdelivr.net/npm/@mlightcad/libredwg-web@0.8.3/', DXFP = 'https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js', ldwP = null, dxfP = null;
+  function ldw() { if (!ldwP) ldwP = import(LDW + 'dist/libredwg-web.js').then(function (m) { return m.LibreDwg.create(LDW + 'wasm').then(function (lib) { return { lib: lib, T: m.Dwg_File_Type }; }); }).catch(function (e) { ldwP = null; throw e; }); return ldwP; }
+  function dxf() { if (!dxfP) dxfP = new Promise(function (res, rej) { if (window.DxfParser) return res(window.DxfParser); var sc = document.createElement('script'); sc.src = DXFP; sc.onload = function () { res(window.DxfParser); }; sc.onerror = function () { dxfP = null; rej(new Error('dxf')); }; document.head.appendChild(sc); }); return dxfP; }
+  var LO = ['Sous-sol', 'RDC', 'Étage', 'Terrasse'];
+  async function read(file) {
+    var buf = await file.arrayBuffer(), N;
+    if (/\.dxf$/i.test(file.name)) { var P = await dxf(); N = CAD.fromDxfParser(new P().parseSync(new TextDecoder('utf-8').decode(buf))); }
+    else { var L = await ldw(), dwg = L.lib.dwg_read_data(buf, L.T.DWG); if (!dwg) throw new Error('dwg'); N = CAD.fromLibredwg(L.lib.convert(dwg)); try { L.lib.dwg_free(dwg); } catch (e) {} }
+    var vs = CAD.views(N).filter(function (v) { return v.ents.length; });
+    vs.forEach(function (v) { v.lv = CAD.levelOf(v); v.A = CAD.analyse(v, CAD.guessRole, N.units); });
+    var ord = { plan: 0, coupe: 1, facade: 2, autre: 3 };
+    vs.sort(function (a, b) { return (ord[a.lv.kind] - ord[b.lv.kind]) || (LO.indexOf(a.lv.level) - LO.indexOf(b.lv.level)); });
+    var keep = vs.filter(function (v) { return v.lv.kind === 'plan' || v.lv.kind === 'coupe'; });
+    if (!keep.length) keep = vs.slice(0, 4);
+    var imgs = [];
+    for (var i = 0; i < keep.length && i < 6; i++) {
+      var v = keep[i], hide = {};
+      v.A.groups.forEach(function (g) { var r = CAD.guessRole(g.n); if (r === 'ign' || r === 'mob') hide[g.n] = 1; });
+      var svg = CAD.svg(v, CAD.guessRole, hide), u = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+      try {
+        var im = await new Promise(function (res, rej) { var x = new Image(); x.onload = function () { res(x); }; x.onerror = rej; x.src = u; });
+        var vb = svg.match(/viewBox="0 0 (\d+) (\d+)"/), W = +vb[1], H = +vb[2], sc = 2200 / Math.max(W, H), cv = document.createElement('canvas');
+        cv.width = Math.round(W * sc); cv.height = Math.round(H * sc);
+        var cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(im, 0, 0, cv.width, cv.height);
+        var b = await new Promise(function (r) { cv.toBlob(r, 'image/jpeg', 0.88); });
+        var lab = v.lv.kind === 'plan' ? (v.lv.level || 'Plan') : 'Coupe';
+        if (b) imgs.push({ blob: b, label: file.name + ' · ' + v.name + ' (' + lab + ')' });
+      } catch (e) {} finally { URL.revokeObjectURL(u); }
+    }
+    var T = ['Données EXACTES lues dans le fichier AutoCAD ' + file.name + ' (unité : mètre). Les images sont des vues dessinées depuis ce fichier, dans l\'ordre : ' + keep.slice(0, 6).map(function (v) { return v.name; }).join(', ') + '.'];
+    vs.forEach(function (v) { var A = v.A; T.push('- ' + v.name + ' (' + (v.lv.level || v.lv.kind) + ', ' + A.W.toFixed(2) + ' × ' + A.H.toFixed(2) + ' m)' + (A.rooms.length ? ' — pièces : ' + A.rooms.map(function (r) { return r.nom + ' ' + r.S + ' m²'; }).join(' ; ') : '') + (A.levels.length ? ' — niveaux : ' + A.levels.join(' ; ') : '')); });
+    return { imgs: imgs, text: T.join('\n') };
+  }
+  return { read: read };
+})();
+
+</script>
+<script>
 var BE=(function(){
 'use strict';
 var NFc={};
@@ -1336,17 +1607,18 @@ async function tilesOf(blob){
 async function planFiles(list){
   var p=ui.plan,files=Array.prototype.slice.call(list||[]),imgs=[],k;
   if(!files.length)return;
-  p.status='loading';p.msg='Préparation du plan…';p.result=null;render();
+  p.status='loading';p.msg='Préparation du plan…';p.result=null;p.cadText='';render();
   try{
     for(k=0;k<files.length;k++){
       var f=files[k];
-      if(f.type==='application/pdf'||/\.pdf$/i.test(f.name)){imgs=imgs.concat(await renderPdf(f));}
+      if(/\.(dwg|dxf)$/i.test(f.name)){p.msg='Lecture du fichier AutoCAD… (la première fois, le lecteur DWG se télécharge)';render();var cr=await BSCAD.read(f);imgs=imgs.concat(cr.imgs);p.cadText=cr.text;}
+      else if(f.type==='application/pdf'||/\.pdf$/i.test(f.name)){imgs=imgs.concat(await renderPdf(f));}
       else if(/^image\//.test(f.type)){imgs.push({blob:f,label:f.name});}
     }
   }catch(e){
-    p.status='error';p.msg='Ce fichier ne peut pas être lu ici. Exporte le plan en image (JPG ou PNG) ou fais une capture, puis réessaie.';render();return;
+    p.status='error';p.msg='Ce fichier ne peut pas être lu ici. Pour un DWG récent, enregistre-le en DXF dans AutoCAD ; sinon exporte le plan en PDF ou en image (JPG, PNG), puis réessaie.';render();return;
   }
-  if(!imgs.length){p.status='error';p.msg='Choisis un PDF ou une image (JPG, PNG).';render();return;}
+  if(!imgs.length){p.status='error';p.msg='Choisis un PDF, une image (JPG, PNG) ou un fichier AutoCAD (DWG, DXF).';render();return;}
   p.imgs.forEach(function(i){if(i.url)URL.revokeObjectURL(i.url);});
   imgs.forEach(function(i){i.url=URL.createObjectURL(i.blob);});
   p.imgs=imgs;p.status='ready';p.msg='';render();
@@ -1429,7 +1701,7 @@ async function readPlan(){
   if(max-blobs.length>=4){var t=await tilesOf(pages[0].blob);if(t.length===4){blobs=blobs.concat(t);hasTiles=true;}}
   var ctl=new AbortController();p.ctl=ctl;p.status='reading';p.msg='';render();
   try{
-    var raw=await sample.json(planPrompt(pages.length,hasTiles),{images:blobs,modelTier:'complex',signal:ctl.signal});
+    var raw=await sample.json(planPrompt(pages.length,hasTiles)+(p.cadText?'\n\n'+p.cadText+'\nUtilise en priorité ces cotes, niveaux et surfaces exacts.':''),{images:blobs,modelTier:'complex',signal:ctl.signal});
     var s=sanitizePlan(raw);
     if(s.err){p.status='error';p.msg=s.err;}else{p.result=s;p.status='done';}
   }catch(e){
@@ -1456,9 +1728,9 @@ function applyPlan(){
 
 function planView(){
   var p=ui.plan,h='<section class="card"><h2>Plan de l\'architecte</h2>'+
-    '<p class="note">Envoie le plan (PDF ou image). Claude lit les axes, les distances, les niveaux et les ouvertures, puis l\'app calcule le coffrage, le ferraillage BAEL, les coupes, les façades et le métré.</p>'+
+    '<p class="note">Envoie le plan (PDF, image ou fichier AutoCAD DWG / DXF). L\'IA lit les axes, les distances, les niveaux et les ouvertures, puis l\'app calcule le coffrage, le ferraillage BAEL, les coupes, les façades et le métré.</p>'+
     '<div class="btns"><label class="btn primary filebtn" for="planFile">Choisir le plan</label>'+
-    '<input id="planFile" type="file" accept="image/*,application/pdf" multiple hidden>'+
+    '<input id="planFile" type="file" accept="image/*,application/pdf,.dwg,.dxf" multiple hidden>'+
     (p.imgs.length&&p.status!=='reading'?'<button class="btn primary" data-act="readplan">Lire le plan et tout calculer</button>':'')+
     (p.status==='reading'?'<button class="btn" data-act="stopplan">Arrêter</button>':'')+'</div>';
   if(p.imgs.length)h+='<div class="thumbs">'+p.imgs.map(function(i){return '<figure><img src="'+i.url+'" alt="'+esc(i.label)+'"><figcaption>'+esc(i.label)+'</figcaption></figure>';}).join('')+'</div>';
