@@ -1640,7 +1640,7 @@ function planPrompt(nPages,hasTiles){
   'Si une donnée est introuvable, fais ton meilleur choix et dis-le dans notes. Réponds avec le JSON seul.';
 }
 function sanitizePlan(raw){
-  if(!raw||typeof raw!=='object')return {err:'Claude n\'a pas renvoyé de données exploitables. Essaie avec une image plus nette.'};
+  if(!raw||typeof raw!=='object')return {err:'L\'IA n\'a pas renvoyé de données exploitables. Essaie avec une image plus nette.'};
   function axes(a){
     var v=(Array.isArray(a)?a:[]).map(Number).filter(function(x){return isFinite(x);}).sort(function(p,q){return p-q;});
     if(!v.length)return [];
@@ -1682,13 +1682,13 @@ function planErr(e){
   if(c==='busy')return 'Les serveurs de l\'IA sont surchargés en ce moment (ce n\'est pas votre clé). Réessayez dans quelques minutes, ou changez de service dans Bâtir Sûr.';
   if(c==='bad_key')return 'La clé IA est refusée : vérifiez-la dans Bâtir Sûr (onglet « 📐 Devis depuis plans », étape 2).';
   if(c==='api')return 'La lecture a échoué : '+(e.message||'erreur inconnue');
-  if(c==='not_granted')return 'Claude n\'a pas la permission de lire ce plan. Autorise-le quand la fenêtre apparaît, puis relance.';
+  if(c==='not_granted')return 'L\'IA n\'a pas la permission de lire ce plan. Autorise-le quand la fenêtre apparaît, puis relance.';
   if(c==='rate_limited')return 'Trop de demandes pour le moment. Attends un peu puis relance la lecture.';
   if(c==='session_expired')return 'Ta session a expiré. Reconnecte-toi à Claude puis relance.';
   if(c==='image_rejected')return 'Image refusée (type ou taille). Envoie un JPG ou PNG de moins de 20 Mo.';
-  if(c==='invalid_json')return 'Claude n\'a pas pu structurer le plan. Essaie avec une image plus nette, un seul plan d\'étage à la fois.';
+  if(c==='invalid_json')return 'L\'IA n\'a pas pu structurer le plan. Essaie avec une image plus nette, un seul plan d\'étage à la fois.';
   if(c==='images_unavailable'||c==='sampling_disabled'||c==='capability_disabled'||c==='capability_removed'||c==='not_declared')return 'La lecture de plan n\'est pas disponible dans cette vue.';
-  if(c==='refused')return 'Claude n\'a pas pu traiter ce document. Essaie un autre plan.';
+  if(c==='refused')return 'L\'IA n\'a pas pu traiter ce document. Essaie un autre plan.';
   return 'La lecture a échoué. Réessaie dans un instant.';
 }
 async function readPlan(){
@@ -1732,7 +1732,7 @@ function planView(){
     '<div class="btns"><label class="btn primary filebtn" for="planFile">Choisir le plan</label>'+
     '<input id="planFile" type="file" accept="image/*,application/pdf,.dwg,.dxf" multiple hidden>'+
     (p.imgs.length&&p.status!=='reading'?'<button class="btn primary" data-act="readplan">Lire le plan et tout calculer</button>':'')+
-    (p.status==='reading'?'<button class="btn" data-act="stopplan">Arrêter</button>':'')+'</div>';
+    (p.status==='reading'?'<button class="btn" data-act="stopplan">Arrêter</button>':'')+'</div>'+BSAI.info();
   if(p.imgs.length)h+='<div class="thumbs">'+p.imgs.map(function(i){return '<figure><img src="'+i.url+'" alt="'+esc(i.label)+'"><figcaption>'+esc(i.label)+'</figcaption></figure>';}).join('')+'</div>';
   if(p.status==='loading')h+='<p class="note strong">'+esc(p.msg)+'</p>';
   if(p.status==='reading')h+='<p class="note strong" role="status">L\'IA lit le plan… Cela prend en général de 30 secondes à 2 minutes.</p>';
@@ -1740,7 +1740,7 @@ function planView(){
   h+='<p class="note">Pour une lecture fiable : un plan d\'étage net par image, avec les cotes lisibles. Plus la page est grande, plus il faut envoyer des images zoomées sur la partie utile.</p></section>';
   if(p.status==='done'&&p.result){
     var s=p.result,tx=0,ty=0;s.sx.forEach(function(v){tx+=v;});s.sy.forEach(function(v){ty+=v;});
-    h+='<section class="card"><h2>Ce que Claude a lu</h2><p class="'+(s.conf==='haute'?'ok':'note strong')+'">Confiance : '+esc(s.conf)+'</p>'+
+    h+='<section class="card"><h2>Ce que l\'IA a lu'+(BSAI.last?' <small style="font-weight:400;font-size:13px;color:var(--ink-2)">· '+esc(BSAI.last)+'</small>':'')+'</h2><p class="'+(s.conf==='haute'?'ok':'note strong')+'">Confiance : '+esc(s.conf)+'</p>'+
       '<table class="kv"><tbody>'+
       '<tr><th>Projet</th><td>'+esc(s.name)+'</td></tr>'+
       '<tr><th>Axes sens X</th><td>'+s.sx.map(function(v){return F(v,2);}).join(' · ')+' m</td></tr>'+
@@ -1852,6 +1852,13 @@ var BSAI={
     if(!BSAI.key(prov))prov=BSAI.key('gemini')?'gemini':BSAI.key('claude')?'claude':prov;
     return {prov:prov,key:BSAI.key(prov),model:((a.prov===prov&&a.model)||(prov==='gemini'?'gemini-3.8-flash':'claude-sonnet-5-5')).trim()};
   },
+  info:function(){
+    if(window.claude&&window.claude.use)return '';
+    var c=BSAI.conf(),n=c.prov==='gemini'?'Google Gemini':'Anthropic Claude';
+    return c.key?'<p class="note">🔑 Lecture avec <b>'+n+'</b> · modèle <code>'+esc(c.model)+'</code> — la même clé que « 📐 Devis depuis plans ». Pour changer de service, de modèle ou de clé : <a href="./#plans" target="_top">Devis depuis plans → étape 2</a>.</p>'
+      :'<p class="warn">🔑 Aucune clé IA enregistrée. Ajoutez votre clé Gemini ou Claude dans <a href="./#plans" target="_top">« 📐 Devis depuis plans » → étape 2</a> : elle sert aussi ici.</p>';
+  },
+  last:'',
   b64:function(b){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(String(r.result).split(',')[1]);};r.onerror=rej;r.readAsDataURL(b);});},
   err:function(code,msg,status){var e=new Error(msg||code);e.code=code;e.status=status;return e;},
   call:async function(c,prompt,imgs,signal){
@@ -1893,7 +1900,7 @@ var BSHIM={
       prompt+='\n\nRéponds UNIQUEMENT avec un objet JSON valide, sans texte autour.';
       var tried=[],waits=[8,20],alts=null,last=null;
       for(var step=0;step<8;step++){
-        try{tried.push(c.model);var t=String(await BSAI.call(c,prompt,imgs,o.signal)).replace(/```(json)?/g,''),a=t.indexOf('{'),z=t.lastIndexOf('}');
+        try{tried.push(c.model);var t=String(await BSAI.call(c,prompt,imgs,o.signal));BSAI.last=(c.prov==='gemini'?'Google Gemini':'Anthropic Claude')+' · '+c.model;t=t.replace(/```(json)?/g,''),a=t.indexOf('{'),z=t.lastIndexOf('}');
           if(a<0||z<a)throw BSAI.err('invalid_json');
           try{return JSON.parse(t.slice(a,z+1));}catch(e){throw BSAI.err('invalid_json');}
         }catch(e){
