@@ -194,6 +194,7 @@ td input.q{width:90px;text-align:right;padding:5px 7px;font-size:14px}
 .mtbl td{padding:4px 5px}
 .mtbl td.x{width:34px}
 .mtbl select{min-width:130px}
+input.dflt{color:#a3978a;font-style:italic}
 h4.mg{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--terra-d);margin:18px 0 6px}
 .fields.f4{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
 .solots{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin-top:10px}
@@ -242,7 +243,7 @@ h4.mg{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.05
 
 <section class="tab" id="t-plans">
   <p class="intro">Donnez à l'application vos <b>plans PDF</b> (plan d'architecte et plan de béton armé) : elle relève les mesures, calcule le <b>devis du gros œuvre</b>, puis vous ajoutez vous-même le <b>second œuvre</b> pour obtenir le devis global.</p>
-  <div class="actions" style="margin:-6px 0 14px"><button class="btn ghost sm" id="plNew">🆕 Nouveau projet</button><small class="note" style="margin:0">Vide le métré, les plans chargés et les lignes « 📐 plan » / « 🏗️ Dossier BA » du devis global.</small></div>
+  <div class="actions" style="margin:-6px 0 14px"><button class="btn ghost sm" id="plNew">🆕 Nouveau projet</button><small class="note" style="margin:0">Vide le métré, les plans chargés et les lignes « 📐 plan » / « 🏗️ Dossier BA » du devis global.</small><label class="chk" style="border:0;padding:0;font-size:13px"><input type="checkbox" id="plNewAll"> Vider aussi tout le devis global (lignes ajoutées à la main et calculateurs)</label></div>
   <div class="card" id="plFiles"></div>
   <div class="card" id="plCad" style="margin-top:16px;display:none"></div>
   <div class="card" id="plRead" style="margin-top:16px"></div>
@@ -1856,8 +1857,8 @@ function renderPlanRead() {
 const getP = (o, p) => p.split('.').reduce((a, k) => a && a[k], o);
 const setP = (o, p, v) => { const ks = p.split('.'), l = ks.pop(); ks.reduce((a, k) => a[k], o)[l] = v; };
 function fScal(path, label, opts) {
-  const v = getP(S.plan.m, path);
-  return `<label class="fld"><span>${label}</span>${opts ? `<select data-mp="${path}">${Object.entries(opts).map(([k, l]) => `<option value="${k}"${k === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : `<input type="number" inputmode="decimal" step="any" min="0" data-mp="${path}" value="${v || ''}" placeholder="0">`}</label>`;
+  const v = getP(S.plan.m, path), d = getP(METRE_DEF, path), isD = !opts && v && v === d;
+  return `<label class="fld"><span>${label}</span>${opts ? `<select data-mp="${path}">${Object.entries(opts).map(([k, l]) => `<option value="${k}"${k === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : `<input type="number" inputmode="decimal" step="any" min="0" data-mp="${path}" value="${v || ''}" placeholder="0"${isD ? ' class="dflt" title="Valeur par défaut, à vérifier sur le plan"' : ''}>`}</label>`;
 }
 function fTable(key) {
   const T = TB[key], rows = S.plan.m[key];
@@ -1874,7 +1875,7 @@ function renderMetre() {
   const srcNow = metreSrcNow(), stale = metreUsed() && S.plan.src && srcNow && S.plan.src !== srcNow;
   box.innerHTML = `<div class="pstep"><span class="n">3</span><h3>Métré — à vérifier</h3></div>
   ${stale ? `<div class="alert warn">⚠️ Ce métré a été rempli avec « ${esc(S.plan.src)} », mais les plans chargés maintenant sont « ${esc(srcNow)} ». S'il s'agit d'un autre projet, videz le métré avant de lire les nouveaux plans.<div class="actions" style="margin-top:8px"><button class="btn sm" id="mStale">🧹 Vider le métré</button><button class="btn ghost sm" id="mKeep">Garder (même projet)</button></div></div>` : ''}
-  <p class="desc">Les mesures relevées sur les plans. Corrigez ou complétez : le devis du gros œuvre (étape 4) se recalcule tout de suite.</p>
+  <p class="desc">Les mesures relevées sur les plans. Corrigez ou complétez : le devis du gros œuvre (étape 4) se recalcule tout de suite. Les chiffres <i style="color:#a3978a">en gris</i> ne sont pas des mesures : ce sont des valeurs par défaut (hauteur d'étage, sections, profondeurs…) à vérifier.</p>
   <h4 class="mg" style="margin-top:6px">🏠 Plan d'architecte</h4>
   ${fTable('niveaux')}${fTable('pieces')}
   <h4 class="mg">Murs (tous niveaux cumulés)</h4><div class="fields f4">
@@ -1896,7 +1897,7 @@ function renderMetre() {
   <p class="note">Vide = l'acier est estimé avec des ratios moyens (kg/m³ de béton). Rempli = les poids de la nomenclature sont utilisés (+5 % de chutes).</p>
   <label class="chk"><input type="checkbox" id="moGo"${m.mo ? ' checked' : ''}> Ajouter la main d'œuvre du gros œuvre au m² de plancher (prix modifiable dans « Prix & réglages ») — dans ce cas, mettez 0 % de main d'œuvre générale ou baissez-la.</label>
   <div class="actions"><button class="btn ghost sm" id="mReset">Vider le métré</button></div>`;
-  box.querySelectorAll('[data-mp]').forEach(i => i.addEventListener(i.tagName === 'SELECT' ? 'change' : 'input', () => { setP(m, i.dataset.mp, i.tagName === 'SELECT' ? i.value : pnum(i.value)); savePlan(); renderGO(); }));
+  box.querySelectorAll('[data-mp]').forEach(i => i.addEventListener(i.tagName === 'SELECT' ? 'change' : 'input', () => { i.classList.remove('dflt'); setP(m, i.dataset.mp, i.tagName === 'SELECT' ? i.value : pnum(i.value)); savePlan(); renderGO(); }));
   box.querySelectorAll('[data-mt]').forEach(i => i.addEventListener(i.tagName === 'SELECT' ? 'change' : 'input', () => {
     const [k, r, c] = i.dataset.mt.split('.'); m[k][+r][c] = i.tagName === 'SELECT' || i.type === 'text' ? i.value : pnum(i.value); savePlan(); renderGO();
   }));
@@ -2053,7 +2054,8 @@ async function newProject() {
   S.plan.m = normMetre({}); S.plan.notes = []; S.plan.src = ''; S.plan.cadUnit = '';
   for (const k of Object.keys(PDFS)) { delete PDFS[k]; try { await idbDo('readwrite', st => st.delete('pdf_' + k)); } catch (e) {} }
   CADF.file = null; CADF.views = null; CADF.open = false; try { await idbDo('readwrite', st => st.delete('cad_file')); } catch (e) {}
-  const n = S.devis.length; S.devis = S.devis.filter(d => d.src !== 'plan' && d.src !== 'dba');
+  const n = S.devis.length; S.devis = $('#plNewAll') && $('#plNewAll').checked ? [] : S.devis.filter(d => d.src !== 'plan' && d.src !== 'dba');
+  if ($('#plNewAll')) $('#plNewAll').checked = false;
   save('plan'); save('devis'); updateDevisCount(); renderPlanFiles(); renderPlans();
   toast('Nouveau projet : ' + (n - S.devis.length) + ' ligne(s) retirée(s) du devis');
   $('#plNew').textContent = '🆕 Nouveau projet';
