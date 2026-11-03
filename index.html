@@ -1089,14 +1089,19 @@ function devisTotals() {
 }
 function renderDevis() {
   const P = S.projet, box = $('#devisBox'), T = devisTotals();
-  const lots = LOTS.filter(l => T.by[l] !== undefined).concat(Object.keys(T.by).filter(l => !LOTS.includes(l)));
+  const lots0 = LOTS.filter(l => T.by[l] !== undefined).concat(Object.keys(T.by).filter(l => !LOTS.includes(l)));
+  const goL = lots0.filter(l => GO_LOTS.includes(l)), estL = lots0.filter(l => l === 'Estimation (indicatif)'), soL = lots0.filter(l => !GO_LOTS.includes(l) && l !== 'Estimation (indicatif)');
+  const lots = goL.concat(soL, estL);
+  const SEC = [['GROS ŒUVRE', goL, T.go], ['SECOND ŒUVRE', soL, T.so], ['ESTIMATION (INDICATIF)', estL, T.by['Estimation (indicatif)'] || 0]].filter(x => x[1].length);
+  const secHead = (t, v) => `<tr><td colspan="4" style="background:var(--ink);color:#fff;font-weight:800;letter-spacing:.04em">${t}</td><td class="num" style="background:var(--ink);color:#fff;font-weight:800">${dh(v)}</td><td style="background:var(--ink)"></td></tr>`;
   let rows = '';
-  lots.forEach(lot => {
+  SEC.forEach(([t, ls, v]) => { rows += secHead(t, v); ls.forEach(lot => {
     rows += `<tr class="lot"><td colspan="4">${esc(lot)}</td><td class="num">${dh(T.by[lot])}</td><td></td></tr>`;
     S.devis.forEach((d, i) => { if ((d.lot || 'Divers') !== lot) return;
-      rows += `<tr><td>${esc(d.l)}${d.src === 'plan' ? '<span class="tag">📐 plan</span>' : d.src === 'dba' ? '<span class="tag">🏗️ Dossier BA</span>' : d.src === 'so' ? '<span class="tag">⚡ auto</span>' : ''}</td><td class="num"><input class="q" type="number" step="any" min="0" data-qi="${i}" value="${d.q}"></td><td>${esc(lineU(d))}</td><td class="num">${fmt(linePU(d), 2)}</td><td class="num"><b>${dh(linePU(d) * d.q)}</b></td><td><button class="btn ghost sm" data-del="${i}" aria-label="Supprimer">✕</button></td></tr>`; });
-  });
-  const recap = lots.map(l => `<tr><td>${esc(l)}</td><td style="width:40%"><div class="bar"><i style="width:${T.mat ? T.by[l] / T.mat * 100 : 0}%"></i></div></td><td class="num">${fmt(T.mat ? T.by[l] / T.mat * 100 : 0, 0)} %</td><td class="num">${dh(T.by[l])}</td></tr>`).join('');
+      rows += `<tr><td style="padding-left:16px">${esc(d.l)}${d.src === 'plan' ? '<span class="tag">📐 plan</span>' : d.src === 'dba' ? '<span class="tag">🏗️ Dossier BA</span>' : d.src === 'so' ? '<span class="tag">⚡ auto</span>' : ''}</td><td class="num"><input class="q" type="number" step="any" min="0" data-qi="${i}" value="${d.q}"></td><td>${esc(lineU(d))}</td><td class="num">${fmt(linePU(d), 2)}</td><td class="num"><b>${dh(linePU(d) * d.q)}</b></td><td><button class="btn ghost sm" data-del="${i}" aria-label="Supprimer">✕</button></td></tr>`; });
+  }); });
+  const recLine = l => `<tr><td style="padding-left:16px">${esc(l)}</td><td style="width:40%"><div class="bar"><i style="width:${T.mat ? T.by[l] / T.mat * 100 : 0}%"></i></div></td><td class="num">${fmt(T.mat ? T.by[l] / T.mat * 100 : 0, 0)} %</td><td class="num">${dh(T.by[l])}</td></tr>`;
+  const recap = SEC.map(([t, ls, v]) => `<tr><td colspan="4" style="font-weight:800;color:var(--terra-d);padding-top:12px">${t}</td></tr>` + ls.map(recLine).join('') + `<tr class="tot"><td colspan="3">Sous-total ${t.toLowerCase()}</td><td class="num">${dh(v)}</td></tr>`).join('');
   box.innerHTML = `<h3 style="justify-content:space-between">📋 Devis global ${phBtn('devis:docs', 'Devis & factures des fournisseurs')}</h3>
   <p class="desc">Toutes les lignes ajoutées depuis les calculateurs, classées par lot. Modifiez les quantités directement ; les prix viennent de l'onglet Prix.</p>
   <div class="proj">
@@ -1119,9 +1124,11 @@ function renderDevis() {
   <div class="actions"><button class="btn ghost sm" id="mlAdd">Ajouter la ligne</button></div>
   ${S.devis.length ? `<h3 style="font-size:16px;margin-top:22px">Récapitulatif</h3>
   <table style="margin-top:6px">${recap}
+    <tr><td colspan="4" style="padding-top:12px"></td></tr>
+    <tr><td colspan="3">Gros œuvre</td><td class="num">${dh(T.go)}</td></tr>
+    <tr><td colspan="3">Second œuvre</td><td class="num">${dh(T.so)}</td></tr>
+    ${T.by['Estimation (indicatif)'] ? `<tr><td colspan="3">Estimation (indicatif)</td><td class="num">${dh(T.by['Estimation (indicatif)'])}</td></tr>` : ''}
     <tr class="tot"><td colspan="3">Total fournitures</td><td class="num">${dh(T.mat)}</td></tr>
-    <tr><td colspan="3" style="padding-left:22px">dont gros œuvre (terrassement, structure, maçonnerie)</td><td class="num">${dh(T.go)}</td></tr>
-    <tr><td colspan="3" style="padding-left:22px">dont second œuvre (finitions, réseaux, équipements…)</td><td class="num">${dh(T.so)}</td></tr>
     <tr><td colspan="3">Main d'œuvre (${fmt(+P.mo || 0)} %)</td><td class="num">${dh(T.mo)}</td></tr>
     <tr><td colspan="3">Imprévus (${fmt(+P.imp || 0)} %)</td><td class="num">${dh(T.imp)}</td></tr>
     <tr class="tot"><td colspan="3" style="font-size:17px">TOTAL GÉNÉRAL</td><td class="num" style="font-size:18px;color:var(--terra-d)">${dh(T.tot)}</td></tr>
@@ -1138,9 +1145,9 @@ function renderDevis() {
   if (S.devis.length) {
     $('#copyDevis').onclick = () => {
       let t = `DEVIS GLOBAL — ${P.nom || 'Projet'}\n${P.proprio ? 'Propriétaire : ' + P.proprio + '\n' : ''}${P.lieu ? 'Lieu : ' + P.lieu + '\n' : ''}Date : ${new Date().toLocaleDateString('fr-FR')}\n`;
-      lots.forEach(lot => { t += `\n== ${lot.toUpperCase()} — ${dh(T.by[lot])} ==\n`;
-        S.devis.forEach(d => { if ((d.lot || 'Divers') === lot) t += `- ${d.l} : ${fmt(d.q, 2)} ${lineU(d)} × ${fmt(linePU(d), 2)} DH = ${dh(linePU(d) * d.q)}\n`; }); });
-      t += `\nTotal fournitures : ${dh(T.mat)}\n  dont gros œuvre : ${dh(T.go)}\n  dont second œuvre : ${dh(T.so)}\nMain d'œuvre (${P.mo} %) : ${dh(T.mo)}\nImprévus (${P.imp} %) : ${dh(T.imp)}\nTOTAL GÉNÉRAL : ${dh(T.tot)}`;
+      SEC.forEach(([tt, ls, v]) => { t += `\n######## ${tt} — ${dh(v)} ########\n`; ls.forEach(lot => { t += `\n== ${lot.toUpperCase()} — ${dh(T.by[lot])} ==\n`;
+        S.devis.forEach(d => { if ((d.lot || 'Divers') === lot) t += `- ${d.l} : ${fmt(d.q, 2)} ${lineU(d)} × ${fmt(linePU(d), 2)} DH = ${dh(linePU(d) * d.q)}\n`; }); }); });
+      t += `\nTotal fournitures : ${dh(T.mat)}\nGros œuvre : ${dh(T.go)}\nSecond œuvre : ${dh(T.so)}\nMain d'œuvre (${P.mo} %) : ${dh(T.mo)}\nImprévus (${P.imp} %) : ${dh(T.imp)}\nTOTAL GÉNÉRAL : ${dh(T.tot)}`;
       copy(t);
     };
     confirmBtn($('#clearDevis'), () => { S.devis = []; save('devis'); updateDevisCount(); renderDevis(); }, 'Confirmer : tout effacer ?');
@@ -2101,9 +2108,11 @@ function renderPlanSO() {
   <table style="margin-top:16px">
     <tr><td>Gros œuvre</td><td class="num">${dh(T.go)}</td></tr>
     <tr><td>Second œuvre</td><td class="num">${dh(T.so)}</td></tr>
-    <tr><td>Main d'œuvre (${fmt(+S.projet.mo || 0)} %) et imprévus (${fmt(+S.projet.imp || 0)} %)</td><td class="num">${dh(T.mo + T.imp)}</td></tr>
+    <tr><td>Main d'œuvre (${fmt(+S.projet.mo || 0)} %)</td><td class="num">${dh(T.mo)}</td></tr>
+    <tr><td>Imprévus (${fmt(+S.projet.imp || 0)} %)</td><td class="num">${dh(T.imp)}</td></tr>
     <tr class="tot"><td style="font-size:17px">TOTAL GÉNÉRAL</td><td class="num" style="font-size:18px;color:var(--terra-d)">${dh(T.tot)}</td></tr>
   </table>
+  ${!T.go ? `<div class="alert warn">Le gros œuvre n'est pas encore dans le devis (0 DH). ${computeGO(S.plan.m).items.length ? '<button class="btn sm" id="soGo" style="margin-left:6px">➕ Ajouter le gros œuvre du métré</button>' : 'Remplissez d\'abord le métré (étapes 2 et 3), puis l\'étape 4.'}</div>` : ''}
   <div class="actions"><button class="btn" id="soDevis">📋 Voir le devis global</button></div>`;
   $('#soFill').onclick = prefillSO;
   $('#soAuto').onclick = autoSO;
@@ -2116,6 +2125,7 @@ function renderPlanSO() {
     save('devis'); updateDevisCount(); renderPlanSO(); toast('Ajouté au lot « ' + $('#soLot').value + ' »');
   };
   $('#soDevis').onclick = () => goTab('devis');
+  if ($('#soGo')) $('#soGo').onclick = () => { const R = computeGO(S.plan.m); S.devis = S.devis.filter(d => d.src !== 'plan').concat(R.items.map(d => Object.assign({ src: 'plan' }, d))); save('devis'); updateDevisCount(); renderGO(); renderPlanSO(); toast('Gros œuvre ajouté au devis ✔'); };
 }
 const metreSrcNow = () => [PDFS.archi && PDFS.archi.name, PDFS.ba && PDFS.ba.name, CADF.file && CADF.file.name].filter(Boolean).join(' + ');
 function metreUsed() { const m = S.plan.m; return m.niveaux.length || m.pieces.length || m.semelles.length || m.poteaux.length || m.poutres.length || m.planchers.length || m.murs.ext || m.murs.int || m.dallage.S || m.emprise || ACIER_D.some(d => m.acier[d]); }
