@@ -223,6 +223,7 @@ h4.mg{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.05
   <button data-t="plans">📐 Devis depuis plans</button>
   <button data-t="dba">🏗️ Dossier BA</button>
   <button data-t="devis">📋 Devis global <span class="badge" id="devisCount">0</span></button>
+  <button data-t="marche">📑 Attachements & décomptes</button>
   <button data-t="journal">📸 Journal de chantier</button>
   <button data-t="diag">🛡️ Diagnostic maison</button>
   <button data-t="fiss">🔍 Fissures</button>
@@ -260,6 +261,12 @@ h4.mg{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.05
 
 <section class="tab" id="t-devis">
   <div class="card tablecard" id="devisBox"></div>
+</section>
+
+<section class="tab" id="t-marche">
+  <p class="intro">Suivi d'un marché de travaux : bordereau des prix, <b>attachements</b> successifs des travaux réalisés (jusqu'à l'attachement définitif), <b>révision des prix</b> selon la formule du CPS, et <b>décomptes</b> provisoires puis définitif, avec export Excel.</p>
+  <div id="marBox"></div>
+  <div class="card" id="marModels" style="margin-top:16px"></div>
 </section>
 
 <section class="tab" id="t-journal">
@@ -407,7 +414,7 @@ async function copy(text) { try { await navigator.clipboard.writeText(text); toa
 function confirmBtn(btn, fn, label = 'Confirmer ?') { let armed = false; btn.onclick = () => { if (!armed) { armed = true; btn.textContent = label; setTimeout(() => { armed = false; }, 4000); return; } fn(); }; }
 
 /* ================= état & sauvegarde ================= */
-const DEF = { prices: {}, calcs: {}, devis: [], diag: {}, journal: [], photos: {}, plan: {}, projet: { nom: '', proprio: '', lieu: '', mo: 0, imp: 10 } };
+const DEF = { prices: {}, calcs: {}, devis: [], diag: {}, journal: [], photos: {}, plan: {}, marche: {}, projet: { nom: '', proprio: '', lieu: '', mo: 0, imp: 10 } };
 const KEYS = Object.keys(DEF);
 const S = {};
 KEYS.forEach(k => { S[k] = store.get('bs_' + k, clone(DEF[k])); });
@@ -467,6 +474,7 @@ function goTab(t) {
   document.querySelectorAll('section.tab').forEach(s => s.classList.toggle('on', s.id === 't-' + t));
   if (t === 'devis') renderDevis();
   if (t === 'plans') renderPlanSO();
+  if (t === 'marche') renderMarche();
   if (t === 'dba' && !$('#dbaFrame').src) $('#dbaFrame').src = 'dossier-ba.html';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -2673,8 +2681,466 @@ function cadSummary() {
   return L.join('\n');
 }
 
+/* ================= suivi du marché : attachements, révision des prix, décomptes ================= */
+const MAR_DEF = {
+  num: '', objet: '', mo: '', titulaire: '', tva: 20, rg: 10, rgMax: 7, avance: 0, avancePct: 0,
+  revisable: 1, K: 0.15, idx: [{ n: 'BAT1', a: 0.85, i0: 0 }], m0: '',
+  lignes: [], atts: [], cur: -1
+};
+function MS() {
+  if (!S.marche || typeof S.marche !== 'object') S.marche = {};
+  const m = S.marche; for (const k in MAR_DEF) if (m[k] === undefined) m[k] = clone(MAR_DEF[k]);
+  return m;
+}
+const saveM = () => save('marche');
+const r6 = x => Math.round(x * 1e6) / 1e6, r4 = x => Math.round(x * 1e4) / 1e4, rc = x => Math.round(x * 100) / 100;
+function marcheHT() { return rc(MS().lignes.reduce((s, l) => s + (+l.q || 0) * (+l.pu || 0), 0)); }
+function coefRev(att) {
+  const m = MS(); if (!m.revisable) return { C: 1, parts: [] };
+  const parts = m.idx.map((x, i) => { const i0 = +x.i0 || 0, im = +((att.ix || {})[i]) || 0; const ratio = i0 && im ? r6(im / i0) : 1; return { n: x.n, a: +x.a || 0, i0, im, ratio, ok: !!(i0 && im) }; });
+  const C = r4((+m.K || 0) + parts.reduce((s, p) => s + p.a * p.ratio, 0));
+  return { C, parts };
+}
+/* calcule le décompte n° k (0-based) */
+function decompte(k) {
+  const m = MS(), A = m.atts, tva = (+m.tva || 0) / 100;
+  const initHT = marcheHT(), initTTC = rc(initHT * (1 + tva));
+  let cumHT = 0, cumRev = 0, prevAmt = 0, rows = [];
+  for (let j = 0; j <= k; j++) {
+    const att = A[j], amt = rc(m.lignes.reduce((s, l, i) => s + (+((att.q || {})[l.id]) || 0) * (+l.pu || 0), 0));
+    const per = rc(amt - prevAmt), cr = coefRev(att), rev = m.revisable ? rc(per * (cr.C - 1)) : 0;
+    rows.push({ n: j + 1, mois: att.mois, per, C: cr.C, rev, parts: cr.parts }); cumRev = rc(cumRev + rev); prevAmt = amt; cumHT = amt;
+  }
+  const att = A[k], pen = A.slice(0, k + 1).reduce((s, a) => s + (+a.pen || 0), 0);
+  const totHT = rc(cumHT + cumRev), TVA = rc(totHT * tva), TTC = rc(totHT + TVA);
+  const libere = !!(att.fin && att.libRG);
+  const RG = libere ? 0 : rc(Math.min(TTC * (+m.rg || 0) / 100, initTTC * (+m.rgMax || 100) / 100));
+  const avTot = rc((+m.avance || 0) || initTTC * (+m.avancePct || 0) / 100);
+  const avRemb = avTot ? rc(Math.min(avTot, avTot * (initHT ? cumHT / initHT : 0))) : 0;
+  const cumPay = rc(TTC - RG - avRemb - pen);
+  let prevPay = 0; if (k > 0) prevPay = decompte(k - 1).cumPay;
+  return { k, att, initHT, initTTC, travauxHT: cumHT, revRows: rows, rev: cumRev, totHT, TVA, TTC, RG, avTot, avRemb, pen: rc(pen), cumPay, prevPay, net: rc(cumPay - prevPay), libere,
+    avancement: initHT ? cumHT / initHT : 0 };
+}
+function lineCum(att, l) { return +((att && att.q || {})[l.id]) || 0; }
+function renderMarche() {
+  const box = $('#marBox'); if (!box) return;
+  const m = MS(), ht = marcheHT(), tva = (+m.tva || 0) / 100, cur = m.atts[m.cur] ? m.cur : m.atts.length - 1;
+  const sumA = r4((+m.K || 0) + m.idx.reduce((s, x) => s + (+x.a || 0), 0));
+  const fld = (k, l, t = 'text', ext = '') => `<label class="fld"><span>${l}</span><input data-mk="${k}" type="${t}" ${t === 'number' ? 'step="any" min="0"' : ''} value="${esc(m[k])}" ${ext}></label>`;
+  let h = `<div class="card"><div class="pstep"><span class="n">1</span><h3>Le marché</h3></div>
+    <div class="proj" style="margin-top:8px">${fld('num', 'Marché n°')}${fld('objet', 'Objet')}${fld('mo', 'Maître d\'ouvrage')}${fld('titulaire', 'Titulaire')}</div>
+    <div class="fields f4" style="margin-top:8px">${fld('tva', 'TVA (%)', 'number')}${fld('rg', 'Retenue de garantie (% de chaque acompte)', 'number')}${fld('rgMax', 'Plafond RG (% du montant initial TTC)', 'number')}${fld('avance', 'Avance versée (DH TTC)', 'number')}${fld('avancePct', 'ou avance en % du TTC', 'number')}</div>
+    <p class="note">Valeurs courantes, à adapter au CPS : retenue de garantie 10 % de chaque acompte, plafonnée à 7 % du montant initial du marché (avenants compris). L'avance est remboursée au prorata des travaux exécutés.</p></div>`;
+  // bordereau
+  h += `<div class="card tablecard" style="margin-top:16px"><div class="pstep"><span class="n">2</span><h3>Bordereau des prix — détail estimatif</h3></div>
+    <div class="actions" style="margin-top:4px"><button class="btn ghost sm" id="marFromDevis">📋 Créer depuis le devis global (${S.devis.length} lignes)</button><button class="btn ghost sm" id="marAddL">➕ Ajouter un prix</button></div>
+    ${m.lignes.length ? `<table class="mtbl" style="margin-top:10px"><tr><th>N° prix</th><th>Désignation</th><th>Unité</th><th class="num">Quantité</th><th class="num">P.U. HT</th><th class="num">Montant HT</th><th></th></tr>
+    ${m.lignes.map((l, i) => `<tr><td><input data-ml="${i}.no" value="${esc(l.no)}" style="width:60px"></td><td><input data-ml="${i}.l" value="${esc(l.l)}" style="min-width:220px"></td><td><input data-ml="${i}.u" value="${esc(l.u)}" style="width:60px"></td>
+      <td class="num"><input data-ml="${i}.q" type="number" step="any" value="${l.q}" style="width:90px"></td><td class="num"><input data-ml="${i}.pu" type="number" step="any" value="${l.pu}" style="width:100px"></td><td class="num">${fmt((+l.q || 0) * (+l.pu || 0), 2)}</td>
+      <td class="x"><button class="btn ghost sm" data-mld="${i}">✕</button></td></tr>`).join('')}
+    <tr class="tot"><td colspan="5">Total HT</td><td class="num">${fmt(ht, 2)}</td><td></td></tr><tr><td colspan="5">TVA ${fmt(+m.tva || 0)} %</td><td class="num">${fmt(ht * tva, 2)}</td><td></td></tr>
+    <tr class="tot"><td colspan="5">Montant initial du marché TTC</td><td class="num" style="color:var(--terra-d)">${fmt(ht * (1 + tva), 2)}</td><td></td></tr></table>`
+    : '<p class="empty">Aucun prix. Créez le bordereau depuis le devis global, ou ajoutez les prix du marché un par un.</p>'}
+    ${m.atts.length && m.lignes.length ? '<p class="note">⚠️ Des attachements existent : modifier les prix change tous les décomptes.</p>' : ''}</div>`;
+  // révision
+  h += `<div class="card" style="margin-top:16px"><div class="pstep"><span class="n">3</span><h3>Révision des prix</h3></div>
+    <label class="chk" style="border:0"><input type="checkbox" id="marRev"${m.revisable ? ' checked' : ''}> Marché à prix révisables (sinon : prix fermes)</label>
+    ${m.revisable ? `<p class="note">Formule du CPS : <b>P = P0 × [ K + a·(I1/I1₀) + b·(I2/I2₀) + … ]</b>, avec K ≥ 0,15 et K + a + b + … = 1. Rapports arrondis à 6 décimales, coefficient à 4. Les travaux d'un mois sont révisés avec les index de ce mois (valeurs publiées par le ministère de l'Équipement).</p>
+    <div class="fields f4">${fld('K', 'Partie fixe K', 'number')}${fld('m0', 'Mois zéro (M0)', 'month')}</div>
+    <table class="mtbl" style="margin-top:8px"><tr><th>Index</th><th class="num">Coefficient</th><th class="num">Valeur au mois zéro (I₀)</th><th></th></tr>
+    ${m.idx.map((x, i) => `<tr><td><input data-mx="${i}.n" value="${esc(x.n)}" style="width:120px"></td><td class="num"><input data-mx="${i}.a" type="number" step="any" value="${x.a}" style="width:90px"></td><td class="num"><input data-mx="${i}.i0" type="number" step="any" value="${x.i0 || ''}" placeholder="à saisir" style="width:110px"></td><td class="x">${m.idx.length > 1 ? `<button class="btn ghost sm" data-mxd="${i}">✕</button>` : ''}</td></tr>`).join('')}</table>
+    <div class="actions"><button class="btn ghost sm" id="marAddX">➕ Ajouter un index</button>
+    <b style="color:${Math.abs(sumA - 1) < 1e-4 && (+m.K || 0) >= 0.15 ? 'var(--ok)' : 'var(--bad)'}">K + coefficients = ${fmt(sumA, 4)}${Math.abs(sumA - 1) < 1e-4 ? ' ✔' : ' (doit faire 1)'}${(+m.K || 0) < 0.15 ? ' · K doit être ≥ 0,15' : ''}</b></div>` : ''}</div>`;
+  // attachements
+  h += `<div class="card tablecard" style="margin-top:16px"><div class="pstep"><span class="n">4</span><h3>Attachements des travaux réalisés</h3></div>
+    <p class="desc">Un attachement par période (souvent par mois), jusqu'à l'attachement définitif. Saisissez les <b>quantités cumulées depuis le début</b> : la quantité de la période se calcule toute seule.</p>
+    <div class="chips">${m.atts.map((a, i) => `<button data-mat="${i}" style="${i === cur ? 'background:var(--ink);color:#fff;border-color:var(--ink)' : ''}">N° ${i + 1}${a.fin ? ' · définitif' : ''} <small style="opacity:.7">${esc(a.mois || '')}</small></button>`).join('')}
+    <button id="marAddA" ${!m.lignes.length ? 'disabled' : ''}>➕ Nouvel attachement</button></div>`;
+  if (m.atts[cur]) {
+    const a = m.atts[cur], prev = m.atts[cur - 1], cr = coefRev(a);
+    h += `<div class="fields f4"><label class="fld"><span>Date de l'attachement</span><input type="date" data-ma="date" value="${esc(a.date || '')}"></label>
+      <label class="fld"><span>Mois des travaux (index)</span><input type="month" data-ma="mois" value="${esc(a.mois || '')}"></label>
+      <label class="fld"><span>Pénalités de cette période (DH)</span><input type="number" step="any" min="0" data-ma="pen" value="${a.pen || 0}"></label></div>
+      <label class="chk" style="border:0"><input type="checkbox" data-mab="fin"${a.fin ? ' checked' : ''}> Attachement définitif (fin des travaux) → décompte définitif</label>
+      ${a.fin ? `<label class="chk" style="border:0;padding-top:0"><input type="checkbox" data-mab="libRG"${a.libRG ? ' checked' : ''}> Libérer la retenue de garantie (après réception définitive, ou caution remise)</label>` : ''}
+      ${m.revisable ? `<div class="res" style="margin:8px 0"><b>Index du mois ${esc(a.mois || '…')}</b><div class="fields f4" style="margin-top:6px">${m.idx.map((x, i) => `<label class="fld"><span>${esc(x.n)} (I₀ = ${x.i0 || '?'})</span><input type="number" step="any" data-mai="${i}" value="${(a.ix || {})[i] || ''}" placeholder="valeur publiée"></label>`).join('')}</div>
+        <div class="row big"><span>Coefficient de révision P/P0</span><b>${fmt(cr.C, 4)}</b></div>${cr.parts.some(p => !p.ok) ? '<div class="alert warn">Index manquant : le rapport est pris égal à 1 (pas de révision) tant que la valeur n\'est pas saisie.</div>' : ''}</div>` : ''}
+      <div class="actions" style="margin:0 0 8px"><button class="btn ghost sm" id="marCopyPrev"${prev ? '' : ' disabled'}>↺ Reprendre les cumuls de l'attachement précédent</button><button class="btn ghost sm" id="marFull">✔ Tout à 100 %</button><button class="btn ghost sm" id="marDelA">🗑 Supprimer cet attachement</button></div>
+      <table class="mtbl"><tr><th>N°</th><th>Désignation</th><th>U</th><th class="num">Qté marché</th><th class="num">Cumul précédent</th><th class="num">Cumul à ce jour</th><th class="num">Période</th><th class="num">%</th><th class="num">Montant cumulé HT</th></tr>
+      ${m.lignes.map(l => { const c = lineCum(a, l), p = lineCum(prev, l), pct = +l.q ? c / l.q : 0; return `<tr><td>${esc(l.no)}</td><td>${esc(l.l)}</td><td>${esc(l.u)}</td><td class="num">${fmt(+l.q || 0, 2)}</td><td class="num">${fmt(p, 2)}</td>
+        <td class="num"><input type="number" step="any" min="0" data-maq="${esc(l.id)}" value="${c || ''}" placeholder="0" style="width:90px${c < p ? ';border-color:var(--bad)' : ''}"></td><td class="num">${fmt(c - p, 2)}</td><td class="num" style="color:${pct > 1.0001 ? 'var(--bad)' : 'inherit'}">${fmt(pct * 100, 0)} %</td><td class="num">${fmt(c * (+l.pu || 0), 2)}</td></tr>`; }).join('')}</table>
+      ${m.lignes.some(l => lineCum(a, l) < lineCum(prev, l)) ? '<div class="alert bad">Un cumul est plus petit que celui de l\'attachement précédent (en rouge).</div>' : ''}
+      ${m.lignes.some(l => +l.q && lineCum(a, l) > l.q * 1.0001) ? '<div class="alert warn">Une quantité dépasse celle du marché : à justifier (variation dans la masse des travaux, avenant).</div>' : ''}`;
+    const D = decompte(cur);
+    h += `</div><div class="card" style="margin-top:16px"><div class="pstep"><span class="n">5</span><h3>${a.fin ? 'Décompte définitif' : 'Décompte provisoire n° ' + (cur + 1)}</h3></div>
+      <p class="desc">Établi d'après l'attachement n° ${cur + 1}${a.date ? ' du ' + new Date(a.date).toLocaleDateString('fr-FR') : ''}. Avancement : <b>${fmt(D.avancement * 100, 1)} %</b> du montant initial.</p>
+      ${m.revisable ? `<table style="margin-bottom:12px"><tr><th>Att.</th><th>Mois</th><th class="num">Travaux de la période HT</th><th class="num">Coef. P/P0</th><th class="num">Révision</th></tr>
+        ${D.revRows.map(r => `<tr><td>${r.n}</td><td>${esc(r.mois || '—')}</td><td class="num">${fmt(r.per, 2)}</td><td class="num">${fmt(r.C, 4)}</td><td class="num">${fmt(r.rev, 2)}</td></tr>`).join('')}
+        <tr class="tot"><td colspan="4">Révision des prix cumulée</td><td class="num">${fmt(D.rev, 2)}</td></tr></table>` : ''}
+      <table>
+        <tr><td>Travaux exécutés cumulés HT</td><td class="num">${fmt(D.travauxHT, 2)}</td></tr>
+        <tr><td>Révision des prix cumulée HT</td><td class="num">${fmt(D.rev, 2)}</td></tr>
+        <tr class="tot"><td>Total HT</td><td class="num">${fmt(D.totHT, 2)}</td></tr>
+        <tr><td>TVA ${fmt(+m.tva || 0)} %</td><td class="num">${fmt(D.TVA, 2)}</td></tr>
+        <tr class="tot"><td>Total TTC</td><td class="num">${fmt(D.TTC, 2)}</td></tr>
+        <tr><td>À déduire : retenue de garantie${D.libere ? ' (libérée)' : ` (${fmt(+m.rg || 0)} %, plafond ${fmt(+m.rgMax || 0)} % = ${fmt(D.initTTC * (+m.rgMax || 0) / 100, 2)})`}</td><td class="num">− ${fmt(D.RG, 2)}</td></tr>
+        ${D.avTot ? `<tr><td>À déduire : remboursement de l'avance (${fmt(D.avTot, 2)} au prorata)</td><td class="num">− ${fmt(D.avRemb, 2)}</td></tr>` : ''}
+        ${D.pen ? `<tr><td>À déduire : pénalités cumulées</td><td class="num">− ${fmt(D.pen, 2)}</td></tr>` : ''}
+        <tr class="tot"><td>Montant cumulé des acomptes à ce jour</td><td class="num">${fmt(D.cumPay, 2)}</td></tr>
+        <tr><td>À déduire : acomptes antérieurs (décomptes n° 1 à ${cur})</td><td class="num">− ${fmt(D.prevPay, 2)}</td></tr>
+        <tr class="tot"><td style="font-size:17px">${a.fin ? 'SOLDE À PAYER' : 'NET À PAYER — décompte n° ' + (cur + 1)}</td><td class="num" style="font-size:18px;color:var(--terra-d)">${fmt(D.net, 2)} DH</td></tr>
+      </table>
+      ${D.net < 0 ? '<div class="alert bad">Montant négatif : les déductions dépassent les travaux de la période.</div>' : ''}
+      <div class="actions"><button class="btn" id="marXls">📊 Exporter en Excel (attachement + révision + décompte)</button><button class="btn ghost" id="marCopy">Copier le décompte</button></div>
+      <p class="note">Vérifiez les règles du CPS du marché (taux, plafond, remboursement de l'avance, pénalités) : l'application applique les paramètres de l'étape 1.</p></div>`;
+  } else h += '</div>';
+  box.innerHTML = h; renderModels();
+  // liaisons
+  box.querySelectorAll('[data-mk]').forEach(i => i.onchange = () => { const k = i.dataset.mk; m[k] = i.type === 'number' ? (parseFloat(i.value) || 0) : i.value; saveM(); renderMarche(); });
+  box.querySelectorAll('[data-ml]').forEach(i => i.onchange = () => { const [r, k] = i.dataset.ml.split('.'); m.lignes[+r][k] = i.type === 'number' ? (parseFloat(i.value) || 0) : i.value; saveM(); renderMarche(); });
+  box.querySelectorAll('[data-mld]').forEach(b => confirmBtn(b, () => { m.lignes.splice(+b.dataset.mld, 1); saveM(); renderMarche(); }, '?'));
+  box.querySelectorAll('[data-mx]').forEach(i => i.onchange = () => { const [r, k] = i.dataset.mx.split('.'); m.idx[+r][k] = k === 'n' ? i.value : (parseFloat(i.value) || 0); saveM(); renderMarche(); });
+  box.querySelectorAll('[data-mxd]').forEach(b => b.onclick = () => { m.idx.splice(+b.dataset.mxd, 1); m.atts.forEach(a => { if (a.ix) { const o = {}; Object.keys(a.ix).forEach(k => { if (+k < +b.dataset.mxd) o[k] = a.ix[k]; else if (+k > +b.dataset.mxd) o[k - 1] = a.ix[k]; }); a.ix = o; } }); saveM(); renderMarche(); });
+  if ($('#marAddX')) $('#marAddX').onclick = () => { m.idx.push({ n: 'Index ' + (m.idx.length + 1), a: 0, i0: 0 }); saveM(); renderMarche(); };
+  $('#marRev').onchange = e => { m.revisable = e.target.checked ? 1 : 0; saveM(); renderMarche(); };
+  $('#marAddL').onclick = () => { m.lignes.push({ id: 'L' + Date.now().toString(36), no: String(m.lignes.length + 1), l: '', u: 'u', q: 0, pu: 0 }); saveM(); renderMarche(); };
+  const fromDevis = () => {
+    if (!S.devis.length) return toast('Le devis global est vide');
+    const lots = LOTS.filter(l => S.devis.some(d => (d.lot || 'Divers') === l)).concat([...new Set(S.devis.map(d => d.lot || 'Divers'))].filter(l => !LOTS.includes(l)));
+    const L = []; lots.forEach((lot, li) => S.devis.filter(d => (d.lot || 'Divers') === lot).forEach((d, k) => L.push({ id: 'L' + li + '_' + k + '_' + Date.now().toString(36), no: (li + 1) + '.' + (k + 1), l: d.l, lot, u: lineU(d), q: r2(d.q), pu: r2(linePU(d)) })));
+    m.lignes = L; saveM(); renderMarche(); toast(L.length + ' prix repris du devis global');
+  };
+  if (m.lignes.length) confirmBtn($('#marFromDevis'), fromDevis, 'Confirmer : remplacer le bordereau ?'); else $('#marFromDevis').onclick = fromDevis;
+  box.querySelectorAll('[data-mat]').forEach(b => b.onclick = () => { m.cur = +b.dataset.mat; saveM(); renderMarche(); });
+  $('#marAddA').onclick = () => { if (!m.lignes.length) return; const last = m.atts[m.atts.length - 1]; if (last && last.fin) return toast('L\'attachement définitif est déjà établi');
+    const d = new Date(); m.atts.push({ date: d.toISOString().slice(0, 10), mois: d.toISOString().slice(0, 7), q: last ? clone(last.q || {}) : {}, ix: last ? clone(last.ix || {}) : {}, pen: 0 }); m.cur = m.atts.length - 1; saveM(); renderMarche(); toast('Attachement n° ' + m.atts.length + ' créé : mettez à jour les cumuls'); };
+  const a = m.atts[cur]; if (!a) return;
+  box.querySelectorAll('[data-ma]').forEach(i => i.onchange = () => { a[i.dataset.ma] = i.type === 'number' ? (parseFloat(i.value) || 0) : i.value; saveM(); renderMarche(); });
+  box.querySelectorAll('[data-mab]').forEach(i => i.onchange = () => { a[i.dataset.mab] = i.checked ? 1 : 0; if (i.dataset.mab === 'fin' && i.checked && cur < m.atts.length - 1) { a.fin = 0; toast('Seul le dernier attachement peut être définitif'); } saveM(); renderMarche(); });
+  box.querySelectorAll('[data-mai]').forEach(i => i.onchange = () => { a.ix = a.ix || {}; a.ix[i.dataset.mai] = parseFloat(i.value) || 0; saveM(); renderMarche(); });
+  box.querySelectorAll('[data-maq]').forEach(i => i.onchange = () => { a.q = a.q || {}; a.q[i.dataset.maq] = parseFloat(i.value) || 0; saveM(); renderMarche(); });
+  $('#marCopyPrev').onclick = () => { const p = m.atts[cur - 1]; if (!p) return; a.q = clone(p.q || {}); saveM(); renderMarche(); };
+  confirmBtn($('#marFull'), () => { a.q = {}; m.lignes.forEach(l => { a.q[l.id] = +l.q || 0; }); saveM(); renderMarche(); }, 'Confirmer : tout à 100 % ?');
+  confirmBtn($('#marDelA'), () => { m.atts.splice(cur, 1); m.cur = m.atts.length - 1; saveM(); renderMarche(); }, 'Confirmer la suppression ?');
+  $('#marCopy').onclick = () => { const D = decompte(cur), L = [`${a.fin ? 'DÉCOMPTE DÉFINITIF' : 'DÉCOMPTE PROVISOIRE N° ' + (cur + 1)} — Marché n° ${m.num || '…'}`, m.objet, 'Titulaire : ' + (m.titulaire || '…'), '',
+    'Travaux exécutés cumulés HT : ' + fmt(D.travauxHT, 2), 'Révision des prix HT : ' + fmt(D.rev, 2), 'Total HT : ' + fmt(D.totHT, 2), 'TVA : ' + fmt(D.TVA, 2), 'Total TTC : ' + fmt(D.TTC, 2),
+    'Retenue de garantie : − ' + fmt(D.RG, 2), D.avTot ? 'Remboursement avance : − ' + fmt(D.avRemb, 2) : '', D.pen ? 'Pénalités : − ' + fmt(D.pen, 2) : '', 'Cumul des acomptes : ' + fmt(D.cumPay, 2), 'Acomptes antérieurs : − ' + fmt(D.prevPay, 2), 'NET À PAYER : ' + fmt(D.net, 2) + ' DH'].filter(x => x !== '');
+    copy(L.join('\n')); };
+  $('#marXls').onclick = () => exportDecompteXlsx(cur);
+}
+async function exportDecompteXlsx(k) {
+  let E; try { E = await loadExcelJS(); } catch (e) { return toast('Impossible de charger le module Excel (connexion ?)'); }
+  const m = MS(), D = decompte(k), a = m.atts[k], prev = m.atts[k - 1], wb = new E.Workbook(), MONEY = '#,##0.00';
+  const fill = c => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: c } }), thin = { style: 'thin', color: { argb: 'FFD9CFC2' } };
+  const bord = r => r.eachCell({ includeEmpty: true }, c => { c.border = { top: thin, bottom: thin, left: thin, right: thin }; });
+  const head = (ws, title, cols) => {
+    ws.mergeCells(1, 1, 1, cols); ws.getCell(1, 1).value = title; ws.getCell(1, 1).font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } }; ws.getCell(1, 1).fill = fill('FF2A3336'); ws.getCell(1, 1).alignment = { horizontal: 'center', vertical: 'middle' }; ws.getRow(1).height = 26;
+    [['Marché n°', m.num], ['Objet', m.objet], ['Maître d\'ouvrage', m.mo], ['Titulaire', m.titulaire], ['Attachement', 'N° ' + (k + 1) + (a.date ? ' du ' + new Date(a.date).toLocaleDateString('fr-FR') : '') + (a.mois ? ' — travaux de ' + a.mois : '')]].forEach(([x, y], i) => { const r = ws.getRow(2 + i); r.getCell(1).value = x; r.getCell(1).font = { bold: true }; ws.mergeCells(2 + i, 2, 2 + i, cols); r.getCell(2).value = y || '—'; });
+    return 8;
+  };
+  // Attachement
+  const w1 = wb.addWorksheet('Attachement ' + (k + 1), { pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
+  w1.columns = [{ width: 9 }, { width: 46 }, { width: 7 }, { width: 12 }, { width: 13 }, { width: 13 }, { width: 13 }, { width: 13 }, { width: 16 }];
+  let row = head(w1, 'ATTACHEMENT N° ' + (k + 1) + (a.fin ? ' (DÉFINITIF)' : ''), 9);
+  const H = w1.getRow(row); H.values = ['N° prix', 'Désignation', 'U', 'Qté marché', 'P.U. HT', 'Cumul précédent', 'Cumul à ce jour', 'Période', 'Montant cumulé HT'];
+  H.eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = fill('FFB8522A'); c.alignment = { wrapText: true, horizontal: 'center', vertical: 'middle' }; }); H.height = 30; bord(H);
+  const first = ++row;
+  m.lignes.forEach(l => { const r = w1.getRow(row); const c = lineCum(a, l), p = lineCum(prev, l);
+    r.values = [l.no, l.l, l.u, +l.q || 0, +l.pu || 0, p, c, { formula: `G${row}-F${row}`, result: rc(c - p) }, { formula: `G${row}*E${row}`, result: rc(c * (+l.pu || 0)) }];
+    [4, 6, 7, 8].forEach(i => r.getCell(i).numFmt = '#,##0.00'); [5, 9].forEach(i => r.getCell(i).numFmt = MONEY); r.getCell(7).fill = fill('FFFBF0D6'); bord(r); row++; });
+  const tr = w1.getRow(row); tr.getCell(2).value = 'TOTAL TRAVAUX EXÉCUTÉS CUMULÉS HT'; tr.getCell(9).value = { formula: `SUM(I${first}:I${row - 1})`, result: D.travauxHT }; tr.getCell(9).numFmt = MONEY; tr.font = { bold: true }; bord(tr);
+  const totCell = 'I' + row;
+  w1.getRow(row + 2).getCell(2).value = 'Le maître d\'ouvrage / maître d\'œuvre'; w1.getRow(row + 2).getCell(7).value = 'Le titulaire';
+  // Révision
+  let revTotRef = null;
+  if (m.revisable) {
+    const w2 = wb.addWorksheet('Révision des prix'); w2.columns = [{ width: 12 }, { width: 12 }, { width: 18 }].concat(m.idx.map(() => ({ width: 14 })), [{ width: 12 }, { width: 16 }]);
+    let r2w = head(w2, 'RÉVISION DES PRIX — attachements 1 à ' + (k + 1), 5 + m.idx.length);
+    const f = w2.getRow(r2w++); f.getCell(1).value = 'Formule : P/P0 = ' + fmt(+m.K || 0, 4) + ' + ' + m.idx.map(x => fmt(+x.a || 0, 4) + '·(' + x.n + '/' + x.n + '₀)').join(' + '); w2.mergeCells(f.number, 1, f.number, 5 + m.idx.length);
+    const i0r = w2.getRow(r2w++); i0r.getCell(1).value = 'I₀ (M0 ' + (m.m0 || '…') + ')'; m.idx.forEach((x, i) => { i0r.getCell(4 + i).value = +x.i0 || 0; }); i0r.font = { italic: true };
+    const hh = w2.getRow(r2w++); hh.values = ['Attachement', 'Mois', 'Travaux période HT'].concat(m.idx.map(x => x.n), ['P/P0', 'Révision HT']);
+    hh.eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = fill('FFB8522A'); }); bord(hh);
+    const f2 = r2w;
+    D.revRows.forEach((rr, j) => { const r = w2.getRow(r2w); r.values = [rr.n, rr.mois || '', rr.per].concat(rr.parts.map(p => p.im || 0), [rr.C, { formula: `C${r2w}*(${String.fromCharCode(68 + m.idx.length)}${r2w}-1)`, result: rr.rev }]);
+      r.getCell(3).numFmt = MONEY; r.getCell(4 + m.idx.length).numFmt = '0.0000'; r.getCell(5 + m.idx.length).numFmt = MONEY; bord(r); r2w++; });
+    const t2 = w2.getRow(r2w); const colR = String.fromCharCode(69 + m.idx.length); t2.getCell(2).value = 'TOTAL'; t2.getCell(5 + m.idx.length).value = { formula: `SUM(${colR}${f2}:${colR}${r2w - 1})`, result: D.rev }; t2.getCell(5 + m.idx.length).numFmt = MONEY; t2.font = { bold: true }; bord(t2);
+    revTotRef = `'Révision des prix'!${colR}${r2w}`;
+  }
+  // Décompte
+  const w3 = wb.addWorksheet(a.fin ? 'Décompte définitif' : 'Décompte ' + (k + 1), { pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
+  w3.columns = [{ width: 58 }, { width: 20 }];
+  w3.mergeCells('A1:B1'); w3.getCell('A1').value = a.fin ? 'DÉCOMPTE DÉFINITIF' : 'DÉCOMPTE PROVISOIRE N° ' + (k + 1); w3.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } }; w3.getCell('A1').fill = fill('FF2A3336'); w3.getCell('A1').alignment = { horizontal: 'center' }; w3.getRow(1).height = 26;
+  [['Marché n°', m.num], ['Objet', m.objet], ['Maître d\'ouvrage', m.mo], ['Titulaire', m.titulaire], ['Établi d\'après l\'attachement n°', (k + 1) + (a.date ? ' du ' + new Date(a.date).toLocaleDateString('fr-FR') : '')], ['Montant initial du marché TTC', D.initTTC]].forEach(([x, y], i) => { const r = w3.getRow(2 + i); r.getCell(1).value = x; r.getCell(1).font = { bold: true }; r.getCell(2).value = y || '—'; if (typeof y === 'number') r.getCell(2).numFmt = MONEY; });
+  let r3 = 9; const L = (lab, val, opt = {}) => { const r = w3.getRow(r3); r.getCell(1).value = lab; r.getCell(2).value = val; r.getCell(2).numFmt = MONEY; if (opt.b) r.font = { bold: true, size: opt.s || 11 }; if (opt.f) r.eachCell({ includeEmpty: true }, c => { c.fill = fill(opt.f); }); bord(r); return 'B' + r3++; };
+  const tx = L('Travaux exécutés cumulés HT', { formula: `'${w1.name}'!${totCell}`, result: D.travauxHT });
+  const rv = L('Révision des prix cumulée HT', revTotRef ? { formula: revTotRef, result: D.rev } : 0);
+  const th = L('Total HT', { formula: `${tx}+${rv}`, result: D.totHT }, { b: 1, f: 'FFEFE7DC' });
+  const tv = L('TVA ' + fmt(+m.tva || 0) + ' %', { formula: `ROUND(${th}*${(+m.tva || 0) / 100},2)`, result: D.TVA });
+  const tt = L('Total TTC', { formula: `${th}+${tv}`, result: D.TTC }, { b: 1, f: 'FFEFE7DC' });
+  const rg = L('À déduire : retenue de garantie' + (D.libere ? ' (libérée)' : ' (' + fmt(+m.rg || 0) + ' %, plafond ' + fmt(+m.rgMax || 0) + ' % du montant initial)'), D.libere ? 0 : { formula: `ROUND(MIN(${tt}*${(+m.rg || 0) / 100},${D.initTTC}*${(+m.rgMax || 0) / 100}),2)`, result: D.RG });
+  const av = L('À déduire : remboursement de l\'avance', D.avRemb);
+  const pe = L('À déduire : pénalités cumulées', D.pen);
+  const cp = L('Montant cumulé des acomptes', { formula: `${tt}-${rg}-${av}-${pe}`, result: D.cumPay }, { b: 1 });
+  const pp = L('À déduire : acomptes antérieurs', D.prevPay);
+  L(a.fin ? 'SOLDE À PAYER' : 'NET À PAYER', { formula: `${cp}-${pp}`, result: D.net }, { b: 1, s: 13, f: 'FFF6E3D8' });
+  w3.getRow(r3 + 1).getCell(1).value = 'Arrêté le présent décompte à la somme de : ' + fmt(D.net, 2) + ' DH'; w3.getRow(r3 + 1).getCell(1).font = { italic: true };
+  w3.getRow(r3 + 3).getCell(1).value = 'Le maître d\'ouvrage'; w3.getRow(r3 + 3).getCell(2).value = 'Le titulaire';
+  const buf = await wb.xlsx.writeBuffer();
+  saveFile((a.fin ? 'decompte-definitif' : 'decompte-' + (k + 1)) + (m.num ? '-marche-' + String(m.num).replace(/[^\w-]+/g, '-') : '') + '.xlsx', new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+
+/* ================= modèles des pièces d'exécution des marchés de travaux ================= */
+let DOCXP = null;
+function loadDocx() {
+  if (window.docx) return Promise.resolve(window.docx);
+  if (!DOCXP) DOCXP = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/docx@9.15.2/dist/index.iife.js'; sc.onload = () => res(window.docx); sc.onerror = () => { DOCXP = null; rej(new Error('docx')); }; document.head.appendChild(sc); });
+  return DOCXP;
+}
+/* montant en lettres (dirhams, centimes) */
+function enLettres(n) {
+  const U = ['zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize', 'dix-sept', 'dix-huit', 'dix-neuf'];
+  const D = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', 'soixante', 'quatre-vingt', 'quatre-vingt'];
+  const lt100 = x => { if (x < 20) return U[x]; const d = Math.floor(x / 10), u = x % 10;
+    if (d === 7 || d === 9) return D[d] + (d === 7 && u === 1 ? ' et ' : '-') + U[10 + u];
+    if (d === 8) return u ? 'quatre-vingt-' + U[u] : 'quatre-vingts';
+    return D[d] + (u === 1 ? ' et un' : u ? '-' + U[u] : ''); };
+  const lt1000 = x => { const c = Math.floor(x / 100), r = x % 100; let s = '';
+    if (c) s = (c > 1 ? U[c] + ' cent' + (r ? '' : 's') : 'cent'); if (r) s += (s ? ' ' : '') + lt100(r); return s || 'zéro'; };
+  const big = x => { if (x === 0) return 'zéro'; const parts = []; const M = [[1e9, 'milliard'], [1e6, 'million'], [1e3, 'mille']];
+    for (const [v, w] of M) { const q = Math.floor(x / v); if (q) { parts.push(w === 'mille' ? (q === 1 ? 'mille' : lt1000(q).replace(/cents$/, 'cent') + ' mille') : lt1000(q) + ' ' + w + (q > 1 ? 's' : '')); x %= v; } }
+    if (x) parts.push(lt1000(x)); return parts.join(' '); };
+  n = Math.round((+n || 0) * 100); const neg = n < 0; n = Math.abs(n); const dh = Math.floor(n / 100), c = n % 100;
+  let s = big(dh) + (dh >= 1e6 && dh % 1e6 === 0 ? ' de' : '') + ' dirham' + (dh > 1 ? 's' : '') + (c ? ' et ' + big(c) + ' centime' + (c > 1 ? 's' : '') : '');
+  s = (neg ? 'moins ' : '') + s; return s.charAt(0).toUpperCase() + s.slice(1);
+}
+const DOT = '……………………';
+const fdate = v => v ? new Date(v).toLocaleDateString('fr-FR') : DOT;
+/* champs administratifs du marché (communs à tous les modèles) */
+const ADM = [['org', 'Ministère ou organisme', 'Commune de …'], ['rep', 'Représentant du maître d\'ouvrage (nom et qualité)', 'M. …, Président du conseil'], ['ville', 'Ville (« Fait à »)', ''],
+  ['adresse', 'Adresse de l\'entrepreneur indiquée au CPS', ''], ['dateApprob', 'Date d\'approbation du marché', '', 'date'], ['dateVisa', 'Date de visa', '', 'date'],
+  ['budget', 'Budget de l\'année', ''], ['chapitre', 'Chapitre', ''], ['article', 'Article', ''], ['paragraphe', 'Paragraphe', ''], ['ligneB', 'Ligne', ''],
+  ['rib', 'N° de compte bancaire de l\'entrepreneur', ''], ['banque', 'Banque et agence (ville)', ''], ['rc', 'Registre de commerce (ville et n°)', ''], ['cnss', 'N° CNSS', ''], ['patente', 'Patente', '']];
+const OS_TAIL = F => [
+  { p: `Le présent ordre de service, établi en deux exemplaires, inscrit au registre du marché sous le numéro ${F('reg')}, est notifié à l'entrepreneur par ${F('mode', 'courrier porté ou lettre recommandée avec accusé de réception')} à l'adresse ${F('adresse')} (indiquée au CPS).` },
+  { gap: 1 }, { p: `Fait à ${F('ville')}, le ${F('dateDoc', '', 'date')}`, align: 'right' }, { p: 'Signature et cachet du maître d\'ouvrage', align: 'right', b: 1 }, { gap: 3 },
+  { p: `L'entrepreneur accuse réception du présent ordre de service en date du ${DOT}` }, { p: 'Signature et cachet de l\'entrepreneur *', b: 1 }, { p: `Fait à ${DOT}, le ${DOT}` }, { gap: 2 },
+  { note: '* En cas de réserve, l\'entrepreneur assortit sa signature de la mention manuscrite « signé avec réserve ».' }];
+const OS_HEAD = (F, titre) => [{ org: 1 }, { gap: 1 }, { h: 'ORDRE DE SERVICE N° ' + F('osNum') }, { h2: titre }, { gap: 1 }, { kv: [['Marché n°', F('num')], ['Objet du marché', F('objet')]] }, { gap: 1 }];
+const OSF = [['osNum', 'N° de l\'ordre de service'], ['reg', 'N° d\'inscription au registre (…/…)'], ['mode', 'Mode de notification', 'courrier porté', ['courrier porté', 'lettre recommandée avec accusé de réception']], ['dateDoc', 'Date de l\'ordre de service', '', 'date']];
+const PV_HEAD = F => [{ org: 1 }, { gap: 1 }, { kv: [['Marché n°', F('num')], ['Objet du marché', F('objet')]] }, { gap: 1 }, { p: `Le ${F('dateJour', '', 'date')},` }, { p: 'Nous, soussignés :', b: 1 },
+  { p: `Messieurs (désignés par le maître d'ouvrage) : ${F('membres')}` }, ...(F('absent') === 'oui' ? [{ p: 'En l\'absence de l\'entrepreneur, dûment convoqué.' }] : [{ p: `Et l'entrepreneur : ${F('titulaire')}` }]), { gap: 1 }];
+const PVF = [['dateJour', 'Date du procès-verbal', '', 'date'], ['membres', 'Membres désignés par le maître d\'ouvrage', 'MM. …'], ['absent', 'Entrepreneur absent ?', 'non', ['non', 'oui']]];
+const PV_RP_VU = F => [{ p: `Vu l'avis de l'entrepreneur, daté du ${F('dateAvis', '', 'date')}, informant le maître d'ouvrage de l'achèvement des travaux ;` },
+  { p: `Vu la décision du maître d'ouvrage n° ${F('decNum')} en date du ${F('decDate', '', 'date')} désignant la ou les personnes chargées de procéder à la réception provisoire ;` },
+  { p: `Vu l'ordre de service n° ${F('osNum2')} du ${F('osDate2', '', 'date')} notifiant à l'entrepreneur la décision de désignation de la ou les personnes chargées de procéder à la réception provisoire et l'invitant à assister aux opérations préalables à la réception provisoire ;` }];
+const RPF = [['dateAvis', 'Date de l\'avis d\'achèvement de l\'entrepreneur', '', 'date'], ['decNum', 'N° de la décision de désignation'], ['decDate', 'Date de la décision', '', 'date'], ['osNum2', 'N° de l\'OS de convocation'], ['osDate2', 'Date de l\'OS de convocation', '', 'date'], ['lieux', 'Lieux visités']];
+const RDF = [['dateDemande', 'Date de la demande de l\'entrepreneur', '', 'date'], ['dateExp', 'Date d\'expiration du délai de garantie', '', 'date'], ['decNum', 'N° de la décision de désignation'], ['decDate', 'Date de la décision', '', 'date'], ['dateConvoc', 'Date de la convocation', '', 'date']];
+const RD_VU = F => [{ p: `Vu la demande de l'entrepreneur, datée du ${F('dateDemande', '', 'date')}, informant le maître d'ouvrage de l'expiration du délai de garantie à la date du ${F('dateExp', '', 'date')} ;` },
+  { p: `Vu la décision du maître d'ouvrage n° ${F('decNum')} en date du ${F('decDate', '', 'date')} désignant la ou les personnes chargées de procéder à la réception définitive ;` },
+  { p: `Vu la convocation adressée par le maître d'ouvrage à l'entrepreneur en date du ${F('dateConvoc', '', 'date')} l'invitant à assister à la réception définitive ;` }];
+const SIGN = [{ gap: 2 }, { p: 'Signataires', align: 'center', b: 1 }, { gap: 4 }];
+const DOCS = [
+  { g: 'Ordres de service', id: 'os1', t: 'OS — Notification de l\'approbation du marché', f: OSF.concat([['caution', 'Montant du cautionnement définitif (DH)', ''], ['autre', 'Autre prescription (facultatif)', '']]),
+    b: F => [...OS_HEAD(F, 'RELATIF À LA NOTIFICATION DE L\'APPROBATION DU MARCHÉ'), { p: `Le maître d'ouvrage représenté par ${F('rep')} informe l'entrepreneur ${F('titulaire')} que le marché cité en objet est approuvé en date du ${F('dateApprob', '', 'date')} et l'invite à :` },
+      { li: 'acquitter les droits de timbre dus au titre du présent marché conformément à la législation en vigueur ;' }, ...(F('caution') !== DOT ? [{ li: `constituer le cautionnement définitif, d'un montant de ${F('caution')} DH, dans les vingt (20) jours qui suivent la notification de l'approbation du marché ;` }] : []),
+      { li: 'produire les attestations des polices d\'assurances telles que prévues par le CPS, et ce avant le commencement des travaux.' }, ...(F('autre') !== DOT ? [{ li: F('autre') }] : []), { gap: 1 }, ...OS_TAIL(F)] },
+  { g: 'Ordres de service', id: 'os2', t: 'OS — Commencement de l\'exécution des travaux', f: OSF.concat([['dateDebut', 'Date de commencement des travaux', '', 'date']]),
+    b: F => [...OS_HEAD(F, 'RELATIF AU COMMENCEMENT DE L\'EXÉCUTION DES TRAVAUX'), { p: `Le maître d'ouvrage représenté par ${F('rep')} invite l'entrepreneur ${F('titulaire')} à commencer l'exécution des travaux le ${F('dateDebut', '', 'date')}.` }, { gap: 1 }, ...OS_TAIL(F)] },
+  { g: 'Ordres de service', id: 'os3', t: 'OS — Arrêt de l\'exécution des travaux', f: OSF.concat([['arret', 'Nature de l\'arrêt (total, ou partiel + partie d\'ouvrage)', 'arrêt total'], ['dateArret', 'Date de l\'arrêt', '', 'date'], ['motifs', 'Motif(s)', '', 'area']]),
+    b: F => [...OS_HEAD(F, 'RELATIF À L\'ARRÊT DE L\'EXÉCUTION DES TRAVAUX'), { p: `Le maître d'ouvrage représenté par ${F('rep')} invite l'entrepreneur ${F('titulaire')} à arrêter l'exécution des travaux (${F('arret')}) à compter du ${F('dateArret', '', 'date')}, pour le ou les motif(s) ci-après : ${F('motifs')}.` }, { gap: 1 }, ...OS_TAIL(F)] },
+  { g: 'Ordres de service', id: 'os4', t: 'OS — Arrêt et reprise de l\'exécution des travaux', f: OSF.concat([['arret', 'Nature de l\'arrêt (total, ou partiel + partie d\'ouvrage)', 'arrêt total'], ['dateArret', 'Date de l\'arrêt', '', 'date'], ['motifs', 'Motif(s)', '', 'area'], ['dateReprise', 'Date de la reprise', '', 'date']]),
+    b: F => [...OS_HEAD(F, 'RELATIF À L\'AJOURNEMENT DE L\'EXÉCUTION DES TRAVAUX'), { p: `Le maître d'ouvrage représenté par ${F('rep')} invite l'entrepreneur ${F('titulaire')} :` },
+      { li: `à arrêter l'exécution des travaux (${F('arret')}) à compter du ${F('dateArret', '', 'date')}, pour le ou les motif(s) ci-après : ${F('motifs')} ;` }, { li: `à reprendre l'exécution des travaux à compter du ${F('dateReprise', '', 'date')}.` }, { gap: 1 }, ...OS_TAIL(F)] },
+  { g: 'Ordres de service', id: 'os5', t: 'OS — Reprise de l\'exécution des travaux', f: OSF.concat([['osArret', 'N° de l\'OS d\'arrêt'], ['osArretDate', 'Date de l\'OS d\'arrêt', '', 'date'], ['dateReprise', 'Date de la reprise', '', 'date']]),
+    b: F => [...OS_HEAD(F, 'RELATIF À LA REPRISE DE L\'EXÉCUTION DES TRAVAUX'), { p: `Vu l'ordre de service n° ${F('osArret')} en date du ${F('osArretDate', '', 'date')} prescrivant l'arrêt des travaux ;` },
+      { p: `Le maître d'ouvrage représenté par ${F('rep')} invite l'entrepreneur ${F('titulaire')} à reprendre l'exécution des travaux à compter du ${F('dateReprise', '', 'date')}.` }, { gap: 1 }, ...OS_TAIL(F)] },
+  { g: 'Ordres de service', id: 'os6', t: 'OS — Autres motifs', f: OSF.concat([['relatif', 'Relatif à… (titre)'], ['verbe', 'Verbe', 'invite', ['invite', 'informe', 'notifie à']], ['objetOS', 'Objet de l\'ordre de service', '', 'area']]),
+    b: F => [...OS_HEAD(F, 'RELATIF À ' + String(F('relatif')).toUpperCase()), { p: `Le maître d'ouvrage représenté par ${F('rep')} ${F('verbe')} l'entrepreneur ${F('titulaire')}.` }, { p: `Objet : ${F('objetOS')}` }, { gap: 1 }, ...OS_TAIL(F)] },
+  { g: 'Réceptions', id: 'pv1', t: 'PV de réception provisoire', f: PVF.concat(RPF),
+    b: F => [{ h: 'PROCÈS-VERBAL DE LA RÉCEPTION PROVISOIRE DES TRAVAUX' }, ...PV_HEAD(F), ...PV_RP_VU(F), { p: `Nous nous sommes transportés sur les lieux ${F('lieux')} pour examiner et vérifier les travaux réalisés dans le cadre du marché n° ${F('num')} exécutés par ${F('titulaire')}.` },
+      { p: 'Considérant qu\'à l\'issue des opérations préalables à la réception provisoire des travaux, aucune anomalie, imperfection ou malfaçon n\'a été constatée ;' },
+      { p: `Nous avons reconnu que les travaux réalisés dans le cadre du marché n° ${F('num')} sont terminés et qu'ils sont réceptionnés provisoirement à la date de l'avis, susvisé, de l'entrepreneur.` }, { p: 'En foi de quoi, nous avons dressé le présent procès-verbal de réception provisoire du marché susmentionné.' }, ...SIGN] },
+  { g: 'Réceptions', id: 'pv2', t: 'PV de réception provisoire avec réserves', f: PVF.concat(RPF, [['anomalies', 'Anomalies mineures constatées', '', 'area']]),
+    b: F => [{ h: 'PROCÈS-VERBAL DE LA RÉCEPTION PROVISOIRE DES TRAVAUX AVEC RÉSERVES' }, ...PV_HEAD(F), ...PV_RP_VU(F), { p: `Nous nous sommes transportés sur les lieux ${F('lieux')} pour examiner et vérifier les travaux réalisés dans le cadre du marché n° ${F('num')} exécutés par ${F('titulaire')}.` },
+      { p: `Considérant qu'à l'issue des opérations préalables à la réception provisoire des travaux, il a été constaté que ${F('anomalies')}, et que ces anomalies ne font pas obstacle à la réception provisoire des travaux ;` },
+      { p: `Nous avons reconnu que les travaux réalisés dans le cadre du marché n° ${F('num')} peuvent être réceptionnés avec réserves à compter de la date de l'avis, susvisé, de l'entrepreneur.` }, { p: 'En foi de quoi, nous avons dressé le présent procès-verbal de réception provisoire du marché susmentionné.' }, ...SIGN] },
+  { g: 'Réceptions', id: 'pv3', t: 'PV de réception provisoire après levée des anomalies', f: PVF.concat(RPF),
+    b: F => [{ h: 'PROCÈS-VERBAL DE LA RÉCEPTION PROVISOIRE DES TRAVAUX APRÈS AVOIR REMÉDIÉ AUX ANOMALIES, IMPERFECTIONS OU MALFAÇONS' }, ...PV_HEAD(F), ...PV_RP_VU(F), { p: 'Vu le rapport relatant les anomalies, imperfections ou malfaçons constatées ;' }, { p: 'Vu la lettre de l\'entrepreneur avisant le maître d\'ouvrage de la correction des anomalies, imperfections ou malfaçons ;' },
+      { p: `Nous nous sommes transportés sur les lieux ${F('lieux')} pour examiner et vérifier les travaux réalisés dans le cadre du marché n° ${F('num')} exécutés par ${F('titulaire')}.` }, { p: 'Considérant, après avoir vérifié la levée des anomalies indiquées dans le rapport susvisé ;' },
+      { p: `Nous avons reconnu que les travaux réalisés dans le cadre du marché n° ${F('num')} sont terminés et qu'ils sont réceptionnés provisoirement à compter de la date du deuxième avis susvisé de l'entrepreneur.` }, { p: 'En foi de quoi, nous avons dressé le présent procès-verbal de réception provisoire du marché susmentionné.' }, ...SIGN] },
+  { g: 'Réceptions', id: 'pv4', t: 'PV de réception provisoire partielle', f: PVF.concat(RPF, [['ouvrages', 'Ouvrages concernés', '', 'area'], ['dateRecep', 'Date de réception provisoire partielle', '', 'date']]),
+    b: F => [{ h: 'PROCÈS-VERBAL DE LA RÉCEPTION PROVISOIRE PARTIELLE DES TRAVAUX' }, ...PV_HEAD(F), { p: `Vu l'avis de l'entrepreneur, daté du ${F('dateAvis', '', 'date')}, informant le maître d'ouvrage de l'achèvement partiel des travaux ;` },
+      { p: `Vu la décision du maître d'ouvrage n° ${F('decNum')} en date du ${F('decDate', '', 'date')} désignant la ou les personnes chargées de procéder à la réception provisoire partielle des ouvrages ${F('ouvrages')} ;` },
+      { p: `Vu l'ordre de service n° ${F('osNum2')} du ${F('osDate2', '', 'date')} notifiant à l'entrepreneur la décision de désignation de la ou les personnes chargées de procéder à la réception provisoire partielle et l'invitant à assister aux opérations préalables à la réception provisoire partielle ;` },
+      { p: `Nous nous sommes transportés sur les lieux ${F('lieux')} pour examiner et vérifier les ouvrages susmentionnés.` }, { p: 'Considérant qu\'à l\'issue des opérations préalables à la réception provisoire partielle des travaux, aucune anomalie, imperfection ou malfaçon n\'a été constatée ;' },
+      { p: `Nous avons reconnu que les ouvrages susmentionnés sont terminés et qu'ils sont réceptionnés provisoirement à la date du ${F('dateRecep', '', 'date')}.` }, { p: 'En foi de quoi, nous avons dressé le présent procès-verbal de réception provisoire partielle des ouvrages susmentionnés.' }, ...SIGN] },
+  { g: 'Réceptions', id: 'pv5', t: 'PV de réception définitive', f: PVF.concat(RDF, [['dateRP', 'Date de la réception provisoire', '', 'date']]),
+    b: F => [{ h: 'PROCÈS-VERBAL DE LA RÉCEPTION DÉFINITIVE' }, ...PV_HEAD(F), ...RD_VU(F), { p: `Vu le procès-verbal de la réception provisoire prononcée en date du ${F('dateRP', '', 'date')} ;` },
+      { p: 'Considérant que les travaux réceptionnés provisoirement ne soulèvent aucune anomalie ou malfaçon et que l\'entrepreneur a rempli toutes les obligations prévues au paragraphe 3 de l\'article 76 du CCAG-T ;' }, { p: 'En foi de quoi, nous avons dressé le présent procès-verbal de réception définitive des travaux objet du marché susvisé.' }, ...SIGN] },
+  { g: 'Réceptions', id: 'pv6', t: 'PV de réception définitive partielle', f: PVF.concat(RDF, [['dateRPP', 'Date de la réception provisoire partielle', '', 'date'], ['ouvrages', 'Ouvrages concernés', '', 'area']]),
+    b: F => [{ h: 'PROCÈS-VERBAL DE LA RÉCEPTION DÉFINITIVE PARTIELLE' }, ...PV_HEAD(F), ...RD_VU(F), { p: `Vu le procès-verbal de réception provisoire partielle prononcée en date du ${F('dateRPP', '', 'date')} pour les ouvrages ${F('ouvrages')} ;` },
+      { p: 'Considérant que les travaux réceptionnés provisoirement ne soulèvent aucune anomalie ou malfaçon ;' }, { p: 'En foi de quoi, nous avons dressé le présent procès-verbal de réception définitive partielle des ouvrages susmentionnés.' }, ...SIGN] },
+  { g: 'Réceptions', id: 'pv7', t: 'PV de la dernière réception définitive partielle', f: PVF.concat(RDF, [['dateRPP', 'Date de la réception provisoire partielle', '', 'date'], ['ouvrages', 'Ouvrages concernés', '', 'area'], ['listeRDP', 'Dates des réceptions définitives partielles précédentes (une par ligne)', '', 'area']]),
+    b: F => [{ h: 'PROCÈS-VERBAL DE LA DERNIÈRE RÉCEPTION DÉFINITIVE PARTIELLE' }, ...PV_HEAD(F), ...RD_VU(F), { p: `Vu le procès-verbal de réception provisoire partielle prononcée en date du ${F('dateRPP', '', 'date')} pour les ouvrages ${F('ouvrages')} ;` },
+      { p: 'Vu le ou les procès-verbaux de réception définitive partielle, prononcée(s) en date du :' }, ...String(F('listeRDP')).split(/\n+/).map(x => ({ li: x })),
+      { p: 'Considérant que les travaux réceptionnés provisoirement ne soulèvent aucune anomalie ou malfaçon et que l\'entrepreneur a rempli toutes les obligations prévues au paragraphe 3 de l\'article 76 du CCAG-T ;' },
+      { p: 'En foi de quoi, nous avons dressé le présent procès-verbal de réception définitive partielle des ouvrages susmentionnés et de l\'ensemble des travaux du marché.' }, ...SIGN] },
+  { g: 'Décomptes (Excel)', id: 'dp', t: 'Décompte provisoire', x: 'prov', f: [['att', 'Attachement n°', '', 'att'], ['exAnt', 'Dépenses imputées sur les exercices antérieurs (DH)', '0']] },
+  { g: 'Décomptes (Excel)', id: 'dd', t: 'Décompte définitif', x: 'def', f: [['att', 'Attachement n°', '', 'att']] },
+  { g: 'Décomptes (Excel)', id: 'dpd', t: 'Décompte partiel définitif', x: 'pdef', f: [['att', 'Attachement n°', '', 'att']] },
+  { g: 'Décomptes (Excel)', id: 'dgd', t: 'Décompte général définitif', x: 'gdef', f: [['att', 'Attachement n°', '', 'att']] },
+  { g: 'Autres pièces', id: 'aug', t: 'Décision d\'augmentation dans la masse des travaux', f: [['dateDoc', 'Date', '', 'date'], ['dateLettre', 'Date de la lettre de l\'entreprise (préavis de 20 jours)', '', 'date'], ['montantAug', 'Montant de l\'augmentation (DH)'], ['delaiSup', 'Délai supplémentaire (par avenant), le cas échéant', '']],
+    b: F => [{ org: 1 }, { p: `Fait à ${F('ville')}, le ${F('dateDoc', '', 'date')}`, align: 'right' }, { gap: 1 }, { h: 'DÉCISION D\'AUGMENTATION DANS LA MASSE DES TRAVAUX' }, { gap: 1 }, { p: `${F('rep')},`, b: 1 },
+      { li: `Vu le marché n° ${F('num')} passé avec la société ${F('titulaire')} pour la réalisation des travaux ${F('objet')} ;` }, { li: 'Vu les dispositions de l\'article 57 du CCAG-T, relatif à l\'augmentation dans la masse des travaux ;' },
+      { li: `Vu la lettre de l'entreprise en date du ${F('dateLettre', '', 'date')} par laquelle elle avise le maître d'ouvrage, vingt (20) jours au moins à l'avance, de la date probable à laquelle la masse des travaux atteindra la masse initiale ;` },
+      { li: 'Vu la nécessité de modifier les quantités de certains postes du détail estimatif du marché suite à des insuffisances des quantités prévues initialement ;' }, { li: 'Vu que ces modifications entraînent une augmentation dans la masse initiale des travaux telle que prévue à l\'article 57 du CCAG-T précité ;' },
+      { li: 'Considérant que l\'augmentation dans la masse des travaux n\'excède pas dix pour cent (10 %) du montant initial du marché ;' }, { gap: 1 }, { h2: 'DÉCIDE' }, { gap: 1 },
+      { p: `Article 1 : L'entreprise ${F('titulaire')} est invitée à poursuivre les travaux objet du marché n° ${F('num')} dans la limite d'une augmentation dans la masse des travaux d'un montant de ${F('montantAug')} DH${F('montantAug') !== DOT ? ' (' + enLettres(parseFloat(String(F('montantAug')).replace(/\s/g, '').replace(',', '.'))) + ')' : ''}.` },
+      ...(F('delaiSup') !== DOT ? [{ p: `Article 2 : Un délai supplémentaire de ${F('delaiSup')} est accordé à l'entreprise par voie d'avenant.` }] : []), { gap: 2 }, { p: 'Signature', align: 'right', b: 1 }] },
+  { g: 'Autres pièces', id: 'med', t: 'Lettre de mise en demeure', f: [['dateDoc', 'Date', '', 'date'], ['dest', 'Destinataire', 'Monsieur le Directeur de la société …'], ['osRefs', 'Ordres de service concernés (n° et dates)'], ['manq', 'Manquement', 'manquement aux stipulations du marché et/ou non-conformité aux ordres de service ordonnés par le maître d\'ouvrage', 'area'], ['delai', 'Délai (jours, moins de 15 en cas d\'urgence)', '15']],
+    b: F => [{ org: 1 }, { p: `Fait à ${F('ville')}, le ${F('dateDoc', '', 'date')}`, align: 'right' }, { gap: 1 }, { h: 'LETTRE DE MISE EN DEMEURE' }, { gap: 1 }, { p: F('dest'), align: 'center', b: 1 }, { gap: 1 },
+      { p: 'Objet : Mise en demeure', b: 1 }, { p: `Réf. : Marché n° ${F('num')} — objet : ${F('objet')}` }, { p: `Ordres de service n° ${F('osRefs')}` }, { gap: 1 }, { p: 'Monsieur,' },
+      { p: `Eu égard aux ordres de service n° ${F('osRefs')} qui vous ont été transmis (${F('manq')}), je vous mets en demeure de vous conformer aux ordres de service qui vous ont été transmis dans un délai maximum de ${F('delai')} jours, à compter de la date de réception de la présente lettre, faute de quoi il vous sera appliqué les mesures coercitives conformément aux dispositions de l'article 79 du CCAG-T.` },
+      { p: 'Veuillez agréer, Monsieur, l\'expression de mes salutations distinguées.' }, { gap: 2 }, { p: 'Signature', align: 'right', b: 1 }] },
+  { g: 'Autres pièces', id: 'res', t: 'Décision de résiliation du marché', f: [['dateDoc', 'Date', '', 'date'], ['autorite', 'Autorité compétente', ''], ['decret', 'Décret des marchés publics visé', 'décret n° 2-22-431 du 15 chaabane 1444 (8 mars 2023) relatif aux marchés publics'], ['delaiExec', 'Délai d\'exécution'], ['artCPS', 'Article du CPS fixant le délai'], ['osDebutDate', 'Date de l\'OS de commencement', '', 'date'], ['dateDebut', 'Date de commencement des travaux', '', 'date'], ['autresOS', 'Autre OS (date et objet)'], ['osMedDate', 'Date de l\'OS notifiant la mise en demeure', '', 'date'], ['art2', 'Article 2 : nature de la résiliation (art. 79) et sort du cautionnement définitif et de la retenue de garantie', '', 'area']],
+    b: F => [{ org: 1 }, { p: `Fait à ${F('ville')}, le ${F('dateDoc', '', 'date')}`, align: 'right' }, { gap: 1 }, { h: 'DÉCISION DE RÉSILIATION DU MARCHÉ N° ' + F('num') }, { gap: 1 }, { p: `${F('autorite')},`, b: 1 },
+      { li: `Vu le ${F('decret')} ;` }, { li: 'Vu le décret n° 2-14-394 du 6 chaabane 1437 (13 mai 2016) approuvant le cahier des clauses administratives générales applicables aux marchés de travaux, et en particulier les dispositions de son article 79 ;' },
+      { li: `Vu le marché n° ${F('num')} ;` }, { li: `Objet : ${F('objet')} ;` }, { li: `Approuvé en date du ${F('dateApprob', '', 'date')} ;` }, { li: `Vu le délai d'exécution des travaux, fixé à ${F('delaiExec')} conformément à l'article ${F('artCPS')} du CPS ;` },
+      { li: `Vu l'ordre de service en date du ${F('osDebutDate', '', 'date')} qui invite l'entreprise ${F('titulaire')} à commencer les travaux à compter du ${F('dateDebut', '', 'date')} ;` }, { li: `Vu l'ordre de service en date du ${F('autresOS')} ;` },
+      { li: `Vu l'ordre de service en date du ${F('osMedDate', '', 'date')} notifiant à l'entreprise la lettre de mise en demeure dans un délai maximum de quinze (15) jours pour se conformer aux ordres de service qui lui ont été adressés ;` },
+      { li: 'Vu que l\'entreprise ne s\'est pas conformée aux ordres de service précités ;' }, { gap: 1 }, { p: 'Et sur proposition du maître d\'ouvrage,', align: 'center', i: 1 }, { h2: 'DÉCIDE' }, { gap: 1 },
+      { p: `Article 1 : Le marché n° ${F('num')} est résilié à compter de la signature de la présente décision.` }, { p: `Article 2 : ${F('art2')}` }, { p: 'Article 3 : Le maître d\'ouvrage veille à l\'application de la présente décision.' }, { gap: 2 }, { p: 'Signature', align: 'right', b: 1 }] }
+];
+function docVal(m, id) { m.docs = m.docs || {}; m.docs[id] = m.docs[id] || {}; return m.docs[id]; }
+function mkF(m, id) {
+  const v = docVal(m, id), D = DOCS.find(d => d.id === id);
+  return (k, def, type) => {
+    let x = v[k]; if (x === undefined || x === '') x = m[k]; if ((x === undefined || x === '') && k === 'titulaire') x = m.titulaire; if (x === undefined || x === '') { const fd = (D.f || []).find(f => f[0] === k); x = fd && fd[2] !== undefined ? fd[2] : def; }
+    if (x === undefined || x === null || x === '') return DOT;
+    if (type === 'date' || ((D.f || []).concat(ADM).find(f => f[0] === k) || [])[3] === 'date') return fdate(x);
+    return String(x);
+  };
+}
+async function genWord(id) {
+  let X; try { X = await loadDocx(); } catch (e) { return toast('Impossible de charger le module Word (connexion ?)'); }
+  const m = MS(), D = DOCS.find(d => d.id === id), F = mkF(m, id), blocks = D.b(F);
+  const { Document, Paragraph, TextRun, AlignmentType, Packer, Table, TableRow, TableCell, WidthType, BorderStyle } = X;
+  const run = (t, o = {}) => new TextRun({ text: t, bold: !!o.b, italics: !!o.i, size: o.s || 22, font: 'Times New Roman' });
+  const P = (t, o = {}) => new Paragraph({ children: [run(t, o)], alignment: o.align === 'right' ? AlignmentType.RIGHT : o.align === 'center' ? AlignmentType.CENTER : AlignmentType.JUSTIFIED, spacing: { after: o.after !== undefined ? o.after : 120, line: 300 }, indent: o.ind ? { left: o.ind, hanging: o.hang || 0 } : undefined });
+  const ch = [];
+  for (const b of blocks) {
+    if (b.org) { ch.push(P('Royaume du Maroc', { b: 1, align: 'left', after: 0 })); ch.push(P(F('org'), { b: 1, align: 'left' })); }
+    else if (b.h) ch.push(P(b.h, { b: 1, s: 28, align: 'center', after: 80 }));
+    else if (b.h2) ch.push(P(b.h2, { b: 1, s: 24, align: 'center' }));
+    else if (b.gap) for (let i = 0; i < b.gap; i++) ch.push(P('', { after: 0 }));
+    else if (b.kv) b.kv.forEach(([k, v]) => ch.push(new Paragraph({ children: [run(k + ' : ', { b: 1 }), run(v)], spacing: { after: 60 } })));
+    else if (b.li) ch.push(P('–  ' + b.li, { ind: 567, hang: 283 }));
+    else if (b.note) ch.push(P(b.note, { i: 1, s: 18 }));
+    else if (b.p !== undefined) ch.push(P(b.p, b));
+  }
+  const doc = new Document({ creator: 'Bâtir Sûr', title: D.t, sections: [{ properties: { page: { margin: { top: 1134, bottom: 1134, left: 1247, right: 1134 } } }, children: ch }] });
+  const blob = await Packer.toBlob(doc);
+  saveFile(id + '-' + (m.num ? 'marche-' + String(m.num).replace(/[^\w-]+/g, '-') + '-' : '') + new Date().toISOString().slice(0, 10) + '.docx', blob, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+}
+/* décomptes au format du modèle officiel */
+async function genDecompteModel(id) {
+  let E; try { E = await loadExcelJS(); } catch (e) { return toast('Impossible de charger le module Excel (connexion ?)'); }
+  const m = MS(), Dd = DOCS.find(d => d.id === id), v = docVal(m, id); if (!m.atts.length) return toast('Établissez d\'abord un attachement (étape 4)');
+  const k = Math.min(m.atts.length - 1, Math.max(0, (+v.att || m.atts.length) - 1)), D = decompte(k), a = m.atts[k], F = mkF(m, id), MONEY = '#,##0.00';
+  const TIT = { prov: 'DÉCOMPTE PROVISOIRE N° ' + (k + 1), def: 'DÉCOMPTE DÉFINITIF', pdef: 'DÉCOMPTE PARTIEL DÉFINITIF', gdef: 'DÉCOMPTE GÉNÉRAL DÉFINITIF' }[Dd.x];
+  const wb = new E.Workbook(), ws = wb.addWorksheet(TIT.slice(0, 30), { pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: .4, right: .4, top: .4, bottom: .4, header: .2, footer: .2 } } });
+  ws.columns = [{ width: 10 }, { width: 50 }, { width: 11 }, { width: 12 }, { width: 14 }, { width: 16 }, { width: 17 }];
+  const thin = { style: 'thin' }, box = c => { c.border = { top: thin, bottom: thin, left: thin, right: thin }; }, B = (r, c, val, o = {}) => { const cl = ws.getCell(r, c); cl.value = val; if (o.b) cl.font = { bold: true, size: o.s || 10 }; if (o.n) cl.numFmt = MONEY; if (o.box) box(cl); if (o.al) cl.alignment = { horizontal: o.al, vertical: 'middle', wrapText: true }; if (o.wrap) cl.alignment = Object.assign(cl.alignment || {}, { wrapText: true, vertical: 'top' }); return cl; };
+  // en-tête (3 blocs : administration / marché / imputation)
+  B(1, 1, 'ROYAUME DU MAROC', { b: 1 }); B(2, 1, F('org'), { b: 1 });
+  B(4, 1, 'N° compte bancaire : ' + F('rib')); B(5, 1, 'Ouvert à : ' + F('banque')); B(6, 1, 'Inscrit au registre de commerce : ' + F('rc')); B(7, 1, 'Affilié à la CNSS sous le n° : ' + F('cnss')); B(8, 1, 'Patente : ' + F('patente'));
+  B(1, 3, 'Marché n° : ' + F('num'), { b: 1 }); ws.mergeCells(2, 3, 3, 5); B(2, 3, 'Objet du marché : ' + F('objet'), { wrap: 1 }); B(4, 3, 'Visé le : ' + F('dateVisa', '', 'date')); B(5, 3, 'Approuvé le : ' + F('dateApprob', '', 'date')); B(6, 3, 'Titulaire : ' + F('titulaire'), { b: 1 });
+  B(1, 6, 'Budget de l\'année : ' + F('budget')); B(2, 6, 'Chapitre : ' + F('chapitre')); B(3, 6, 'Article : ' + F('article')); B(4, 6, 'Paragraphe : ' + F('paragraphe')); B(5, 6, 'Ligne : ' + F('ligneB'));
+  if (Dd.x === 'prov') { B(7, 6, 'Montant de l\'acompte :', { b: 1 }); B(8, 6, D.net, { b: 1, n: 1 }); }
+  ws.mergeCells(10, 1, 10, 7); B(10, 1, TIT, { b: 1, s: 14, al: 'center' });
+  ws.mergeCells(11, 1, 11, 7); B(11, 1, 'Des ouvrages exécutés et des dépenses faites à la date du ' + fdate(a.date), { al: 'center' });
+  const hr = 13; ['N° du prix', 'Désignation des ouvrages', 'Unité de mesure ou de compte', 'Quantité', 'Prix unitaire (HT)', 'Dépense HT partielle', 'Dépense HT totale'].forEach((t, i) => { const c = B(hr, i + 1, t, { b: 1, al: 'center', box: 1 }); c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEDEDED' } }; });
+  ws.getRow(hr).height = 32; [1, 2, 3, 4, 5, 6, 7].forEach(i => B(hr + 1, i, i, { al: 'center', box: 1 }));
+  let r = hr + 2;
+  if (Dd.x === 'prov') { ws.mergeCells(r, 1, r, 7); B(r, 1, 'APPROVISIONNEMENT', { b: 1, box: 1 }); r++; B(r, 2, 'TOTAL approvisionnement calculé à 80 % (HT)', { b: 1, box: 1 }); B(r, 7, 0, { n: 1, box: 1 }); [1, 3, 4, 5, 6].forEach(i => B(r, i, '', { box: 1 })); r++; }
+  const groups = {}; m.lignes.forEach(l => { const g = l.lot || (String(l.l).match(/\(([^()]+)\)\s*$/) || [0, 'Travaux'])[1]; (groups[g] = groups[g] || []).push(l); });
+  const totCells = [];
+  Object.entries(groups).forEach(([g, ls]) => {
+    ws.mergeCells(r, 1, r, 7); B(r, 1, 'POSTE OU SÉRIE : ' + g.toUpperCase(), { b: 1, box: 1 }); ws.getCell(r, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF6E3D8' } }; r++;
+    const f0 = r;
+    ls.forEach(l => { const q = lineCum(a, l); B(r, 1, l.no, { box: 1, al: 'center' }); B(r, 2, String(l.l).replace(/\s*\([^()]+\)\s*$/, ''), { box: 1, wrap: 1 }); B(r, 3, l.u, { box: 1, al: 'center' }); B(r, 4, q, { box: 1 }); ws.getCell(r, 4).numFmt = '#,##0.00';
+      B(r, 5, +l.pu || 0, { box: 1, n: 1 }); B(r, 6, { formula: `D${r}*E${r}`, result: rc(q * (+l.pu || 0)) }, { box: 1, n: 1 }); B(r, 7, '', { box: 1 }); r++; });
+    B(r, 2, 'TOTAL POSTE OU SÉRIE', { b: 1, box: 1, al: 'right' }); [1, 3, 4, 5, 6].forEach(i => B(r, i, '', { box: 1 })); B(r, 7, { formula: `SUM(F${f0}:F${r - 1})`, result: rc(ls.reduce((s, l) => s + lineCum(a, l) * (+l.pu || 0), 0)) }, { b: 1, box: 1, n: 1 }); totCells.push('G' + r); r++;
+  });
+  if (Dd.x !== 'prov') { ws.mergeCells(r, 1, r, 7); B(r, 1, 'AVENANTS', { b: 1, box: 1 }); r++; B(r, 2, 'TOTAL AVENANTS', { b: 1, box: 1, al: 'right' }); B(r, 7, 0, { n: 1, box: 1 }); [1, 3, 4, 5, 6].forEach(i => B(r, i, '', { box: 1 })); totCells.push('G' + r); r++; }
+  r++; const tva = (+m.tva || 0) / 100;
+  const L = (lab, val, o = {}) => { ws.mergeCells(r, 3, r, 6); B(r, 3, lab, { b: 1, box: 1, al: 'right' }); B(r, 7, val, { b: !!o.b, box: 1, n: 1 }); return 'G' + r++; };
+  const ht = L('TOTAL TRAVAUX HORS TVA', { formula: totCells.join('+'), result: D.travauxHT }, { b: 1 });
+  const tv = L('MONTANT TVA ' + fmt(+m.tva || 0) + ' %', { formula: `ROUND(${ht}*${tva},2)`, result: rc(D.travauxHT * tva) });
+  const ttc = L('TOTAL TRAVAUX T.T.C', { formula: `${ht}+${tv}`, result: rc(D.travauxHT * (1 + tva)) }, { b: 1 });
+  const revTTC = rc(D.rev * (1 + tva));
+  if (Dd.x === 'prov') {
+    const rv = L('RÉVISION DES PRIX (TTC)', revTTC);
+    r++; ws.mergeCells(r, 1, r, 4); B(r, 1, 'RÉCAPITULATION', { b: 1, al: 'center' }); r++;
+    ['Nature des dépenses', '', '', '', 'Dépenses faites', 'Retenue de garantie', 'Reste'].forEach((t, i) => { if (t) B(r, i + 1, t, { b: 1, box: 1, al: 'center' }); }); ws.mergeCells(r, 1, r, 4); r++;
+    const rg = D.RG, dep = D.TTC; const nt = a.fin ? 0 : dep;
+    const rowR = (lab, d, g) => { ws.mergeCells(r, 1, r, 4); B(r, 1, lab, { box: 1 }); B(r, 5, d, { box: 1, n: 1 }); B(r, 6, g, { box: 1, n: 1 }); B(r, 7, { formula: `E${r}-F${r}`, result: rc(d - g) }, { box: 1, n: 1 }); return r++; };
+    const r1 = rowR('Travaux terminés', a.fin ? dep : 0, a.fin ? rg : 0), r2_ = rowR('Travaux non terminés (TTC, révision comprise)', nt, a.fin ? 0 : rg), r3 = rowR('Approvisionnement', 0, 0);
+    ws.mergeCells(r, 1, r, 4); B(r, 1, 'Totaux', { b: 1, box: 1 }); [5, 6, 7].forEach(c => B(r, c, { formula: `SUM(${'EFG'[c - 5]}${r1}:${'EFG'[c - 5]}${r3})`, result: c === 5 ? dep : c === 6 ? rg : rc(dep - rg) }, { b: 1, box: 1, n: 1 })); const tr = r++;
+    const exAnt = parseFloat(v.exAnt) || 0, line2 = (lab, val, o = {}) => { ws.mergeCells(r, 1, r, 6); B(r, 1, lab, { b: !!o.b, box: 1 }); B(r, 7, val, { b: !!o.b, box: 1, n: 1 }); return 'G' + r++; };
+    const avRow = D.avRemb ? line2('À déduire : remboursement de l\'avance', D.avRemb) : null;
+    const penRow = D.pen ? line2('À déduire : pénalités', D.pen) : null;
+    const ea = line2('À déduire les dépenses imputées sur les exercices antérieurs', exAnt);
+    const rp = line2('Reste à payer sur l\'exercice en cours', { formula: `G${tr}` + (avRow ? `-${avRow}` : '') + (penRow ? `-${penRow}` : '') + `-${ea}`, result: rc(D.cumPay - exAnt) }, { b: 1 });
+    const ac = line2('À déduire le montant des acomptes délivrés sur l\'exercice en cours', rc(D.prevPay - exAnt));
+    line2('MONTANT DE L\'ACOMPTE À DÉLIVRER', { formula: `${rp}-${ac}`, result: D.net }, { b: 1 });
+    r++; ws.mergeCells(r, 1, r, 7); B(r, 1, 'Arrêté par nous, ordonnateur, à la somme de : ' + enLettres(D.net), { b: 1, wrap: 1 }); ws.getRow(r).height = 30; r += 2;
+    ws.mergeCells(r, 1, r, 4); ws.mergeCells(r, 5, r, 7); B(r, 1, 'Dressé par l\'agent chargé du suivi de l\'exécution du marché, soussigné, et inscrit au journal d\'attachement sous le n° ' + (k + 1), { wrap: 1 }); B(r, 5, 'Vu et vérifié par le maître d\'œuvre (le cas échéant)', { wrap: 1 }); ws.getRow(r).height = 30; r += 4;
+    B(r, 1, 'Signé par le maître d\'ouvrage'); B(r, 5, 'Arrêté par nous, ordonnateur'); r++; B(r, 1, `À ${F('ville')}, le ${DOT}`); B(r, 5, `À ${F('ville')}, le ${DOT}`);
+  } else {
+    const rv = L('RÉVISION DES PRIX (TTC)', revTTC);
+    const tot = L('TOTAL Y COMPRIS LA RÉVISION DES PRIX ET AVENANTS', { formula: `${ttc}+${rv}`, result: rc(D.travauxHT * (1 + tva) + revTTC) }, { b: 1 });
+    r++; ws.mergeCells(r, 1, r, 7);
+    const name = { def: 'décompte définitif', pdef: 'décompte partiel définitif', gdef: 'décompte général définitif' }[Dd.x];
+    B(r, 1, `Le présent ${name} est arrêté à la somme de : ${enLettres(rc(D.travauxHT * (1 + tva) + revTTC))} (${fmt(rc(D.travauxHT * (1 + tva) + revTTC), 2)} DH TTC).`, { b: 1, wrap: 1 }); ws.getRow(r).height = 32; r += 2;
+    B(r, 1, 'Établi par l\'agent chargé du suivi de l\'exécution du marché :'); r += 3; B(r, 1, 'Vérifié par le maître d\'œuvre, le cas échéant'); B(r, 5, 'Présenté par le maître d\'ouvrage'); r += 3;
+    B(r, 1, 'Signé par l\'entrepreneur'); B(r, 5, 'Approuvé par l\'autorité compétente'); if (Dd.x !== 'def') { r++; B(r, 1, 'Lu et accepté par l\'entreprise sans réserve / avec réserve'); }
+    r += 2; B(r, 1, `Pour mémoire : montant déjà payé par acomptes ${fmt(D.prevPay, 2)} DH ; retenue de garantie ${fmt(D.RG, 2)} DH ; remboursement de l'avance ${fmt(D.avRemb, 2)} DH ; pénalités ${fmt(D.pen, 2)} DH.`, { wrap: 1 }); ws.mergeCells(r, 1, r, 7);
+  }
+  ws.headerFooter.oddFooter = '&L' + TIT + '&RPage &P / &N';
+  const buf = await wb.xlsx.writeBuffer();
+  saveFile(id + '-' + (k + 1) + (m.num ? '-marche-' + String(m.num).replace(/[^\w-]+/g, '-') : '') + '.xlsx', new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+function renderModels() {
+  const box = $('#marModels'); if (!box) return;
+  const m = MS(); m.docs = m.docs || {}; const cur = m.docCur || '';
+  const groups = [...new Set(DOCS.map(d => d.g))];
+  let h = `<div class="pstep"><span class="n">6</span><h3>Modèles des pièces du marché</h3></div>
+  <p class="desc">Les modèles des pièces nécessaires à l'exécution des marchés de travaux (CCAG-T), pré-remplis avec les données du marché : en <b>Word</b> pour les ordres de service, procès-verbaux et décisions, en <b>Excel</b> pour les décomptes (avec les calculs). Les champs vides restent en pointillés à compléter à la main.</p>
+  <details style="margin:0 0 12px"><summary>🏛️ Informations administratives communes (organisme, représentant, imputation budgétaire, entreprise)</summary><div class="body"><div class="fields f4">${ADM.map(([k, l, ph, t]) => `<label class="fld"><span>${l}</span><input data-mad="${k}" type="${t || 'text'}" value="${esc(m[k] || '')}" placeholder="${esc(ph || '')}"></label>`).join('')}</div></div></details>`;
+  groups.forEach(g => { h += `<h4 class="mg">${g}</h4><div class="chips">${DOCS.filter(d => d.g === g).map(d => `<button data-doc="${d.id}" style="${d.id === cur ? 'background:var(--ink);color:#fff;border-color:var(--ink)' : ''}">${d.x ? '📊' : '📄'} ${esc(d.t)}</button>`).join('')}</div>`; });
+  const D = DOCS.find(d => d.id === cur);
+  if (D) {
+    const v = docVal(m, D.id);
+    h += `<div class="res" style="margin-top:10px"><b style="font-size:16px">${D.x ? '📊' : '📄'} ${esc(D.t)}</b><div class="fields f4" style="margin-top:8px">${(D.f || []).map(([k, l, def, t]) => {
+      const val = v[k] !== undefined ? v[k] : '';
+      if (t === 'att') return `<label class="fld"><span>${l}</span><select data-dv="${k}">${m.atts.map((a, i) => `<option value="${i + 1}"${String(val || m.atts.length) === String(i + 1) ? ' selected' : ''}>N° ${i + 1}${a.fin ? ' (définitif)' : ''} — ${esc(a.mois || '')}</option>`).join('') || '<option>Aucun attachement</option>'}</select></label>`;
+      if (Array.isArray(t)) return `<label class="fld"><span>${l}</span><select data-dv="${k}">${t.map(o => `<option${(val || def) === o ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></label>`;
+      if (t === 'area') return `<label class="fld full"><span>${l}</span><textarea data-dv="${k}" placeholder="${esc(def || '')}">${esc(val)}</textarea></label>`;
+      return `<label class="fld"><span>${l}</span><input data-dv="${k}" type="${t === 'date' ? 'date' : 'text'}" value="${esc(val)}" placeholder="${esc(def || '')}"></label>`;
+    }).join('')}</div>
+    <div class="actions"><button class="btn" id="docGen">${D.x ? '📊 Générer le fichier Excel' : '📄 Générer le document Word'}</button><small class="note">Marché n° ${esc(m.num || '…')} · ${esc(m.titulaire || 'titulaire ?')}${!m.num || !m.objet ? ' — complétez l\'étape 1' : ''}</small></div></div>`;
+  }
+  box.innerHTML = h;
+  box.querySelectorAll('[data-mad]').forEach(i => i.onchange = () => { m[i.dataset.mad] = i.value; saveM(); });
+  box.querySelectorAll('[data-doc]').forEach(b => b.onclick = () => { m.docCur = b.dataset.doc; saveM(); renderModels(); });
+  box.querySelectorAll('[data-dv]').forEach(i => i.onchange = () => { docVal(m, cur)[i.dataset.dv] = i.value; saveM(); });
+  if ($('#docGen')) $('#docGen').onclick = () => D.x ? genDecompteModel(D.id) : genWord(D.id);
+}
+
 /* ================= init ================= */
-function renderAll() { renderPrices(); renderCalcs(); renderPlans(); renderDiag(); renderGuide(); renderJournal(); updateDevisCount(); if ($('#t-devis').classList.contains('on')) renderDevis(); fillSlots(); refreshPh(); }
+function renderAll() { renderPrices(); renderCalcs(); renderPlans(); if ($('#t-marche').classList.contains('on')) renderMarche(); renderDiag(); renderGuide(); renderJournal(); updateDevisCount(); if ($('#t-devis').classList.contains('on')) renderDevis(); fillSlots(); refreshPh(); }
 /* ===== PWA ===== */
 let installEvt = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; $('#installBtn').style.display = ''; $('#sync').style.marginLeft = '0'; });
@@ -2692,7 +3158,7 @@ window.addEventListener('message', e => { if (e.origin === location.origin && e.
 window.addEventListener('storage', e => { if (e.key === 'bs_devis') reloadDevisFromStore(); });
 
 /* ===== liens directs (#calc, #devis, #journal…) ===== */
-const TABS = ['calc', 'plans', 'dba', 'devis', 'journal', 'diag', 'fiss', 'guide', 'pieges', 'prix'];
+const TABS = ['calc', 'plans', 'dba', 'devis', 'marche', 'journal', 'diag', 'fiss', 'guide', 'pieges', 'prix'];
 function fromHash() { const h = location.hash.slice(1); if (TABS.includes(h)) goTab(h); }
 window.addEventListener('hashchange', fromHash); fromHash();
 
