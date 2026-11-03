@@ -242,6 +242,7 @@ h4.mg{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.05
 
 <section class="tab" id="t-plans">
   <p class="intro">Donnez à l'application vos <b>plans PDF</b> (plan d'architecte et plan de béton armé) : elle relève les mesures, calcule le <b>devis du gros œuvre</b>, puis vous ajoutez vous-même le <b>second œuvre</b> pour obtenir le devis global.</p>
+  <div class="actions" style="margin:-6px 0 14px"><button class="btn ghost sm" id="plNew">🆕 Nouveau projet</button><small class="note" style="margin:0">Vide le métré, les plans chargés et les lignes « 📐 plan » / « 🏗️ Dossier BA » du devis global.</small></div>
   <div class="card" id="plFiles"></div>
   <div class="card" id="plCad" style="margin-top:16px;display:none"></div>
   <div class="card" id="plRead" style="margin-top:16px"></div>
@@ -624,6 +625,7 @@ function renderPrices() {
     S.prices[i.dataset.p] = parseFloat(i.value) || 0; save('prices'); updateAllCalcs(); updateDevisCount();
   });
 }
+confirmBtn($('#plNew'), newProject, '⚠️ Confirmer : tout vider pour un nouveau projet ?');
 confirmBtn($('#resetPrices'), () => { S.prices = {}; save('prices'); renderPrices(); updateAllCalcs(); $('#resetPrices').textContent = 'Remettre les prix par défaut'; toast('Prix réinitialisés'); });
 
 /* ================= données techniques ================= */
@@ -1754,7 +1756,7 @@ async function aiRun() {
     }
     if (text === null) throw lastErr || new Error('Pas de réponse');
     const J = parseJSON(text);
-    S.plan.m = normMetre(J);
+    S.plan.m = normMetre(J); S.plan.src = metreSrcNow();
     S.plan.notes = ['🤖 Métré relevé par ' + AI[prov].n.replace(/ \(.*/, '') + ' (' + model + ') le ' + new Date().toLocaleDateString('fr-FR') + ' : vérifiez chaque ligne.'].concat((J.remarques || []).map(String).slice(0, 15));
     save('plan'); renderPlans(); toast('Métré rempli ✔ Vérifiez-le');
     $('#plMetre').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1812,7 +1814,7 @@ async function textScan() {
     if (sl.length) notes.push('🏗️ Sections lues dans le plan BA : ' + sl.map(([a, b]) => a + ' (×' + b + ')').join(', ') + '.');
     if (rl.length) notes.push('🏷️ Repères trouvés (nombre d\'apparitions) : ' + rl.map(([a, b]) => a + ' ×' + b).join(', ') + '. Servez-vous en pour remplir les semelles, poteaux et poutres.');
     if (PDFS.ba) notes.push('Le texte seul ne suffit pas pour compter fondations et poteaux : complétez les tableaux, ou utilisez la lecture par IA.');
-    S.plan.notes = notes; save('plan'); renderPlans(); toast('Lecture terminée');
+    S.plan.notes = notes; S.plan.src = metreSrcNow(); save('plan'); renderPlans(); toast('Lecture terminée');
   } catch (e) { toast('Lecture du texte impossible'); }
   finally { btn.disabled = false; btn.textContent = '🔎 Lire le texte du PDF (sans IA)'; }
 }
@@ -1869,7 +1871,9 @@ function fTable(key) {
 function renderMetre() {
   const box = $('#plMetre'); if (!box) return;
   const m = S.plan.m, BL = Object.fromEntries(Object.entries(BLOCKS).map(([k, b]) => [k, b.n]));
+  const srcNow = metreSrcNow(), stale = metreUsed() && S.plan.src && srcNow && S.plan.src !== srcNow;
   box.innerHTML = `<div class="pstep"><span class="n">3</span><h3>Métré — à vérifier</h3></div>
+  ${stale ? `<div class="alert warn">⚠️ Ce métré a été rempli avec « ${esc(S.plan.src)} », mais les plans chargés maintenant sont « ${esc(srcNow)} ». S'il s'agit d'un autre projet, videz le métré avant de lire les nouveaux plans.<div class="actions" style="margin-top:8px"><button class="btn sm" id="mStale">🧹 Vider le métré</button><button class="btn ghost sm" id="mKeep">Garder (même projet)</button></div></div>` : ''}
   <p class="desc">Les mesures relevées sur les plans. Corrigez ou complétez : le devis du gros œuvre (étape 4) se recalcule tout de suite.</p>
   <h4 class="mg" style="margin-top:6px">🏠 Plan d'architecte</h4>
   ${fTable('niveaux')}${fTable('pieces')}
@@ -1899,6 +1903,7 @@ function renderMetre() {
   box.querySelectorAll('[data-madd]').forEach(b => b.onclick = () => { const k = b.dataset.madd, last = m[k][m[k].length - 1]; m[k].push(last ? clone(last) : clone(TB[k].d)); save('plan'); renderMetre(); renderGO(); });
   box.querySelectorAll('[data-mdel]').forEach(b => b.onclick = () => { const [k, r] = b.dataset.mdel.split('.'); m[k].splice(+r, 1); save('plan'); renderMetre(); renderGO(); });
   $('#moGo').onchange = e => { m.mo = e.target.checked ? 1 : 0; save('plan'); renderGO(); };
+  if ($('#mStale')) { $('#mStale').onclick = () => { S.plan.m = normMetre({}); S.plan.notes = []; S.plan.src = ''; save('plan'); renderPlans(); toast('Métré vidé'); }; $('#mKeep').onclick = () => { S.plan.src = srcNow; save('plan'); renderMetre(); }; }
   confirmBtn($('#mReset'), () => { S.plan.m = normMetre({}); S.plan.notes = []; save('plan'); renderPlans(); }, 'Confirmer : tout vider ?');
 }
 
@@ -2041,6 +2046,17 @@ function renderPlanSO() {
     save('devis'); updateDevisCount(); renderPlanSO(); toast('Ajouté au lot « ' + $('#soLot').value + ' »');
   };
   $('#soDevis').onclick = () => goTab('devis');
+}
+const metreSrcNow = () => [PDFS.archi && PDFS.archi.name, PDFS.ba && PDFS.ba.name, CADF.file && CADF.file.name].filter(Boolean).join(' + ');
+function metreUsed() { const m = S.plan.m; return m.niveaux.length || m.pieces.length || m.semelles.length || m.poteaux.length || m.poutres.length || m.planchers.length || m.murs.ext || m.murs.int || m.dallage.S || m.emprise || ACIER_D.some(d => m.acier[d]); }
+async function newProject() {
+  S.plan.m = normMetre({}); S.plan.notes = []; S.plan.src = ''; S.plan.cadUnit = '';
+  for (const k of Object.keys(PDFS)) { delete PDFS[k]; try { await idbDo('readwrite', st => st.delete('pdf_' + k)); } catch (e) {} }
+  CADF.file = null; CADF.views = null; CADF.open = false; try { await idbDo('readwrite', st => st.delete('cad_file')); } catch (e) {}
+  const n = S.devis.length; S.devis = S.devis.filter(d => d.src !== 'plan' && d.src !== 'dba');
+  save('plan'); save('devis'); updateDevisCount(); renderPlanFiles(); renderPlans();
+  toast('Nouveau projet : ' + (n - S.devis.length) + ' ligne(s) retirée(s) du devis');
+  $('#plNew').textContent = '🆕 Nouveau projet';
 }
 function renderPlans() { planInit(); renderPlanRead(); renderMetre(); renderGO(); renderPlanSO(); renderCad(); }
 
@@ -2460,6 +2476,8 @@ function cadFill() {
   const rooms = plans.flatMap(p => p.A.rooms.map(r => ({ nom: r.nom, niv: p.lv.level, type: r.type, S: r.S })));
   if (rooms.length) m.pieces = rooms;
   const habit = plans.filter(p => p.lv.level !== 'Terrasse');
+  if (S.plan.src !== metreSrcNow()) m.niveaux = [];
+  S.plan.src = metreSrcNow();
   habit.forEach((p, i) => {
     const h = lvls.length > i + 1 ? Math.round((lvls[i + 1] - lvls[i]) * 100) / 100 : 0;
     const S2 = Math.round(p.A.rooms.reduce((s, r) => s + r.S, 0) * 100) / 100;

@@ -1,0 +1,2030 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Dossier BA</title><style>.bsback{display:inline-block;margin-bottom:6px;font:600 13px var(--font-ui,sans-serif);color:var(--accent);text-decoration:none}html.inframe .bsback{display:none}</style><script>if(window.self!==window.top)document.documentElement.classList.add('inframe');</script>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Concept: a structural engineer's drawing office. Pale drafting paper, ink lines, rebar drawn in red, one teal accent for everything you can act on. */
+:root{
+  --bg:#E9EDEF; --canvas:#FAFBFA; --surface:#FFFFFF; --ink:#17242D; --ink-2:#566873; --line:#CBD4D9;
+  --accent:#0B7A69; --accent-soft:#D6EFE9; --accent-ink:#FFFFFF; --danger:#B4381A;
+  --d-canvas:var(--canvas); --d-ink:var(--ink); --d-ink2:var(--ink-2);
+  --d-slab:#EEF3F5; --d-beam:#D6EFE9; --d-axis:#C0544A; --d-wall:#E7ECEE; --d-concrete:#DDE3E6;
+  --d-glass:#CFE6EE; --d-door:#D8C3A5; --d-danger:#B4381A; --d-steel:#B4381A; --d-steel2:#1F5FA8;
+  --font-ui:"IBM Plex Sans Condensed",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1519; --canvas:#131C22; --surface:#1A252C; --ink:#E6EEF2; --ink-2:#93A5B0; --line:#2D3B44;
+    --accent:#3CC3AA; --accent-soft:#12372F; --accent-ink:#06211C; --danger:#F08A6C;
+    --d-slab:#18242B; --d-beam:#12372F; --d-axis:#E08A7E; --d-wall:#1F2C34; --d-concrete:#2A3942;
+    --d-glass:#23495A; --d-door:#6B5A43; --d-danger:#F08A6C; --d-steel:#F08A6C; --d-steel2:#7FB2F0;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1519; --canvas:#131C22; --surface:#1A252C; --ink:#E6EEF2; --ink-2:#93A5B0; --line:#2D3B44;
+  --accent:#3CC3AA; --accent-soft:#12372F; --accent-ink:#06211C; --danger:#F08A6C;
+  --d-slab:#18242B; --d-beam:#12372F; --d-axis:#E08A7E; --d-wall:#1F2C34; --d-concrete:#2A3942;
+  --d-glass:#23495A; --d-door:#6B5A43; --d-danger:#F08A6C; --d-steel:#F08A6C; --d-steel2:#7FB2F0;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{
+  padding-block:12px 40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:var(--bg);color:var(--ink);font:400 15px/1.4 var(--font-ui);
+  -webkit-tap-highlight-color:transparent;
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:980px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.top h1{margin:0;font:600 24px/1.1 var(--font-ui);letter-spacing:.02em}
+.top p{margin:3px 0 0;font-size:13px;color:var(--ink-2);letter-spacing:.04em}
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;display:flex;gap:6px;overflow-x:auto;padding:8px 0;background:var(--bg);scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:0 0 auto;height:40px;padding:0 15px;border:1px solid var(--line);background:var(--surface);border-radius:999px;font-weight:500}
+.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+#view{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0}
+h2{margin:0;font:600 17px/1.2 var(--font-ui);letter-spacing:.02em}
+h3{margin:0;font:600 15px/1.25 var(--font-ui)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0}
+.card.flat{background:none;border:0;padding:0}
+.sub{margin:0;font:400 13px/1.35 var(--font-mono);color:var(--ink-2)}
+.note{margin:0;font-size:13px;color:var(--ink-2)}
+.note.strong{color:var(--ink);font-family:var(--font-mono);font-weight:500}
+.warn{color:var(--danger);margin:0}
+.ok{color:var(--accent);margin:0}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.fld{display:grid;gap:3px;min-width:0}
+.fld.w2{grid-column:1/-1}
+.fld.grow{flex:1 1 auto}
+.fld label{font-size:12px;color:var(--ink-2);letter-spacing:.03em;text-transform:uppercase}
+.fld input,.fld select{width:100%;min-width:0;height:40px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font:500 14px var(--font-mono)}
+.fld input[type=text]{font-family:var(--font-ui);font-size:15px}
+.chk{display:flex;align-items:center;gap:8px;min-height:40px;font-size:14px}
+.chk input{width:20px;height:20px;accent-color:var(--accent)}
+.lvl{display:grid;gap:10px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.lvl-h{display:flex;gap:10px;align-items:flex-end}
+.btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{height:40px;padding:0 16px;border:1px solid var(--line);background:var(--bg);border-radius:8px;font-weight:500}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--danger);border-color:var(--danger);background:transparent}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{height:36px;padding:0 13px;border:1px solid var(--line);background:var(--bg);border-radius:999px;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--canvas)}
+.nodes{display:grid;gap:6px;align-items:center;justify-items:center;max-width:520px}
+.nl{font:600 13px var(--font-mono);color:var(--ink-2)}
+.node{width:100%;min-width:40px;height:44px;border:1px dashed var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:16px}
+.node[aria-pressed="true"]{border:1px solid var(--accent);background:var(--accent-soft)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.stats div{display:grid;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.stats b{font:600 18px var(--font-mono);font-variant-numeric:tabular-nums}
+.stats span{font-size:12px;color:var(--ink-2)}
+.tw{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.tbl th,.tbl td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:baseline}
+.tbl thead th{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);font-weight:500}
+.tbl .r,.tbl th.r{text-align:right}
+.tbl tr.tot td{font-weight:600;border-top:1.5px solid var(--ink-2)}
+.tbl tr.sec td{background:var(--bg);font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);font-weight:600}
+.tbl.mini{font-size:13px}
+.tbl.nw th,.tbl.nw td{white-space:nowrap}
+input.pu{width:92px;height:34px;padding:0 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);text-align:right;font:500 14px var(--font-mono)}
+.el-b{display:grid;grid-template-columns:minmax(0,230px) minmax(0,1fr);gap:14px;align-items:start}
+.fig{min-width:0;border:1px solid var(--line);border-radius:8px;background:var(--canvas);padding:6px}
+.kv{width:100%;border-collapse:collapse;font-size:14px}
+.kv th{width:55%;padding:5px 8px 5px 0;text-align:left;font-weight:400;color:var(--ink-2);border-bottom:1px solid var(--line);vertical-align:baseline}
+.kv td{padding:5px 0;font-family:var(--font-mono);font-size:13px;border-bottom:1px solid var(--line);text-align:right}
+.kv tr.hl th{color:var(--ink);font-weight:600}
+.kv tr.hl td{font-weight:600;background:var(--accent-soft);padding-inline:6px}
+.alerts{margin:0;padding-left:18px;color:var(--danger);font-size:14px;display:grid;gap:4px}
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.legend p{margin:3px 0 0;font:400 13px var(--font-mono);color:var(--ink-2)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;max-width:calc(100% - 32px);padding:10px 16px;border-radius:999px;background:var(--ink);color:var(--bg);font-size:14px}
+label.filebtn{display:inline-flex;align-items:center;cursor:pointer}
+.thumbs{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+.thumbs figure{margin:0;flex:0 0 auto;width:140px;display:grid;gap:4px}
+.thumbs img{width:140px;height:100px;object-fit:cover;border:1px solid var(--line);border-radius:8px;background:#fff}
+.thumbs figcaption{font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:560px){.el-b{grid-template-columns:minmax(0,1fr)}.fig{max-width:260px}}
+@media (prefers-reduced-motion:no-preference){.chip,.btn,.tabs button,.node{transition:background-color .12s,border-color .12s}}
+</style>
+
+<div class="wrap">
+  <header class="top"><a class="bsback" href="./#plans" target="_top">← Bâtir Sûr</a><h1>Dossier BA</h1><p>Bureau d'études béton armé · coffrage, ferraillage, métré</p></header>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" data-tab="plan" aria-selected="true">Plan</button>
+    <button role="tab" data-tab="resume" aria-selected="false">Résumé</button>
+    <button role="tab" data-tab="projet" aria-selected="false">Projet</button>
+    <button role="tab" data-tab="structure" aria-selected="false">Structure</button>
+    <button role="tab" data-tab="coffrage" aria-selected="false">Coffrage</button>
+    <button role="tab" data-tab="ferraillage" aria-selected="false">Ferraillage</button>
+    <button role="tab" data-tab="coupes" aria-selected="false">Coupes</button>
+    <button role="tab" data-tab="facades" aria-selected="false">Façades</button>
+    <button role="tab" data-tab="metre" aria-selected="false">Métré</button>
+  </nav>
+  <main id="view"></main>
+</div>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script>
+/* Lecture DWG / DXF pour Bâtir Sûr : normalisation, explosion des blocs, dessin SVG, relevé */
+(function (root) {
+  const RAD = Math.PI / 180;
+  const groupOf = l => String(l || '0').replace(/_Stylo_No__\d+$/i, '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim() || '0';
+  const ROLES = {
+    mext: 'Murs extérieurs', mint: 'Cloisons / refends', pot: 'Poteaux', pout: 'Poutres / longrines', sem: 'Fondations',
+    fen: 'Fenêtres', porte: 'Portes', cot: 'Cotation', txt: 'Textes', mob: 'Mobilier / équipement', axe: 'Axes', ign: 'Ignorer', autre: 'Autre'
+  };
+  function guessRole(g) {
+    const s = g.toLowerCase();
+    if (/p[ée]riph|ext[ée]r|façade|facade|mur ext/.test(s) && /mur/.test(s)) return 'mext';
+    if (/refend|cloison|int[ée]r|mur/.test(s)) return 'mint';
+    if (/poteau|\bpot\b|column|colonne/.test(s)) return 'pot';
+    if (/pout|longr|chain|beam/.test(s)) return 'pout';
+    if (/semel|fond|footing/.test(s)) return 'sem';
+    if (/fen[eê]tre|window|vitr/.test(s)) return 'fen';
+    if (/porte|door/.test(s)) return 'porte';
+    if (/cot|dim/.test(s)) return 'cot';
+    if (/axe|axis|grid/.test(s)) return 'axe';
+    if (/texte|text|anot|annot/.test(s)) return 'txt';
+    if (/mobil|equip|fourniture|sanit/.test(s)) return 'mob';
+    if (/cartouche|defpoints|terrain|topo|dessins plac/.test(s)) return 'ign';
+    return 'autre';
+  }
+  // matrices affines [a,b,c,d,e,f] : x' = a x + c y + e ; y' = b x + d y + f
+  const mul = (m, n) => [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1], m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3], m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]];
+  const ap = (m, x, y) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
+  const ID = [1, 0, 0, 1, 0, 0];
+  const scaleOf = m => Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2])) || 1;
+  const rotOf = m => Math.atan2(m[1], m[0]);
+  function cleanText(s) {
+    return String(s == null ? '' : s).replace(/\\P/g, ' ').replace(/\\[A-Za-z][^;\\{}]*;/g, '').replace(/[{}]/g, '').replace(/%%[uUoOdDcCpP]/g, m => ({ '%%d': '°', '%%c': 'Ø', '%%p': '±' }[m.toLowerCase()] || '')).replace(/\s+/g, ' ').trim();
+  }
+  /* ---------- normalisation : libredwg-web (DWG) ---------- */
+  function fromLibredwg(db) {
+    const blocks = {};
+    (db.tables && db.tables.BLOCK_RECORD && db.tables.BLOCK_RECORD.entries || []).forEach(b => { blocks[b.name] = { base: b.basePoint || { x: 0, y: 0 }, ents: (b.entities || []).map(convLD).filter(Boolean) }; });
+    const ms = (db.entities || []).map(convLD).filter(Boolean);
+    return { blocks, ms, units: db.header && db.header.INSUNITS };
+  }
+  function convLD(e) {
+    const L = e.layer, p = q => [q.x, q.y];
+    switch (e.type) {
+      case 'LINE': return { t: 'L', L, a: p(e.startPoint), b: p(e.endPoint) };
+      case 'LWPOLYLINE': case 'POLYLINE2D': case 'POLYLINE': return { t: 'P', L, pts: (e.vertices || []).map(v => [v.x, v.y, v.bulge || 0]), closed: !!((e.flag || e.flags || 0) & 1) || !!e.closed };
+      case 'CIRCLE': return { t: 'C', L, c: p(e.center), r: e.radius };
+      case 'ARC': return { t: 'A', L, c: p(e.center), r: e.radius, a0: e.startAngle, a1: e.endAngle };
+      case 'ELLIPSE': return { t: 'E', L, c: p(e.center), M: p(e.majorAxisEndPoint), k: e.axisRatio, a0: e.startAngle, a1: e.endAngle };
+      case 'TEXT': return { t: 'T', L, p: p(e.startPoint), h: e.textHeight, rot: e.rotation || 0, s: cleanText(e.text) };
+      case 'MTEXT': return { t: 'T', L, p: p(e.insertionPoint), h: e.textHeight, rot: e.rotation || (e.direction ? Math.atan2(e.direction.y, e.direction.x) : 0), s: cleanText(e.text) };
+      case 'HATCH': return { t: 'H', L, polys: (e.boundaryPaths || []).filter(b => b.vertices && b.vertices.length > 2).map(b => b.vertices.map(v => [v.x, v.y])) };
+      case 'INSERT': return { t: 'I', L, name: e.name, p: p(e.insertionPoint), sx: e.xScale || 1, sy: e.yScale || 1, rot: e.rotation || 0, attrs: (e.attribs || []).map(a => a.text && cleanText(a.text.text)).filter(Boolean) };
+      case 'DIMENSION': return { t: 'D', L, name: e.name, m: e.measurement, txt: cleanText(e.text), p: e.textPoint ? p(e.textPoint) : null };
+      case 'SOLID': case 'TRACE': return e.corner1 ? { t: 'H', L, polys: [[e.corner1, e.corner2, e.corner4 || e.corner3, e.corner3].filter(Boolean).map(p)] } : null;
+      default: return null;
+    }
+  }
+  /* ---------- normalisation : dxf-parser (DXF) ---------- */
+  function fromDxfParser(d) {
+    const blocks = {};
+    Object.entries(d.blocks || {}).forEach(([n, b]) => { blocks[n] = { base: b.position || { x: 0, y: 0 }, ents: (b.entities || []).map(convDP).filter(Boolean) }; });
+    return { blocks, ms: (d.entities || []).map(convDP).filter(Boolean), units: d.header && d.header.$INSUNITS };
+  }
+  function convDP(e) {
+    const L = e.layer, p = q => [q.x, q.y];
+    switch (e.type) {
+      case 'LINE': return e.vertices && e.vertices.length > 1 ? { t: 'L', L, a: p(e.vertices[0]), b: p(e.vertices[1]) } : null;
+      case 'LWPOLYLINE': case 'POLYLINE': return { t: 'P', L, pts: (e.vertices || []).map(v => [v.x, v.y, v.bulge || 0]), closed: !!e.shape || !!e.closed };
+      case 'CIRCLE': return { t: 'C', L, c: p(e.center), r: e.radius };
+      case 'ARC': return { t: 'A', L, c: p(e.center), r: e.radius, a0: e.startAngle, a1: e.endAngle };
+      case 'ELLIPSE': return { t: 'E', L, c: p(e.center), M: p(e.majorAxisEndPoint), k: e.axisRatio, a0: e.startAngle, a1: e.endAngle };
+      case 'TEXT': return { t: 'T', L, p: p(e.startPoint || e.position || { x: 0, y: 0 }), h: e.textHeight, rot: (e.rotation || 0) * RAD, s: cleanText(e.text) };
+      case 'MTEXT': return { t: 'T', L, p: p(e.position || { x: 0, y: 0 }), h: e.height, rot: (e.rotation || 0) * RAD, s: cleanText(e.text) };
+      case 'INSERT': return { t: 'I', L, name: e.name, p: p(e.position || { x: 0, y: 0 }), sx: e.xScale || 1, sy: e.yScale || 1, rot: (e.rotation || 0) * RAD, attrs: [] };
+      case 'DIMENSION': return { t: 'D', L, name: e.block, m: e.actualMeasurement, txt: cleanText(e.text), p: e.middleOfText ? p(e.middleOfText) : null };
+      case 'SOLID': return e.points ? { t: 'H', L, polys: [e.points.map(p)] } : null;
+      default: return null;
+    }
+  }
+  /* ---------- explosion des blocs ---------- */
+  function explode(N, list, m, depth, out, layerOverride) {
+    for (const e of list) {
+      const L = (e.L === '0' && layerOverride) ? layerOverride : e.L;
+      if (e.t === 'I') {
+        const B = N.blocks[e.name]; if (!B || depth > 8 || /^\*(D|E)\d/.test(e.name) && depth > 6) continue;
+        const c = Math.cos(e.rot), s = Math.sin(e.rot);
+        const local = [c * e.sx, s * e.sx, -s * e.sy, c * e.sy, e.p[0], e.p[1]];
+        const mm = mul(m, mul(local, [1, 0, 0, 1, -B.base.x, -B.base.y]));
+        explode(N, B.ents, mm, depth + 1, out, L);
+        continue;
+      }
+      if (e.t === 'D') { if (e.name && N.blocks[e.name]) explode(N, N.blocks[e.name].ents, m, depth + 1, out, L); out.push({ t: 'D', L, m: e.m, txt: e.txt, p: e.p && ap(m, e.p[0], e.p[1]) }); continue; }
+      const k = scaleOf(m);
+      if (e.t === 'L') out.push({ t: 'L', L, a: ap(m, ...e.a), b: ap(m, ...e.b) });
+      else if (e.t === 'P') out.push({ t: 'P', L, closed: e.closed, pts: e.pts.map(q => ap(m, q[0], q[1]).concat(q[2] || 0)) });
+      else if (e.t === 'C') out.push({ t: 'C', L, c: ap(m, ...e.c), r: e.r * k });
+      else if (e.t === 'A') { const r = rotOf(m); out.push({ t: 'A', L, c: ap(m, ...e.c), r: e.r * k, a0: e.a0 + r, a1: e.a1 + r }); }
+      else if (e.t === 'E') { const c0 = ap(m, ...e.c), tip = ap(m, e.c[0] + e.M[0], e.c[1] + e.M[1]); out.push({ t: 'E', L, c: c0, M: [tip[0] - c0[0], tip[1] - c0[1]], k: e.k, a0: e.a0, a1: e.a1 }); }
+      else if (e.t === 'T') out.push({ t: 'T', L, p: ap(m, ...e.p), h: (e.h || 0.2) * k, rot: e.rot + rotOf(m), s: e.s });
+      else if (e.t === 'H') out.push({ t: 'H', L, polys: e.polys.map(pl => pl.map(q => ap(m, q[0], q[1]))) });
+    }
+    return out;
+  }
+  /* vues : chaque bloc inséré au premier niveau = une vue ; le reste = la feuille */
+  function views(N) {
+    const vs = [], rest = [];
+    N.ms.forEach(e => {
+      if (e.t === 'I' && N.blocks[e.name] && !/^\*/.test(e.name) && N.blocks[e.name].ents.length > 30) {
+        vs.push({ name: e.name, ents: explode(N, [e], ID, 0, []) });
+      } else rest.push(e);
+    });
+    const r = explode(N, rest, ID, 0, []);
+    if (r.length > 20 || !vs.length) vs.push({ name: vs.length ? 'Feuille (autres dessins)' : 'Dessin', ents: r });
+    vs.forEach(v => { v.box = bbox(v.ents); v.title = viewTitle(v); });
+    return vs;
+  }
+  function viewTitle(v) {
+    const t = v.ents.filter(e => e.t === 'T' && e.s && e.h > 0).sort((a, b) => b.h - a.h)[0];
+    return v.name;
+  }
+  function bbox(ents) {
+    const xs = [], ys = [];
+    const add = q => { if (q && isFinite(q[0]) && isFinite(q[1])) { xs.push(q[0]); ys.push(q[1]); } };
+    ents.forEach(e => { if (e.t === 'L') { add(e.a); add(e.b); } else if (e.t === 'P') e.pts.forEach(add); else if (e.t === 'C' || e.t === 'A' || e.t === 'E') add(e.c); else if (e.t === 'H') e.polys.forEach(pl => pl.forEach(add)); else if (e.t === 'T') add(e.p); });
+    if (!xs.length) return { x0: 0, y0: 0, x1: 1, y1: 1 };
+    xs.sort((a, b) => a - b); ys.sort((a, b) => a - b);
+    const q = (a, f) => a[Math.min(a.length - 1, Math.max(0, Math.round(f * (a.length - 1))))];
+    // ignore les 0,3 % de points les plus éloignés (cartouches, points perdus)
+    let x0 = q(xs, 0.003), x1 = q(xs, 0.997), y0 = q(ys, 0.003), y1 = q(ys, 0.997);
+    const pad = Math.max(x1 - x0, y1 - y0) * 0.03 || 1;
+    return { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad };
+  }
+  /* ---------- dessin SVG ---------- */
+  const COL = { mext: '#b8522a', mint: '#d9822b', pot: '#7a1f1f', pout: '#2f6390', sem: '#5b3fa0', fen: '#1f8aa8', porte: '#8a6d3b', cot: '#2c7a4b', txt: '#222', mob: '#9aa3a6', axe: '#c0544a', ign: '#c9c9c9', autre: '#555' };
+  const escx = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function arcPath(c, r, a0, a1) {
+    let d = a1 - a0; while (d <= 0) d += 2 * Math.PI;
+    const p0 = [c[0] + r * Math.cos(a0), -(c[1] + r * Math.sin(a0))], p1 = [c[0] + r * Math.cos(a0 + d), -(c[1] + r * Math.sin(a0 + d))];
+    return `M${p0[0]} ${p0[1]}A${r} ${r} 0 ${d > Math.PI ? 1 : 0} 0 ${p1[0]} ${p1[1]}`;
+  }
+  function svg(v, roleOf, hidden, opts) {
+    opts = opts || {};
+    const b = v.box, W = b.x1 - b.x0, H = b.y1 - b.y0, K = 1000 / Math.max(W, H), sw = 0.75;
+    const X = x => Math.round((x - b.x0) * K * 100) / 100, Y = y => Math.round((b.y1 - y) * K * 100) / 100, S = d => Math.round(d * K * 100) / 100;
+    const VW = Math.round(W * K), VH = Math.round(H * K);
+    let h = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VW} ${VH}" ${opts.size ? `width="${opts.size}" height="${Math.round(opts.size * VH / VW)}"` : ''} style="background:#fff" stroke-linecap="round"><g fill="none" stroke-width="${sw}">`;
+    for (const e of v.ents) {
+      const g = groupOf(e.L), r = roleOf(g); if (hidden[g]) continue;
+      const c = COL[r] || '#555', strong = r === 'mext' || r === 'mint' || r === 'pot';
+      const st = `stroke="${c}"${strong ? ` stroke-width="${sw * 2}"` : ''}`;
+      if (e.t === 'L') h += `<line x1="${X(e.a[0])}" y1="${Y(e.a[1])}" x2="${X(e.b[0])}" y2="${Y(e.b[1])}" ${st}/>`;
+      else if (e.t === 'P') h += `<path d="${e.pts.map((q, i) => (i ? 'L' : 'M') + X(q[0]) + ' ' + Y(q[1])).join('') + (e.closed ? 'Z' : '')}" ${st}/>`;
+      else if (e.t === 'C') h += `<circle cx="${X(e.c[0])}" cy="${Y(e.c[1])}" r="${S(e.r)}" ${st}/>`;
+      else if (e.t === 'A') { let d = e.a1 - e.a0; while (d <= 0) d += 2 * Math.PI; const r0 = S(e.r);
+        h += `<path d="M${X(e.c[0] + e.r * Math.cos(e.a0))} ${Y(e.c[1] + e.r * Math.sin(e.a0))}A${r0} ${r0} 0 ${d > Math.PI ? 1 : 0} 0 ${X(e.c[0] + e.r * Math.cos(e.a0 + d))} ${Y(e.c[1] + e.r * Math.sin(e.a0 + d))}" ${st}/>`; }
+      else if (e.t === 'E') { const R = Math.hypot(e.M[0], e.M[1]), ang = Math.atan2(e.M[1], e.M[0]); h += `<ellipse cx="${X(e.c[0])}" cy="${Y(e.c[1])}" rx="${S(R)}" ry="${S(R * e.k)}" transform="rotate(${Math.round(-ang / RAD * 100) / 100} ${X(e.c[0])} ${Y(e.c[1])})" ${st}/>`; }
+      else if (e.t === 'H') h += e.polys.map(pl => `<polygon points="${pl.map(q => X(q[0]) + ',' + Y(q[1])).join(' ')}" fill="${c}" fill-opacity="${strong ? 0.55 : 0.18}" stroke="none"/>`).join('');
+      else if (e.t === 'T' && e.s) h += `<text x="${X(e.p[0])}" y="${Y(e.p[1])}" font-size="${S(e.h)}" font-family="Arial,sans-serif" fill="${r === 'cot' ? COL.cot : '#222'}" stroke="none"${e.rot ? ` transform="rotate(${Math.round(-e.rot / RAD * 100) / 100} ${X(e.p[0])} ${Y(e.p[1])})"` : ''}>${escx(e.s)}</text>`;
+    }
+    return h + '</g></svg>';
+  }
+  /* conversion écran (coordonnées du SVG 0..1000) -> dessin */
+  function toModel(v, sx, sy) { const b = v.box, K = 1000 / Math.max(b.x1 - b.x0, b.y1 - b.y0); return [b.x0 + sx / K, b.y1 - sy / K]; }
+  function toSvg(v, x, y) { const b = v.box, K = 1000 / Math.max(b.x1 - b.x0, b.y1 - b.y0); return [(x - b.x0) * K, (b.y1 - y) * K]; }
+  /* ---------- relevé ---------- */
+  const polyArea = pl => { let a = 0; for (let i = 0; i < pl.length; i++) { const p = pl[i], q = pl[(i + 1) % pl.length]; a += p[0] * q[1] - q[0] * p[1]; } return Math.abs(a / 2); };
+  const polyLen = (pts, closed) => { let s = 0; for (let i = 1; i < pts.length; i++) s += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (closed && pts.length > 2) s += Math.hypot(pts[0][0] - pts.at(-1)[0], pts[0][1] - pts.at(-1)[1]); return s; };
+  function unitFactor(v, units) {
+    // 1 unité du dessin = f mètres. Estimation par la taille du dessin si l'en-tête est douteux.
+    const b = v.box, size = Math.max(b.x1 - b.x0, b.y1 - b.y0);
+    if (size > 2000) return 0.001; if (size > 200) return 0.01; if (size > 2) return 1;
+    return { 4: 0.001, 5: 0.01, 6: 1 }[units] || 1;
+  }
+  const NUM = s => parseFloat(String(s).replace(/\s/g, '').replace(',', '.'));
+  const ROOM_RX = [[/chambre|\bch\b|suite|parent|enfant|غرفة|bedroom/i, 'chambre'], [/salon|s[ée]jour|living|r[ée]ception|bureau|coin feu|صالون/i, 'salon'], [/cuisine|kitchen|مطبخ/i, 'cuisine'], [/s\.?d\.?b|bain|douche|hammam|حمام/i, 'sdb'], [/\bwc\b|w\.c|toilette|مرحاض/i, 'wc'], [/hall|d[ée]gagement|couloir|circulation|escalier|palier|entr[ée]e|sas|dressing/i, 'circ']];
+  function analyse(v, roleOf, units) {
+    const f = unitFactor(v, units), g = {};
+    const G = n => g[n] || (g[n] = { n, role: roleOf(n), len: 0, area: 0, count: 0, ents: 0 });
+    const texts = [];
+    v.ents.forEach(e => {
+      const x = G(groupOf(e.L)); x.ents++;
+      if (e.t === 'L') x.len += Math.hypot(e.b[0] - e.a[0], e.b[1] - e.a[1]) * f;
+      else if (e.t === 'P') { x.len += polyLen(e.pts, e.closed) * f; if (e.closed) x.area += polyArea(e.pts) * f * f; }
+      else if (e.t === 'H') x.area += e.polys.reduce((s, pl) => s + polyArea(pl), 0) * f * f;
+      else if (e.t === 'C') x.count++;
+      else if (e.t === 'T' && e.s) texts.push(e);
+    });
+    // surfaces écrites : « 26,04 m » suivi de « 2 », ou « 12,5 m² » ; le nom est juste au-dessus
+    const rooms = [], areas = [];
+    texts.forEach((t, i) => {
+      const m = t.s.match(/^(\d+(?:[.,]\d+)?)\s*m(?:²|2)?$/i);
+      if (m && /[.,]/.test(m[1]) && (/m(²|2)$/i.test(t.s) || /m$/i.test(t.s))) areas.push({ v: NUM(m[1]), p: t.p, h: t.h });
+    });
+    const STOP = /alignement|nord|coupe|façade|facade|fondation|sous sol|^rdc$|^etage$|^étage$|^terrasse$|^vide|cour anglaise/i;
+    const names = texts.filter(t => t.s === '-' || /[a-zà-ü]{2,}/i.test(t.s) && !STOP.test(t.s) && t.s.length < 30 && !/^\d/.test(t.s));
+    areas.forEach(a => {
+      const lim = Math.max(a.h * 12, 1.2 / f);
+      const near = names.filter(n => n.p[1] > a.p[1] - a.h * 0.2 && n.p[1] - a.p[1] < lim && Math.abs(n.p[0] - a.p[0]) < lim * 1.2)
+        .sort((x, y) => (x.p[1] - a.p[1]) - (y.p[1] - a.p[1]));
+      // on garde la pile de noms continue au-dessus de la surface
+      const pile = []; let lastY = a.p[1];
+      for (const n of near) { if (pile.length && n.p[1] - lastY > Math.max(n.h, a.h) * 3.2) break; pile.push(n); lastY = n.p[1]; }
+      const nom = pile.reverse().map(n => n.s).filter(x => x !== '-').join(' - ').trim() || 'Pièce';
+      const type = (ROOM_RX.find(([rx]) => rx.test(nom)) || [0, 'autre'])[1];
+      rooms.push({ nom, type, S: a.v });
+    });
+    const levels = texts.map(t => t.s.match(/^([+-]\d+[.,]\d{2})$/)).filter(Boolean).map(m => NUM(m[1]));
+    const sections = {}; texts.forEach(t => { const m = t.s.match(/^(\d{2,3})\s*[xX×*]\s*(\d{2,3})$/); if (m) { const k = m[1] + '×' + m[2]; sections[k] = (sections[k] || 0) + 1; } });
+    const b = v.box;
+    return { f, groups: Object.values(g).sort((a, b) => b.len - a.len), rooms, levels: [...new Set(levels)].sort((a, b) => a - b), sections, texts: texts.map(t => t.s),
+      W: (b.x1 - b.x0) * f, H: (b.y1 - b.y0) * f };
+  }
+  /* murs : longueur ≈ (longueur des traits du calque) / 2, car un mur est dessiné par ses deux faces */
+  function wallsOf(A) {
+    const s = r => A.groups.filter(x => x.role === r).reduce((t, x) => t + x.len, 0) / 2;
+    const ar = r => A.groups.filter(x => x.role === r).reduce((t, x) => t + x.area, 0);
+    return { ext: s('mext'), int: s('mint'), extHatch: ar('mext'), intHatch: ar('mint') };
+  }
+  /* aimantation : extrémités les plus proches */
+  function snapPoints(v) { const P = []; v.ents.forEach(e => { if (e.t === 'L') { P.push(e.a, e.b); } else if (e.t === 'P') e.pts.forEach(q => P.push([q[0], q[1]])); }); return P; }
+  function levelOf(v) {
+    const T = (v.name + ' ' + v.ents.filter(e => e.t === 'T').map(e => e.s).join(' ')).toLowerCase();
+    const n = v.name.toLowerCase();
+    const k = s => /sous[ -]?sol/.test(s) ? 'Sous-sol' : /\brdc\b|rez/.test(s) ? 'RDC' : /[ée]tage|r\+1/.test(s) ? 'Étage' : /terrasse/.test(s) ? 'Terrasse' : '';
+    if (/coupe/.test(T) && !k(n)) return { kind: 'coupe' };
+    const lv = k(n) || (/^feuille|^dessin$/i.test(v.name) ? '' : k(T.slice(0, 400)));
+    return lv ? { kind: 'plan', level: lv } : { kind: /façade|facade/.test(T) ? 'facade' : 'autre' };
+  }
+  root.CAD = { levelOf, fromLibredwg, fromDxfParser, views, svg, analyse, wallsOf, groupOf, guessRole, ROLES, COL, polyArea, polyLen, snapPoints, unitFactor, toModel, toSvg };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+/* Bâtir Sûr : DWG / DXF -> images des plans et coupes + textes exacts */
+window.BSCAD = (function () {
+  var LDW = 'https://cdn.jsdelivr.net/npm/@mlightcad/libredwg-web@0.8.3/', DXFP = 'https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js', ldwP = null, dxfP = null;
+  function ldw() { if (!ldwP) ldwP = import(LDW + 'dist/libredwg-web.js').then(function (m) { return m.LibreDwg.create(LDW + 'wasm').then(function (lib) { return { lib: lib, T: m.Dwg_File_Type }; }); }).catch(function (e) { ldwP = null; throw e; }); return ldwP; }
+  function dxf() { if (!dxfP) dxfP = new Promise(function (res, rej) { if (window.DxfParser) return res(window.DxfParser); var sc = document.createElement('script'); sc.src = DXFP; sc.onload = function () { res(window.DxfParser); }; sc.onerror = function () { dxfP = null; rej(new Error('dxf')); }; document.head.appendChild(sc); }); return dxfP; }
+  var LO = ['Sous-sol', 'RDC', 'Étage', 'Terrasse'];
+  async function read(file) {
+    var buf = await file.arrayBuffer(), N;
+    if (/\.dxf$/i.test(file.name)) { var P = await dxf(); N = CAD.fromDxfParser(new P().parseSync(new TextDecoder('utf-8').decode(buf))); }
+    else { var L = await ldw(), dwg = L.lib.dwg_read_data(buf, L.T.DWG); if (!dwg) throw new Error('dwg'); N = CAD.fromLibredwg(L.lib.convert(dwg)); try { L.lib.dwg_free(dwg); } catch (e) {} }
+    var vs = CAD.views(N).filter(function (v) { return v.ents.length; });
+    vs.forEach(function (v) { v.lv = CAD.levelOf(v); v.A = CAD.analyse(v, CAD.guessRole, N.units); });
+    var ord = { plan: 0, coupe: 1, facade: 2, autre: 3 };
+    vs.sort(function (a, b) { return (ord[a.lv.kind] - ord[b.lv.kind]) || (LO.indexOf(a.lv.level) - LO.indexOf(b.lv.level)); });
+    var keep = vs.filter(function (v) { return v.lv.kind === 'plan' || v.lv.kind === 'coupe'; });
+    if (!keep.length) keep = vs.slice(0, 4);
+    var imgs = [];
+    for (var i = 0; i < keep.length && i < 6; i++) {
+      var v = keep[i], hide = {};
+      v.A.groups.forEach(function (g) { var r = CAD.guessRole(g.n); if (r === 'ign' || r === 'mob') hide[g.n] = 1; });
+      var svg = CAD.svg(v, CAD.guessRole, hide), u = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+      try {
+        var im = await new Promise(function (res, rej) { var x = new Image(); x.onload = function () { res(x); }; x.onerror = rej; x.src = u; });
+        var vb = svg.match(/viewBox="0 0 (\d+) (\d+)"/), W = +vb[1], H = +vb[2], sc = 2200 / Math.max(W, H), cv = document.createElement('canvas');
+        cv.width = Math.round(W * sc); cv.height = Math.round(H * sc);
+        var cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(im, 0, 0, cv.width, cv.height);
+        var b = await new Promise(function (r) { cv.toBlob(r, 'image/jpeg', 0.88); });
+        var lab = v.lv.kind === 'plan' ? (v.lv.level || 'Plan') : 'Coupe';
+        if (b) imgs.push({ blob: b, label: file.name + ' · ' + v.name + ' (' + lab + ')' });
+      } catch (e) {} finally { URL.revokeObjectURL(u); }
+    }
+    var T = ['Données EXACTES lues dans le fichier AutoCAD ' + file.name + ' (unité : mètre). Les images sont des vues dessinées depuis ce fichier, dans l\'ordre : ' + keep.slice(0, 6).map(function (v) { return v.name; }).join(', ') + '.'];
+    vs.forEach(function (v) { var A = v.A; T.push('- ' + v.name + ' (' + (v.lv.level || v.lv.kind) + ', ' + A.W.toFixed(2) + ' × ' + A.H.toFixed(2) + ' m)' + (A.rooms.length ? ' — pièces : ' + A.rooms.map(function (r) { return r.nom + ' ' + r.S + ' m²'; }).join(' ; ') : '') + (A.levels.length ? ' — niveaux : ' + A.levels.join(' ; ') : '')); });
+    return { imgs: imgs, text: T.join('\n') };
+  }
+  return { read: read };
+})();
+
+</script>
+<script>
+var BE=(function(){
+'use strict';
+var NFc={};
+function F(v,d){if(!NFc[d])NFc[d]=new Intl.NumberFormat('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d});return NFc[d].format(v);}
+var DIAS=[8,10,12,14,16,20,25,32];
+function barA(phi){return Math.PI*Math.pow(phi/10,2)/4;}
+function sumKg(s){return s.reduce(function(a,x){return a+0.00617*x.phi*x.phi*x.len;},0);}
+
+/* Flexion simple ELU, section rectangulaire (BAEL 91 révisé 99). b,d,dp en cm, Mu en kN.m */
+function flex(b,d,dp,Mu,fc,fe){
+  var bm=b/100,dm=d/100,M=Mu/1000,fbu=0.85*fc/1.5,fsu=fe/1.15;
+  var al=3.5/(3.5+1000*fe/(1.15*200000)),mul=0.8*al*(1-0.4*al);
+  var r={mu:0,mul:mul,fbu:fbu,fsu:fsu,Ast:0,Asc:0,comp:false,z:dm};
+  if(!(M>0))return r;
+  var mu=M/(bm*dm*dm*fbu);r.mu=mu;
+  if(mu<=mul){
+    var a=1.25*(1-Math.sqrt(1-2*mu)),z=dm*(1-0.4*a);
+    r.z=z;r.Ast=M/(z*fsu)*1e4;
+  }else{
+    r.comp=true;
+    var Mul=mul*bm*dm*dm*fbu,zl=dm*(1-0.4*al);
+    var esc=0.0035*(al*dm-dp/100)/(al*dm),ssc=Math.min(fsu,200000*esc);
+    var Asc=(M-Mul)/((dm-dp/100)*ssc);
+    r.z=zl;r.Asc=Asc*1e4;r.Ast=(Mul/(zl*fsu)+Asc*ssc/fsu)*1e4;
+  }
+  return r;
+}
+function proposeBars(Areq,widthCm,nmin,nmax,even,dmin){
+  var out=[];
+  DIAS.forEach(function(phi){
+    if(dmin&&phi<dmin)return;
+    var a=barA(phi),n=Math.max(nmin,Math.ceil(Areq/a-1e-9));
+    if(even&&n%2)n++;
+    var e=Math.max(phi/10,2.5),need=n*phi/10+(n-1)*e,avail=widthCm-7.6;
+    if(n<=nmax&&need<=avail)out.push({phi:phi,n:n,area:n*a});
+  });
+  out.sort(function(x,y){return (x.area-y.area)||(x.n-y.n);});
+  var res=out.slice(0,3);
+  if(!res.length){
+    [20,25,32].forEach(function(phi){var a=barA(phi),n=Math.ceil(Areq/a-1e-9);res.push({phi:phi,n:n,area:n*a,layers:true});});
+  }
+  return res;
+}
+function lbl(o){return o.n+'HA'+o.phi+' ('+F(o.area,2)+' cm²)'+(o.layers?' · plusieurs lits':'');}
+function slabBars(A,smax){
+  var c=[8,10,12,14];
+  for(var k=0;k<c.length;k++){
+    var a=barA(c[k]),s=100*a/A;
+    if(s>=12||c[k]===14){
+      var s5=Math.floor(Math.min(s,smax)/5)*5;if(s5<10)s5=10;
+      return {phi:c[k],s:s5,area:100*a/s5};
+    }
+  }
+}
+function slabLbl(o){return 'HA'+o.phi+' e = '+o.s+' cm ('+F(o.area,2)+' cm²/m)';}
+function fieldBars(Areq,widthCm){
+  var res=null,L=[10,12,14,16,20];
+  for(var k=0;k<L.length&&!res;k++){
+    var phi=L[k],a=barA(phi),n=Math.max(4,Math.ceil(Areq/a-1e-9)),s=(widthCm-10)/(n-1);
+    if(s>=10){
+      if(s>20){n=Math.ceil((widthCm-10)/20)+1;s=(widthCm-10)/(n-1);}
+      res={phi:phi,n:n,s:s,area:n*a};
+    }
+  }
+  if(!res){var a2=barA(20),n2=Math.ceil(Areq/a2);res={phi:20,n:n2,s:(widthCm-10)/(n2-1),area:n2*a2,tight:true};}
+  return res;
+}
+function pickPhit(phiMax){var p=6;[6,8,10,12].forEach(function(x){if(x<=phiMax)p=x;});return p;}
+
+function poutre(i){
+  if(!(i.b>0&&i.h>0&&i.dp>=0&&i.h>i.dp+5))return {err:'Vérifie la section : b, h et d\' doivent être cohérents.'};
+  var d=i.h-i.dp,rows=[],warns=[],Vu=null,Mu,cont=i.cont==='cont';
+  if(i.mode==='charges'){
+    if(!(i.L>0))return {err:'Entre la portée L.'};
+    var pu=1.35*i.G+1.5*i.Q,M0=pu*i.L*i.L/8;
+    Mu=cont?0.75*M0:M0;Vu=pu*i.L/2*(cont?1.15:1);
+    rows.push(['Charge ELU pu = 1,35G + 1,5Q',F(pu,2)+' kN/m']);
+    rows.push(['M0 = pu·L²/8',F(M0,2)+' kN·m']);
+    if(cont)rows.push(['Mt en travée = 0,75·M0',F(Mu,2)+' kN·m']);
+    rows.push(['Effort tranchant Vu',F(Vu,2)+' kN']);
+  }else{
+    Mu=i.Mu;if(!(Mu>0))return {err:'Entre le moment ultime Mu.'};
+    rows.push(['Moment ultime Mu',F(Mu,2)+' kN·m']);
+  }
+  var fl=flex(i.b,d,i.dp,Mu,i.fc,i.fe),ft28=0.6+0.06*i.fc,Amin=0.23*i.b*d*ft28/i.fe;
+  rows.push(['Hauteur utile d = h − d\'',F(d,1)+' cm']);
+  rows.push(['μ = Mu / (b·d²·fbu)',F(fl.mu,3)+'  (μl = '+F(fl.mul,3)+')']);
+  rows.push(['Ast calculée',F(fl.Ast,2)+' cm²']);
+  rows.push(['Ast mini (non-fragilité)',F(Amin,2)+' cm²']);
+  var Ar=Math.max(fl.Ast,Amin),bars=proposeBars(Ar,i.b,2,8,false,10);
+  var sel=bars[0],topN=2,topPhi=10,top=null;
+  if(fl.comp){
+    warns.push('μ > μl : des armatures comprimées sont nécessaires. Augmenter la section est souvent plus économique.');
+    rows.push(['Asc (armatures comprimées)',F(fl.Asc,2)+' cm²']);
+    top=proposeBars(Math.max(fl.Asc,1.57),i.b,2,8,false,10);topN=top[0].n;topPhi=top[0].phi;
+  }
+  if(sel.layers)warns.push('Les barres ne tiennent pas sur un seul lit : prévoir plusieurs lits ou augmenter b.');
+  var phiL=sel.phi,phit=Math.min(8,pickPhit(Math.min(i.h*10/35,phiL,i.b*10/10))),At=2*barA(phit),st=null,stMax=Math.min(0.9*d,40),cadresTxt;
+  var stm=Math.max(5,Math.floor(Math.min(stMax,25)/5)*5);
+  if(Vu!==null){
+    var tau=Vu/1000/((i.b/100)*(d/100)),tauLim=Math.min(0.2*i.fc/1.5,5);
+    rows.push(['τu = Vu / (b·d)',F(tau,2)+' MPa  (τlim = '+F(tauLim,2)+')']);
+    if(tau>tauLim)warns.push('τu dépasse τlim : augmenter la section de la poutre.');
+    var stc=tau>0.3*ft28?At*0.9*i.fe/(1.15*i.b*(tau-0.3*ft28)):1e9;
+    st=Math.max(5,Math.floor(Math.min(stc,stMax,15)/5)*5);
+    stm=Math.max(st,stm);
+    cadresTxt='Cadres HA'+phit+' : e = '+st+' cm en appui, '+stm+' cm en travée';
+  }else{
+    st=Math.max(5,Math.floor(Math.min(stMax,15)/5)*5);
+    stm=Math.max(st,stm);
+    cadresTxt='Cadres HA'+phit+' : e = '+st+' cm en appui, '+stm+' cm en travée (effort tranchant à vérifier)';
+  }
+  var chap=null;
+  if(cont&&i.mode==='charges'){
+    var fs=flex(i.b,d,i.dp,0.5*(1.35*i.G+1.5*i.Q)*i.L*i.L/8,i.fc,i.fe);
+    chap=proposeBars(Math.max(fs.Ast,Amin),i.b,2,6,false,10)[0];
+    rows.push(['Chapeaux sur appuis (Ma = 0,5·M0)',lbl(chap),true]);
+  }
+  rows.push(['Armatures inférieures retenues',lbl(sel),true]);
+  rows.push(['Armatures supérieures',fl.comp?lbl(top[0]):'2HA10 (porte-cadres)']);
+  rows.push(['Armatures transversales',cadresTxt,true]);
+  var vol=i.L>0?i.b*i.h*i.L/1e4:0,steel=[];
+  if(i.L>0){
+    var Lb=i.L+0.5;
+    steel.push({part:'Armatures inférieures',phi:sel.phi,len:sel.n*Lb});
+    steel.push({part:'Armatures supérieures',phi:fl.comp?top[0].phi:10,len:(fl.comp?top[0].n:2)*Lb});
+    var zone=Math.min(i.L*100/2,2*i.h),nC=Math.ceil(2*zone/st+(i.L*100-2*zone)/stm+1),per=2*((i.b-6)+(i.h-6))/100+0.24;
+    steel.push({part:'Cadres',phi:phit,len:nC*per});
+    if(chap)steel.push({part:'Chapeaux sur appuis',phi:chap.phi,len:chap.n*0.6*i.L});
+  }
+  var kg=sumKg(steel);
+  return {title:'Poutre '+i.b+'×'+i.h+(i.L>0?' (L = '+F(i.L,2)+' m)':''),rows:rows,warns:warns,
+    options:[{label:'Autres choix pour les armatures inférieures',list:bars.slice(1).map(lbl)}],
+    draw:{type:'poutre',b:i.b,h:i.h,n:sel.n,phi:sel.phi,tn:topN,tphi:topPhi,phit:phit,st:st,stm:stm,chap:chap},
+    vol:vol,kg:kg,steel:steel,summary:'Poutre '+i.b+'×'+i.h+' : '+lbl(sel)+' en bas, '+cadresTxt};
+}
+
+function poteau(i){
+  var a=Math.min(i.a,i.b);
+  if(!(a>=15&&i.l0>0))return {err:'Section minimale 15 cm et hauteur libre l0 > 0.'};
+  var Nu=i.Nu>0?i.Nu:1.35*i.G+1.5*i.Q;
+  if(!(Nu>0))return {err:'Entre les charges G et Q (ou Nu).'};
+  var rows=[],warns=[],lf=i.k*i.l0*100,lam=lf*Math.sqrt(12)/a;
+  var alpha=lam<=50?0.85/(1+0.2*Math.pow(lam/35,2)):0.6*Math.pow(50/lam,2);
+  var Br=(i.a-2)*(i.b-2)/1e4;
+  var Ath=Math.max(0,(Nu/1000/alpha-Br*i.fc/(0.9*1.5))*1.15/i.fe*1e4);
+  var u=2*(i.a+i.b)/100,Amin=Math.max(4*u,0.2*i.a*i.b/100),Amax=5*i.a*i.b/100,Ar=Math.max(Ath,Amin);
+  rows.push(['Effort normal Nu',F(Nu,1)+' kN']);
+  rows.push(['Longueur de flambement lf = '+F(i.k,1).replace(',0','')+'·l0',F(lf/100,2)+' m']);
+  rows.push(['Élancement λ = lf·√12 / a',F(lam,1)]);
+  rows.push(['Coefficient α',F(alpha,3)]);
+  rows.push(['Section réduite Br',F(Br*1e4,0)+' cm²']);
+  rows.push(['A calculée',F(Ath,2)+' cm²']);
+  rows.push(['A mini = max(4u ; 0,2 %B)',F(Amin,2)+' cm²']);
+  rows.push(['A maxi = 5 %B',F(Amax,2)+' cm²']);
+  if(lam>70)warns.push('λ > 70 : le poteau est trop élancé pour cette méthode. Augmenter la section.');
+  else if(lam>50)warns.push('λ > 50 : méthode applicable, mais la section est mince pour cette hauteur.');
+  if(Ar>Amax)warns.push('A dépasse 5 % de B : augmenter la section du poteau.');
+  var opts=[];
+  [12,14,16,20,25].forEach(function(phi){
+    var ab=barA(phi),n=Math.max(4,Math.ceil(Ar/ab-1e-9));if(n%2)n++;
+    if(n<=16)opts.push({phi:phi,n:n,area:n*ab});
+  });
+  opts.sort(function(x,y){return (x.area-y.area)||(x.n-y.n);});
+  var sel=opts[0]||{phi:25,n:16,area:16*barA(25)};
+  var phit=[6,8,10,12].filter(function(x){return x>=sel.phi/3-1e-9;})[0]||12,t=Math.floor(Math.min(15*sel.phi/10,40,a+10));
+  rows.push(['Armatures longitudinales retenues',lbl(sel),true]);
+  rows.push(['Cadres','HA'+phit+', espacement '+t+' cm',true]);
+  var perim=2*((i.a-6)+(i.b-6))/100+0.24;
+  var steel=[{part:'Armatures longitudinales',phi:sel.phi,len:sel.n*(i.l0+0.5)},{part:'Cadres',phi:phit,len:Math.ceil(i.l0*100/t+1)*perim}];
+  var kg=sumKg(steel);
+  return {title:'Poteau '+i.a+'×'+i.b+' (h = '+F(i.l0,2)+' m)',rows:rows,warns:warns,
+    options:[{label:'Autres choix',list:opts.slice(1,3).map(lbl)}],
+    draw:{type:'poteau',b:i.a,h:i.b,n:sel.n,phi:sel.phi,phit:phit,st:t},
+    vol:i.a*i.b*i.l0/1e4,kg:kg,steel:steel,summary:'Poteau '+i.a+'×'+i.b+' : '+lbl(sel)+', cadres HA'+phit+' e = '+t+' cm'};
+}
+
+function dalle(i){
+  if(!(i.lx>0&&i.ly>0&&i.e>=8))return {err:'Entre les portées lx, ly et une épaisseur d\'au moins 8 cm.'};
+  var lx=Math.min(i.lx,i.ly),ly=Math.max(i.lx,i.ly),rho=lx/ly,e=i.e,rows=[],warns=[];
+  var gp=25*e/100,pu=1.35*(i.g+gp)+1.5*i.q,cont=i.cont==='cont',k=cont?0.75:1,one=rho<0.4;
+  var Mx0,My0,mx,my;
+  if(one){mx=0.125;my=0;Mx0=pu*lx*lx/8;My0=0;}
+  else{mx=1/(8*(1+2.4*Math.pow(rho,3)));my=rho*rho*(1-0.95*Math.pow(1-rho,2));Mx0=mx*pu*lx*lx;My0=my*Mx0;}
+  var Mtx=k*Mx0,Mty=k*My0,Ma=cont?0.5*Mx0:0,d=e-i.dp,dy=d-1;
+  var rho0=i.fe>=500?0.0006:0.0008;
+  var Axmin=rho0*(one?1:(3-rho)/2)*100*e,Aymin=rho0*100*e;
+  var fx=flex(100,d,i.dp,Mtx,i.fc,i.fe),fy=flex(100,dy,i.dp+1,Mty,i.fc,i.fe),fa=flex(100,d,i.dp,Ma,i.fc,i.fe);
+  if(fx.comp||fy.comp||fa.comp)warns.push('μ > μl : l\'épaisseur est insuffisante pour cette portée. Augmenter e.');
+  var Ax=Math.max(fx.Ast,Axmin),Ay=Math.max(one?Ax/4:fy.Ast,Aymin),Aa=Math.max(fa.Ast,Axmin);
+  var bx=slabBars(Ax,Math.min(3*e,33,20)),by=slabBars(Ay,Math.min(4*e,45,25)),ba=cont?slabBars(Aa,Math.min(3*e,33,20)):null;
+  var hmin=lx*100/(cont?35:30);
+  rows.push(['Charge ELU pu (poids propre inclus)',F(pu,2)+' kN/m²']);
+  rows.push(['ρ = lx / ly',F(rho,2)+(one?'  (porte dans un seul sens)':'  (porte dans 2 sens)')]);
+  if(!one)rows.push(['μx ; μy',F(mx,4)+' ; '+F(my,4)]);
+  rows.push(['M0x ; M0y',F(Mx0,2)+' ; '+F(My0,2)+' kN·m/m']);
+  rows.push(['Mtx ; Mty en travée',F(Mtx,2)+' ; '+F(Mty,2)+' kN·m/m']);
+  if(cont)rows.push(['Ma sur appuis (0,5·M0x)',F(Ma,2)+' kN·m/m']);
+  rows.push(['Ax calculée ; mini',F(fx.Ast,2)+' ; '+F(Axmin,2)+' cm²/m']);
+  rows.push(['Ay calculée ; mini',F(one?Ax/4:fy.Ast,2)+' ; '+F(Aymin,2)+' cm²/m']);
+  rows.push(['Sens lx (inférieur)',slabLbl(bx),true]);
+  rows.push(['Sens ly (inférieur)',slabLbl(by),true]);
+  if(cont)rows.push(['Chapeaux sur appuis',slabLbl(ba),true]);
+  rows.push(['Épaisseur conseillée (flèche)','≥ '+F(hmin,1)+' cm']);
+  if(e<hmin)warns.push('L\'épaisseur est inférieure à la valeur conseillée pour limiter la flèche ('+F(hmin,1)+' cm).');
+  var steel=[{part:'Sens lx (inférieur)',phi:bx.phi,len:(Math.ceil(ly*100/bx.s)+1)*(lx+0.4)},{part:'Sens ly (inférieur)',phi:by.phi,len:(Math.ceil(lx*100/by.s)+1)*(ly+0.4)}];
+  if(cont)steel.push({part:'Chapeaux sur appuis',phi:ba.phi,len:(Math.ceil(ly*100/ba.s)+1)*(0.5*lx+0.3)});
+  var kg=sumKg(steel);
+  return {title:'Dalle '+F(lx,2)+' × '+F(ly,2)+' m, e = '+e+' cm',rows:rows,warns:warns,
+    options:[],draw:{type:'dalle',lx:lx,ly:ly,bx:bx,by:by,ba:ba},vol:lx*ly*e/100,kg:kg,steel:steel,
+    summary:'Dalle '+F(lx,2)+'×'+F(ly,2)+' e='+e+' : sens lx '+slabLbl(bx)+' ; sens ly '+slabLbl(by)};
+}
+
+function semelle(i){
+  if(!(i.a>0&&i.b>0&&i.sol>0))return {err:'Entre le poteau et la contrainte admissible du sol.'};
+  var Nser=i.G+i.Q,Nu=1.35*i.G+1.5*i.Q,sig=i.sol*100,a=i.a/100,b=i.b/100;
+  if(!(Nser>0))return {err:'Entre les charges G et Q.'};
+  var S=Nser/sig,A=Math.ceil(Math.sqrt(S*a/b)*20)/20,B=Math.ceil(Math.sqrt(S*b/a)*20)/20,d=0,h=0,sr=0;
+  for(var n=0;n<80;n++){
+    d=Math.max(0.25,Math.ceil(Math.max((A-a)/4,(B-b)/4)*20)/20);h=d+0.05;
+    sr=(Nser+25*A*B*h)/(A*B);
+    if(sr<=sig)break;
+    A+=0.05;B+=0.05;
+  }
+  var fsu=i.fe/1.15,Aa=Nu/1000*(A-a)/(8*d*fsu)*1e4,Ab=Nu/1000*(B-b)/(8*d*fsu)*1e4;
+  var ba=fieldBars(Aa,B*100),bb=fieldBars(Ab,A*100),rows=[],warns=[];
+  rows.push(['Charges Nser ; Nu',F(Nser,1)+' ; '+F(Nu,1)+' kN']);
+  rows.push(['Sol admissible',F(sig,0)+' kPa ('+F(i.sol,1)+' bar)']);
+  rows.push(['Dimensions A × B',F(A,2)+' × '+F(B,2)+' m',true]);
+  rows.push(['Hauteur utile d ; hauteur h',F(d*100,0)+' ; '+F(h*100,0)+' cm',true]);
+  rows.push(['Contrainte réelle (poids propre inclus)',F(sr,0)+' kPa']);
+  rows.push(['Nappe // A (calculée)',F(Aa,2)+' cm²']);
+  rows.push(['Nappe // B (calculée)',F(Ab,2)+' cm²']);
+  rows.push(['Nappe // A retenue',ba.n+'HA'+ba.phi+' (espacement '+F(ba.s,0)+' cm)',true]);
+  rows.push(['Nappe // B retenue',bb.n+'HA'+bb.phi+' (espacement '+F(bb.s,0)+' cm)',true]);
+  if(ba.tight||bb.tight)warns.push('Les barres sont très serrées : augmenter la hauteur ou prévoir des diamètres plus gros.');
+  if(i.sol<1)warns.push('Sol très faible (< 1 bar) : une étude géotechnique est indispensable avant tout choix de fondations.');
+  warns.push('Prévoir 5 cm de béton de propreté sous la semelle et un enrobage de 5 cm.');
+  var steel=[{part:'Nappe // A',phi:ba.phi,len:ba.n*(A-0.1+0.3)},{part:'Nappe // B',phi:bb.phi,len:bb.n*(B-0.1+0.3)}];
+  var kg=sumKg(steel);
+  return {title:'Semelle '+F(A,2)+' × '+F(B,2)+' m, h = '+F(h*100,0)+' cm',rows:rows,warns:warns,options:[],
+    draw:{type:'semelle',A:A,B:B,a:i.a,b:i.b,na:ba.n,pa:ba.phi,nb:bb.n,pb:bb.phi},geo:{A:A,B:B,h:h,d:d},
+    vol:A*B*h,kg:kg,steel:steel,summary:'Semelle '+F(A,2)+'×'+F(B,2)+' h='+F(h*100,0)+' : //A '+ba.n+'HA'+ba.phi+', //B '+bb.n+'HA'+bb.phi};
+}
+
+function longrine(i){
+  var d=i.h-i.dp,fsu=i.fe/1.15,self=25*(i.b/100)*(i.h/100),G=self+(i.G||0),pu=1.35*G,M0=pu*i.L*i.L/8,rows=[],warns=[];
+  var fl=flex(i.b,d,i.dp,M0,i.fc,i.fe),Nt=0.10*(i.Nu||0),At=Nt/1000/fsu*1e4;
+  var Ar=Math.max(fl.Ast,At/2,2.26),bars=proposeBars(Ar,i.b,2,6,false,12),sel=bars[0];
+  rows.push(['Charge ELU pu (poids propre + mur)',F(pu,2)+' kN/m']);
+  rows.push(['Moment M0 = pu·L²/8',F(M0,2)+' kN·m']);
+  rows.push(['Traction de liaison (10 % de Nu)',F(Nt,1)+' kN']);
+  rows.push(['As en flexion',F(fl.Ast,2)+' cm²']);
+  rows.push(['A de traction par lit',F(At/2,2)+' cm²']);
+  rows.push(['A mini par lit (2HA12)','2,26 cm²']);
+  rows.push(['Armatures haut et bas retenues',lbl(sel),true]);
+  rows.push(['Cadres','HA6 : e = 15 cm en appui, 20 cm en travée',true]);
+  if(fl.comp)warns.push('μ > μl : augmenter la hauteur de la longrine.');
+  if(sel.layers)warns.push('Les barres ne tiennent pas sur un seul lit : augmenter b.');
+  var zone=Math.min(i.L*100/2,2*i.h),nC=Math.ceil(2*zone/15+(i.L*100-2*zone)/20+1),per=2*((i.b-6)+(i.h-6))/100+0.24;
+  var steel=[{part:'Armatures inférieures',phi:sel.phi,len:sel.n*(i.L+0.5)},{part:'Armatures supérieures',phi:sel.phi,len:sel.n*(i.L+0.5)},{part:'Cadres',phi:6,len:nC*per}];
+  return {title:'Longrine '+i.b+'×'+i.h+' (L = '+F(i.L,2)+' m)',rows:rows,warns:warns,options:[{label:'Autres choix par lit',list:bars.slice(1).map(lbl)}],
+    draw:{type:'poutre',b:i.b,h:i.h,n:sel.n,phi:sel.phi,tn:sel.n,tphi:sel.phi,phit:6,st:15,stm:20},vol:i.b*i.h*i.L/1e4,kg:sumKg(steel),steel:steel,
+    summary:'Longrine '+i.b+'×'+i.h+' : '+sel.n+'HA'+sel.phi+' en haut et en bas, cadres HA6 e = 15/20 cm'};
+}
+function chainage(i){
+  var n=i.n||4,phi=i.phi||10,per=2*((i.b-6)+(i.h-6))/100+0.24,rows=[],warns=[];
+  var steel=[{part:'Armatures longitudinales',phi:phi,len:n*i.L*1.1},{part:'Cadres',phi:6,len:Math.ceil(i.L/0.2+1)*per}];
+  rows.push(['Section',i.b+' × '+i.h+' cm']);
+  rows.push(['Armatures minimales',n+'HA'+phi+' ('+F(n*barA(phi),2)+' cm²)',true]);
+  rows.push(['Cadres','HA6 : e = 20 cm',true]);
+  rows.push(['Longueur de l\'élément',F(i.L,2)+' m']);
+  warns.push('Armatures forfaitaires usuelles : à confirmer selon la zone sismique (RPS 2000).');
+  return {title:(i.label||'Chaînage')+' '+i.b+'×'+i.h,rows:rows,warns:warns,options:[],
+    draw:{type:'poutre',b:i.b,h:i.h,n:Math.ceil(n/2),phi:phi,tn:Math.floor(n/2),tphi:phi,phit:6,st:20,stm:20},vol:i.b*i.h*i.L/1e4,kg:sumKg(steel),steel:steel,
+    summary:(i.label||'Chaînage')+' '+i.b+'×'+i.h+' : '+n+'HA'+phi+', cadres HA6 e = 20 cm'};
+}
+return {poutre:poutre,poteau:poteau,dalle:dalle,semelle:semelle,longrine:longrine,chainage:chainage,F:F};
+})();
+if(typeof module!=='undefined')module.exports=BE;
+
+var MD=(function(){
+'use strict';
+var FACS=['N','S','E','O'];
+var FACNAME={N:'Nord',S:'Sud',E:'Est',O:'Ouest'};
+
+function defaultProject(){
+  return {
+    name:'Villa R+1 (exemple)',
+    fc:25, fe:500, sol:2, depth:1.2, kflamb:0.7, loss:10, parapet:0.6,
+    wallG:2.6, openF:0.8, partG:4,
+    longOn:true, longB:25, longH:30, wallT:20, chH:20, chainOn:true, lintelOn:true,
+    axesX:[4,4,3.5], axesY:[5,4],
+    colOff:{}, beamAuto:true,
+    floors:[
+      {name:'RDC',h:3.1,e:15,g:1.5,q:1.5,ca:25,cb:25,bb:25,bh:45},
+      {name:'Étage 1',h:3.0,e:15,g:2.5,q:1.0,ca:25,cb:25,bb:25,bh:45}
+    ],
+    openings:[
+      {id:1,f:'N',k:0,x:1.2,w:1.2,h:1.2,sill:0.9,kind:'fen'},
+      {id:2,f:'N',k:0,x:5.6,w:1.2,h:1.2,sill:0.9,kind:'fen'},
+      {id:3,f:'N',k:1,x:1.2,w:1.2,h:1.2,sill:0.9,kind:'fen'},
+      {id:4,f:'N',k:1,x:5.6,w:1.2,h:1.2,sill:0.9,kind:'fen'},
+      {id:5,f:'N',k:1,x:9.0,w:1.2,h:1.2,sill:0.9,kind:'fen'},
+      {id:6,f:'S',k:0,x:2.0,w:1.0,h:2.2,sill:0,kind:'porte'},
+      {id:7,f:'S',k:0,x:5.0,w:1.8,h:1.2,sill:0.9,kind:'fen'},
+      {id:8,f:'S',k:1,x:2.0,w:1.2,h:1.2,sill:0.9,kind:'fen'},
+      {id:9,f:'S',k:1,x:5.0,w:1.8,h:1.2,sill:0.9,kind:'fen'},
+      {id:10,f:'O',k:0,x:3.5,w:1.0,h:2.2,sill:0,kind:'porte'},
+      {id:11,f:'O',k:1,x:3.5,w:1.2,h:1.2,sill:0.9,kind:'fen'},
+      {id:12,f:'E',k:0,x:2.0,w:1.2,h:1.2,sill:0.9,kind:'fen'},
+      {id:13,f:'E',k:1,x:2.0,w:1.2,h:1.2,sill:0.9,kind:'fen'}
+    ],
+    oseq:20,
+    prices:{beton:1400,acier:12,coffrage:110,propre:900,fouille:70,maconn:150,enduit:70,fen:1800,porte:2000},
+    tva:true
+  };
+}
+function parseSpans(str){
+  return String(str).replace(/,/g,'.').split(/[\s;]+/).map(parseFloat).filter(function(x){return x>0&&isFinite(x)&&x<60;});
+}
+function r2(v){return Math.round(v*100)/100;}
+function f5(v){return Math.floor(v/5)*5;}
+
+function analyse(P){
+  var R={warns:[],err:null};
+  var xs=[0],ys=[0],i,j,k;
+  if(!P.axesX.length||!P.axesY.length){R.err='Entre au moins une travée dans chaque sens.';return R;}
+  if(!P.floors.length){R.err='Ajoute au moins un niveau.';return R;}
+  P.axesX.forEach(function(s){xs.push(xs[xs.length-1]+s);});
+  P.axesY.forEach(function(s){ys.push(ys[ys.length-1]+s);});
+  var nx=xs.length,ny=ys.length,nf=P.floors.length,fl=P.floors;
+  R.xs=xs;R.ys=ys;R.nx=nx;R.ny=ny;R.Lx=xs[nx-1];R.Ly=ys[ny-1];
+  var z=[],acc=0;fl.forEach(function(f){acc+=f.h;z.push(acc);});R.z=z;R.top=acc;
+
+  /* columns */
+  var has={},cols=[];
+  for(j=0;j<ny;j++)for(i=0;i<nx;i++){
+    if(P.colOff[i+','+j])continue;
+    var c={id:'P'+(cols.length+1),i:i,j:j,x:xs[i],y:ys[j]};cols.push(c);has[i+','+j]=c;
+  }
+  R.cols=cols;R.has=has;
+  if(cols.length<4){R.err='Il faut au moins 4 poteaux formant une maille.';return R;}
+
+  /* beam sections */
+  var maxL=0;P.axesX.concat(P.axesY).forEach(function(s){maxL=Math.max(maxL,s);});
+  var sec=fl.map(function(f){
+    if(P.beamAuto){var bh=Math.max(30,Math.ceil(maxL*100/12/5)*5);return {bb:bh<=40?20:25,bh:bh};}
+    return {bb:f.bb,bh:f.bh};
+  });
+  R.sec=sec;
+
+  /* geometry of beams and panels */
+  var bg=[],bx={},by={};
+  for(j=0;j<ny;j++)for(i=0;i<nx-1;i++)if(has[i+','+j]&&has[(i+1)+','+j]){
+    var g={dir:'x',i:i,j:j,L:xs[i+1]-xs[i],x1:xs[i],y1:ys[j],x2:xs[i+1],y2:ys[j],per:(j===0||j===ny-1)};
+    bg.push(g);bx[i+','+j]=g;
+  }
+  for(i=0;i<nx;i++)for(j=0;j<ny-1;j++)if(has[i+','+j]&&has[i+','+(j+1)]){
+    var g2={dir:'y',i:i,j:j,L:ys[j+1]-ys[j],x1:xs[i],y1:ys[j],x2:xs[i],y2:ys[j+1],per:(i===0||i===nx-1)};
+    bg.push(g2);by[i+','+j]=g2;
+  }
+  bg.forEach(function(g){
+    g.cont=g.dir==='x'?!!(bx[(g.i-1)+','+g.j]||bx[(g.i+1)+','+g.j]):!!(by[g.i+','+(g.j-1)]||by[g.i+','+(g.j+1)]);
+  });
+  var pg=[],pAt={};
+  for(j=0;j<ny-1;j++)for(i=0;i<nx-1;i++)if(has[i+','+j]&&has[(i+1)+','+j]&&has[i+','+(j+1)]&&has[(i+1)+','+(j+1)]){
+    var p={i:i,j:j,dx:xs[i+1]-xs[i],dy:ys[j+1]-ys[j],x0:xs[i],y0:ys[j]};pg.push(p);pAt[i+','+j]=p;
+  }
+  pg.forEach(function(p){p.cont=!!(pAt[(p.i-1)+','+p.j]||pAt[(p.i+1)+','+p.j]||pAt[p.i+','+(p.j-1)]||pAt[p.i+','+(p.j+1)]);});
+  R.bg=bg;R.pg=pg;
+  if(!pg.length)R.warns.push('Aucune dalle : il faut 4 poteaux aux angles d\'une maille.');
+
+  /* beams */
+  var bk=[],bGroups={},bList=[],beamLab=[],steelAgg={Poteaux:{},Poutres:{},Dalles:{},Semelles:{},Longrines:{},'Chaînages':{},Linteaux:{}};
+  function addSteel(type,steel,n){steel.forEach(function(s){var o=steelAgg[type];o[s.phi]=(o[s.phi]||0)+s.len*n;});}
+  for(k=0;k<nf;k++){
+    bk[k]=[];beamLab[k]=[];
+    var f=fl[k],s=sec[k];
+    bg.forEach(function(g,gi){
+      var w=0,pa=g.dir==='x'?[pAt[g.i+','+(g.j-1)],pAt[g.i+','+g.j]]:[pAt[(g.i-1)+','+g.j],pAt[g.i+','+g.j]];
+      pa.forEach(function(q){if(q)w+=Math.min(q.dx,q.dy)/2;});
+      var self=25*(s.bb/100)*((s.bh-f.e)/100);
+      var wall=g.per?P.wallG*Math.max(0,f.h-s.bh/100)*P.openF+(k===nf-1?P.wallG*P.parapet:0):P.partG;
+      var G=(25*f.e/100+f.g)*w+self+wall,Q=f.q*w;
+      bk[k][gi]={self:self,wall:wall};
+      G=Math.ceil(G/2)*2;Q=Math.ceil(Q/2)*2;
+      var key=[k,s.bb,s.bh,g.L.toFixed(2),g.cont?1:0,G.toFixed(1),Q.toFixed(1)].join('|');
+      var grp=bGroups[key];
+      if(!grp){
+        var res=BE.poutre({mode:'charges',b:s.bb,h:s.bh,dp:4,L:g.L,G:G,Q:Q,fc:P.fc,fe:P.fe,cont:g.cont?'cont':'iso'});
+        grp={id:'Pt'+(bList.length+1),k:k,res:res,n:0,L:g.L,b:s.bb,h:s.bh,G:G,Q:Q,e:f.e,cont:g.cont};
+        bGroups[key]=grp;bList.push(grp);
+      }
+      grp.n++;beamLab[k][gi]=grp.id;
+    });
+  }
+  R.bList=bList;R.beamLab=beamLab;
+  bList.forEach(function(g){if(!g.res.err)addSteel('Poutres',g.res.steel,g.n);});
+
+  /* column loads */
+  var l0=fl.map(function(f,kk){return Math.max(0.5,f.h-sec[kk].bh/100+(kk===0?Math.max(0,P.depth-0.5):0));});
+  R.l0=l0;
+  var cItems=[];
+  cols.forEach(function(c,ci){
+    var tx=((c.i>0?xs[c.i]-xs[c.i-1]:0)+(c.i<nx-1?xs[c.i+1]-xs[c.i]:0))/2;
+    var ty=((c.j>0?ys[c.j]-ys[c.j-1]:0)+(c.j<ny-1?ys[c.j+1]-ys[c.j]:0))/2;
+    var G=[],Q=[];
+    for(k=0;k<nf;k++){
+      var f2=fl[k],A=tx*ty,gg=(25*f2.e/100+f2.g)*A,qq=f2.q*A;
+      bg.forEach(function(g,gi){
+        var touch=(g.dir==='x'&&g.j===c.j&&(g.i===c.i||g.i+1===c.i))||(g.dir==='y'&&g.i===c.i&&(g.j===c.j||g.j+1===c.j));
+        if(touch)gg+=g.L/2*(bk[k][gi].self+bk[k][gi].wall);
+      });
+      G[k]=gg;Q[k]=qq;
+    }
+    var per=[];
+    for(k=0;k<nf;k++){
+      var NG=0,NQ=0;
+      for(var m=k;m<nf;m++){NG+=G[m]+25*(fl[m].ca*fl[m].cb/1e4)*l0[m];NQ+=Q[m];}
+      var res2=BE.poteau({a:fl[k].ca,b:fl[k].cb,l0:l0[k],k:P.kflamb,G:NG,Q:NQ,Nu:0,fc:P.fc,fe:P.fe});
+      per.push({ci:ci,k:k,res:res2,NG:NG,NQ:NQ,Nu:1.35*NG+1.5*NQ,l0:l0[k]});
+      if(!res2.err)addSteel('Poteaux',res2.steel,1);
+    }
+    cItems.push(per);
+  });
+  R.cItems=cItems;
+  var cGroups={},cList=[];
+  cItems.forEach(function(per){per.forEach(function(it){
+    if(it.res.err)return;
+    var key=it.k+'|'+fl[it.k].ca+'|'+fl[it.k].cb+'|'+it.res.summary;
+    var gr=cGroups[key];
+    if(!gr){gr={k:it.k,a:fl[it.k].ca,b:fl[it.k].cb,items:[],rep:it};cGroups[key]=gr;cList.push(gr);}
+    gr.items.push(it);if(it.Nu>gr.rep.Nu)gr.rep=it;
+  });});
+  cList.sort(function(a,b){return a.k-b.k;});
+  R.cList=cList;
+
+  /* footings */
+  var sGroups={},sList=[],footOf=[];
+  cols.forEach(function(c,ci){
+    var it=cItems[ci][0];
+    var res=BE.semelle({a:fl[0].ca,b:fl[0].cb,G:Math.ceil(it.NG/25)*25,Q:Math.ceil(it.NQ/25)*25,sol:P.sol,fe:P.fe});
+    if(res.err){footOf[ci]=null;return;}
+    var key=res.summary;
+    var gr=sGroups[key];
+    if(!gr){gr={id:'S'+(sList.length+1),res:res,items:[],Nser:it.NG+it.NQ};sGroups[key]=gr;sList.push(gr);}
+    gr.items.push(ci);if(it.NG+it.NQ>gr.Nser)gr.Nser=it.NG+it.NQ;
+    footOf[ci]=gr;addSteel('Semelles',res.steel,1);
+  });
+  R.sList=sList;R.footOf=footOf;
+  var minSpan=maxL;P.axesX.concat(P.axesY).forEach(function(s){minSpan=Math.min(minSpan,s);});
+  sList.forEach(function(g){
+    if(g.res.geo.A>minSpan-0.2||g.res.geo.B>minSpan-0.2)R.warns.push('Semelle '+g.id+' ('+BE.F(g.res.geo.A,2)+' × '+BE.F(g.res.geo.B,2)+' m) presque en contact avec la voisine : prévoir une semelle filante ou une étude de sol.');
+  });
+
+  /* slabs */
+  var dGroups={},dList=[],dLab=[],panelRes=[];
+  for(k=0;k<nf;k++){
+    dLab[k]=[];
+    pg.forEach(function(p,pi){
+      var key=[k,p.dx.toFixed(2),p.dy.toFixed(2),p.cont?1:0].join('|');
+      var gr=dGroups[key];
+      if(!gr){
+        var res=BE.dalle({lx:p.dx,ly:p.dy,e:fl[k].e,g:fl[k].g,q:fl[k].q,dp:3,fc:P.fc,fe:P.fe,cont:p.cont?'cont':'iso'});
+        gr={id:'D'+(dList.length+1),k:k,res:res,n:0,dx:p.dx,dy:p.dy,e:fl[k].e};dGroups[key]=gr;dList.push(gr);
+      }
+      gr.n++;dLab[k][pi]=gr.id;
+      if(!gr.res.err)addSteel('Dalles',gr.res.steel,1);
+    });
+  }
+  R.dList=dList;R.dLab=dLab;
+
+
+  /* longrines, chaînages, linteaux */
+  var lgGroups={},lgList=[],lgLab=[],chList=[],lnGroups={},lnList=[],nops=0;
+  if(P.longOn!==false){
+    bg.forEach(function(g,gi){
+      var cA=has[g.i+','+g.j],cB=g.dir==='x'?has[(g.i+1)+','+g.j]:has[g.i+','+(g.j+1)];
+      var ia=cols.indexOf(cA),ib=cols.indexOf(cB),Nu=Math.max(cItems[ia][0].Nu,cItems[ib][0].Nu);
+      var wl=g.per?P.wallG*Math.max(0,P.depth-0.4):0,key=[g.L.toFixed(2),g.per?1:0,Math.ceil(Nu/50)*50].join('|'),grp=lgGroups[key];
+      if(!grp){
+        var res=BE.longrine({b:P.longB,h:P.longH,dp:4,L:g.L,G:wl,Nu:Math.ceil(Nu/50)*50,fc:P.fc,fe:P.fe});
+        grp={id:'L'+(lgList.length+1),res:res,n:0,L:g.L,per:g.per,Nu:Nu,b:P.longB,h:P.longH};lgGroups[key]=grp;lgList.push(grp);
+      }
+      grp.n++;lgLab[gi]=grp.id;
+    });
+    lgList.forEach(function(g){if(!g.res.err)addSteel('Longrines',g.res.steel,g.n);});
+  }
+  var perL=0;bg.forEach(function(g){if(g.per)perL+=g.L;});
+  P.openings.forEach(function(o){if(o.k<nf)nops++;});
+  if(P.chainOn!==false&&perL>0){
+    var rh=BE.chainage({b:P.wallT,h:P.chH,L:perL,n:4,phi:10,label:'Chaînage horizontal'});
+    chList.push({id:'Ch1',kind:'h',label:'Chaînage horizontal (niveau des linteaux, sur le périmètre)',n:nf,res:rh,L:perL,b:P.wallT,h:P.chH});
+    addSteel('Chaînages',rh.steel,nf);
+    if(nops>0){
+      var hs=0,cnt=0;P.openings.forEach(function(o){if(o.k<nf){hs+=Math.max(1,fl[o.k].h-sec[o.k].bh/100);cnt++;}});
+      var Hv=hs/cnt,rv=BE.chainage({b:15,h:P.wallT,L:Hv,n:4,phi:10,label:'Raidisseur vertical'});
+      chList.push({id:'Ch2',kind:'v',label:'Chaînages verticaux (de chaque côté des ouvertures)',n:2*nops,res:rv,L:Hv,b:15,h:P.wallT});
+      addSteel('Chaînages',rv.steel,2*nops);
+    }
+  }
+  if(P.lintelOn!==false){
+    P.openings.forEach(function(o){
+      if(o.k>=nf)return;
+      var w=Math.round(o.w*20)/20,key=w.toFixed(2),grp=lnGroups[key];
+      if(!grp){
+        var h=w<=1.5?20:w<=2.5?25:30,L=w+0.4,self=25*(P.wallT/100)*(h/100),G=self+(2/3)*P.wallG*Math.min(w,1.2);
+        var res2=BE.poutre({mode:'charges',b:P.wallT,h:h,dp:3,L:L,G:G,Q:0,fc:P.fc,fe:P.fe,cont:'iso'});
+        grp={id:'Lt'+(lnList.length+1),res:res2,n:0,w:w,L:L,b:P.wallT,h:h};lnGroups[key]=grp;lnList.push(grp);
+      }
+      grp.n++;
+    });
+    lnList.sort(function(a,b){return a.w-b.w;}).forEach(function(g,q){g.id='Lt'+(q+1);});
+    lnList.forEach(function(g){if(!g.res.err)addSteel('Linteaux',g.res.steel,g.n);});
+  }
+  R.lgList=lgList;R.lgLab=lgLab;R.chList=chList;R.lnList=lnList;
+
+  /* quantities */
+  var q={vol:{poteaux:0,poutres:0,dalles:0,semelles:0,longrines:0,chainages:0,linteaux:0},cof:{poteaux:0,poutres:0,dalles:0,semelles:0,longrines:0,chainages:0,linteaux:0},propre:0,fouille:0};
+  cItems.forEach(function(per){per.forEach(function(it){
+    var f3=fl[it.k];q.vol.poteaux+=f3.ca*f3.cb*it.l0/1e4;q.cof.poteaux+=2*(f3.ca+f3.cb)/100*it.l0;
+  });});
+  for(k=0;k<nf;k++){
+    bg.forEach(function(g){
+      var rib=(sec[k].bh-fl[k].e)/100;
+      q.vol.poutres+=sec[k].bb/100*rib*g.L;
+      q.cof.poutres+=(sec[k].bb/100+2*rib)*g.L;
+    });
+    pg.forEach(function(p){q.vol.dalles+=p.dx*p.dy*fl[k].e/100;q.cof.dalles+=p.dx*p.dy;});
+  }
+  sList.forEach(function(g){var geo=g.res.geo,n=g.items.length;
+    q.vol.semelles+=geo.A*geo.B*geo.h*n;q.cof.semelles+=2*(geo.A+geo.B)*geo.h*n;
+    q.propre+=(geo.A+0.1)*(geo.B+0.1)*0.05*n;q.fouille+=(geo.A+0.3)*(geo.B+0.3)*P.depth*n;
+  });
+  lgList.forEach(function(g){if(g.res.err)return;q.vol.longrines+=g.b*g.h*g.L/1e4*g.n;q.cof.longrines+=2*g.h/100*g.L*g.n;});
+  chList.forEach(function(c){q.vol.chainages+=c.b*c.h*c.L/1e4*c.n;q.cof.chainages+=(2*c.h+c.b)/100*c.L*c.n;});
+  lnList.forEach(function(g){if(g.res.err)return;q.vol.linteaux+=g.b*g.h*g.L/1e4*g.n;q.cof.linteaux+=(g.b+2*g.h)/100*g.L*g.n;});
+  q.volTot=0;Object.keys(q.vol).forEach(function(k){q.volTot+=q.vol[k];});
+  q.cofTot=0;Object.keys(q.cof).forEach(function(k){q.cofTot+=q.cof[k];});
+  var byPhi={},kgT=0,kgType={};
+  Object.keys(steelAgg).forEach(function(t){
+    kgType[t]=0;
+    Object.keys(steelAgg[t]).forEach(function(phi){
+      var len=steelAgg[t][phi],kg=0.00617*phi*phi*len;
+      byPhi[phi]=byPhi[phi]||{len:0,kg:0};byPhi[phi].len+=len;byPhi[phi].kg+=kg;kgT+=kg;kgType[t]+=kg;
+    });
+  });
+  q.steelAgg=steelAgg;q.byPhi=byPhi;q.kgType=kgType;q.kg=kgT;q.kgLoss=kgT*(1+P.loss/100);
+  q.ratio=q.volTot>0?q.kgLoss/q.volTot:0;
+  R.q=q;
+
+  /* facades */
+  var fac={},tot={maconn:0,enduit:0,fen:0,porte:0};
+  FACS.forEach(function(fc){
+    var len=(fc==='N'||fc==='S')?R.Lx:R.Ly;
+    var onLine=cols.filter(function(c){return fc==='N'?c.j===0:fc==='S'?c.j===ny-1:fc==='O'?c.i===0:c.i===nx-1;});
+    var opens=P.openings.filter(function(o){return o.f===fc&&o.k<nf;});
+    var maconn=0,openArea={fen:0,porte:0},gross=len*(R.top+P.parapet);
+    for(k=0;k<nf;k++){
+      var wid=0;onLine.forEach(function(c){wid+=((fc==='N'||fc==='S')?fl[k].ca:fl[k].cb)/100;});
+      var wallH=Math.max(0,fl[k].h-sec[k].bh/100),oa=0;
+      opens.filter(function(o){return o.k===k;}).forEach(function(o){var a=o.w*o.h;oa+=a;openArea[o.kind]+=a;});
+      maconn+=Math.max(0,(len-wid)*wallH-oa);
+    }
+    maconn+=len*P.parapet;
+    var ens=Math.max(0,gross-openArea.fen-openArea.porte);
+    fac[fc]={len:len,maconn:maconn,enduit:ens,fen:openArea.fen,porte:openArea.porte,opens:opens,onLine:onLine};
+    tot.maconn+=maconn;tot.enduit+=ens;tot.fen+=openArea.fen;tot.porte+=openArea.porte;
+  });
+  R.fac=fac;R.facTot=tot;
+
+  /* warnings */
+  function pushW(label,res){if(res.err)R.warns.push(label+' : '+res.err);(res.warns||[]).forEach(function(w){if(w.indexOf('béton de propreté')<0)R.warns.push(label+' : '+w);});}
+  bList.forEach(function(g){pushW(g.id+' ('+fl[g.k].name+')',g.res);});
+  cList.forEach(function(g){pushW('Poteaux '+g.rep.ci+' '+fl[g.k].name,g.rep.res);});
+  dList.forEach(function(g){pushW(g.id+' ('+fl[g.k].name+')',g.res);});
+  sList.forEach(function(g){pushW(g.id,g.res);});
+  lgList.forEach(function(g){pushW(g.id,g.res);});
+  lnList.forEach(function(g){pushW(g.id,g.res);});
+  var seen={};R.warns=R.warns.filter(function(w){if(seen[w])return false;seen[w]=1;return true;});
+  return R;
+}
+
+return {analyse:analyse,defaultProject:defaultProject,parseSpans:parseSpans,FACS:FACS,FACNAME:FACNAME};
+})();
+if(typeof module!=='undefined')module.exports=MD;
+
+var DR=(function(){
+'use strict';
+var F=function(v,d){return BE.F(v,d);};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function n(v){return Math.round(v*1000)/1000;}
+function letter(j){return String.fromCharCode(65+(j%26));}
+var DEFS='<defs>'+
+ '<pattern id="hc" width="0.16" height="0.16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line class="hln" x1="0" y1="0" x2="0" y2="0.16"/></pattern>'+
+ '<pattern id="sl" width="0.3" height="0.3" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><line class="hln" x1="0" y1="0" x2="0" y2="0.3"/></pattern>'+
+ '</defs>';
+function line(x1,y1,x2,y2,cls){return '<line class="'+cls+'" x1="'+n(x1)+'" y1="'+n(y1)+'" x2="'+n(x2)+'" y2="'+n(y2)+'"/>';}
+function rect(x,y,w,h,cls,extra){return '<rect class="'+cls+'" x="'+n(x)+'" y="'+n(y)+'" width="'+n(Math.max(0,w))+'" height="'+n(Math.max(0,h))+'"'+(extra||'')+'/>';}
+function circ(x,y,r,cls){return '<circle class="'+cls+'" cx="'+n(x)+'" cy="'+n(y)+'" r="'+n(r)+'"/>';}
+function txt(x,y,s,fs,cls,anchor,rot){
+  return '<text class="t '+(cls||'')+'" x="'+n(x)+'" y="'+n(y)+'" font-size="'+n(fs)+'" text-anchor="'+(anchor||'middle')+'" dominant-baseline="central"'+(rot?' transform="rotate('+rot+' '+n(x)+' '+n(y)+')"':'')+'>'+esc(s)+'</text>';
+}
+function svg(x,y,w,h,inner,minw,label,defs){
+  return '<svg class="dwg" viewBox="'+n(x)+' '+n(y)+' '+n(w)+' '+n(h)+'" role="img" aria-label="'+esc(label)+'" style="min-width:'+(minw||0)+'px">'+(defs===false?'':DEFS)+inner+'</svg>';
+}
+function dimH(x1,x2,y,label,fs){
+  var t=fs*0.38;
+  return line(x1,y,x2,y,'dim')+line(x1,y-t,x1,y+t,'dim')+line(x2,y-t,x2,y+t,'dim')+(label?txt((x1+x2)/2,y-fs*0.8,label,fs,'dimt'):'');
+}
+function dimV(y1,y2,x,label,fs,right){
+  var t=fs*0.38;
+  return line(x,y1,x,y2,'dim')+line(x-t,y1,x+t,y1,'dim')+line(x-t,y2,x+t,y2,'dim')+(label?txt(x+(right?1:-1)*fs*0.8,(y1+y2)/2,label,fs,'dimt','middle',-90):'');
+}
+function bubble(x,y,s,fs){return circ(x,y,fs*1.0,'bub')+txt(x,y,s,fs*0.95,'tl strong');}
+function spread(k,a,b){var r=[],i;for(i=0;i<k;i++)r.push(k===1?(a+b)/2:a+(b-a)*i/(k-1));return r;}
+
+/* ---------- plan de coffrage ---------- */
+function coffrage(P,R,k){
+  var m=1.5,W=R.Lx+2*m,H=R.Ly+2*m,fs=Math.max(0.17,W/46),o='',fl=P.floors[k],sec=R.sec[k],i,j;
+  R.pg.forEach(function(p,pi){
+    o+=rect(p.x0,p.y0,p.dx,p.dy,'slab');
+    var cx=p.x0+p.dx/2,cy=p.y0+p.dy/2;
+    o+=txt(cx,cy-fs*0.7,R.dLab[k][pi],fs*1.15,'tl strong')+txt(cx,cy+fs*0.7,'e = '+fl.e+' cm',fs*0.9,'tl');
+  });
+  R.xs.forEach(function(x){o+=line(x,-m*0.7,x,R.Ly+m*0.7,'ax');});
+  R.ys.forEach(function(y){o+=line(-m*0.7,y,R.Lx+m*0.7,y,'ax');});
+  var bw=sec.bb/100;
+  R.bg.forEach(function(g,gi){
+    var lab=R.beamLab[k][gi];
+    if(g.dir==='x'){
+      o+=rect(g.x1,g.y1-bw/2,g.L,bw,'beam');
+      o+=txt(g.x1+g.L/2,g.y1-bw/2-fs*0.75,lab,fs*0.95,'tl');
+    }else{
+      o+=rect(g.x1-bw/2,g.y1,bw,g.L,'beam');
+      o+=txt(g.x1-bw/2-fs*0.75,g.y1+g.L/2,lab,fs*0.95,'tl','middle',-90);
+    }
+  });
+  var ca=fl.ca/100,cb=fl.cb/100;
+  R.cols.forEach(function(c){
+    o+=rect(c.x-ca/2,c.y-cb/2,ca,cb,'colm');
+    o+=txt(c.x+ca/2+fs*0.25,c.y-cb/2-fs*0.55,c.id,fs*0.95,'tl strong','start');
+  });
+  R.xs.forEach(function(x,i2){o+=bubble(x,-m*0.88,String(i2+1),fs);o+=bubble(x,R.Ly+m*0.88,String(i2+1),fs);});
+  R.ys.forEach(function(y,j2){o+=bubble(-m*0.88,y,letter(j2),fs);o+=bubble(R.Lx+m*0.88,y,letter(j2),fs);});
+  for(i=0;i<R.nx-1;i++)o+=dimH(R.xs[i],R.xs[i+1],-m*0.38,F(R.xs[i+1]-R.xs[i],2),fs*0.9);
+  for(j=0;j<R.ny-1;j++)o+=dimV(R.ys[j],R.ys[j+1],-m*0.38,F(R.ys[j+1]-R.ys[j],2),fs*0.9);
+  o+=dimH(0,R.Lx,R.Ly+m*0.38,F(R.Lx,2),fs*0.9);
+  o+=dimV(0,R.Ly,R.Lx+m*0.45,F(R.Ly,2),fs*0.9,true);
+  return svg(-m,-m,W,H,o,Math.round(Math.min(760,Math.max(480,W*46))),'Plan de coffrage '+fl.name);
+}
+
+/* ---------- plan des fondations ---------- */
+function fondations(P,R){
+  var m=1.5,W=R.Lx+2*m,H=R.Ly+2*m,fs=Math.max(0.17,W/46),o='',i,j,lb=P.longB/100;
+  R.cols.forEach(function(c,ci){
+    var gr=R.footOf[ci];if(!gr)return;
+    var A=gr.res.geo.A,B=gr.res.geo.B;
+    o+=rect(c.x-A/2,c.y-B/2,A,B,'foot');
+  });
+  R.xs.forEach(function(x){o+=line(x,-m*0.7,x,R.Ly+m*0.7,'ax');});
+  R.ys.forEach(function(y){o+=line(-m*0.7,y,R.Lx+m*0.7,y,'ax');});
+  R.bg.forEach(function(g,gi){
+    var lab=R.lgLab[gi];if(!lab)return;
+    if(g.dir==='x'){o+=rect(g.x1,g.y1-lb/2,g.L,lb,'beam');o+=txt(g.x1+g.L/2,g.y1-lb/2-fs*0.75,lab,fs*0.95,'tl');}
+    else{o+=rect(g.x1-lb/2,g.y1,lb,g.L,'beam');o+=txt(g.x1-lb/2-fs*0.75,g.y1+g.L/2,lab,fs*0.95,'tl','middle',-90);}
+  });
+  R.cols.forEach(function(c,ci){
+    var gr=R.footOf[ci],f0=P.floors[0],ca=f0.ca/100,cb=f0.cb/100;
+    o+=rect(c.x-ca/2,c.y-cb/2,ca,cb,'colm');
+    if(gr){var B=gr.res.geo.B;o+=txt(c.x,c.y+B/2-fs*0.8,gr.id,fs*0.9,'tl strong');}
+  });
+  R.xs.forEach(function(x,i2){o+=bubble(x,-m*0.88,String(i2+1),fs);o+=bubble(x,R.Ly+m*0.88,String(i2+1),fs);});
+  R.ys.forEach(function(y,j2){o+=bubble(-m*0.88,y,letter(j2),fs);o+=bubble(R.Lx+m*0.88,y,letter(j2),fs);});
+  for(i=0;i<R.nx-1;i++)o+=dimH(R.xs[i],R.xs[i+1],-m*0.38,F(R.xs[i+1]-R.xs[i],2),fs*0.9);
+  for(j=0;j<R.ny-1;j++)o+=dimV(R.ys[j],R.ys[j+1],-m*0.38,F(R.ys[j+1]-R.ys[j],2),fs*0.9);
+  o+=dimH(0,R.Lx,R.Ly+m*0.38,F(R.Lx,2),fs*0.9);
+  o+=dimV(0,R.Ly,R.Lx+m*0.45,F(R.Ly,2),fs*0.9,true);
+  return svg(-m,-m,W,H,o,Math.round(Math.min(760,Math.max(480,W*46))),'Plan des fondations');
+}
+
+/* ---------- coupe ---------- */
+function coupe(P,R,dir,idx){
+  var fl=P.floors,nf=fl.length,pos=dir==='x'?R.xs:R.ys,Lt=pos[pos.length-1],depth=P.depth,top=R.top,ptop=top+P.parapet,o='',k;
+  var fs=Math.max(0.16,(Lt+4)/48),line1=R.cols.filter(function(c){return dir==='x'?c.j===idx:c.i===idx;});
+  var cpos=line1.map(function(c){return dir==='x'?c.i:c.j;}),cmap={};
+  line1.forEach(function(c,q){cmap[cpos[q]]=c;});
+  function Y(z){return -z;}
+  o+=rect(-0.9,0,Lt+1.8,depth+0.35,'soil');
+  o+=rect(0,0,Lt,0.1,'cut');
+  var fz=[];
+  line1.forEach(function(c,q){
+    var ci=R.cols.indexOf(c),gr=R.footOf[ci];
+    if(!gr)return;
+    var geo=gr.res.geo,w=dir==='x'?geo.A:geo.B,x=pos[cpos[q]];
+    fz[q]=-depth+geo.h;
+    o+=rect(x-(w+0.1)/2,depth,w+0.1,0.05,'cut');
+    o+=rect(x-w/2,depth-geo.h,w,geo.h,'cut');
+  });
+  if(P.longOn!==false){
+    for(var s2=0;s2<cpos.length-1;s2++){
+      var ia=R.cols.indexOf(line1[s2]),ib=R.cols.indexOf(line1[s2+1]),ga=R.footOf[ia],gb=R.footOf[ib];
+      if(cpos[s2+1]!==cpos[s2]+1||!ga||!gb)continue;
+      var wa=dir==='x'?ga.res.geo.A:ga.res.geo.B,wb=dir==='x'?gb.res.geo.A:gb.res.geo.B,lh=P.longH/100;
+      var xa2=pos[cpos[s2]]+wa/2,xb2=pos[cpos[s2+1]]-wb/2;
+      o+=rect(xa2,depth-ga.res.geo.h,xb2-xa2,lh,'cut');
+    }
+  }
+  o+=line(-0.9,0,Lt+0.9,0,'gl');
+  for(k=0;k<nf;k++){
+    var z1=R.z[k],z0=k===0?0:R.z[k-1],e=fl[k].e/100,bh=R.sec[k].bh/100;
+    line1.forEach(function(c,q){
+      var w=(dir==='x'?fl[k].ca:fl[k].cb)/100,x=pos[cpos[q]],zb=k===0?(fz[q]!==undefined?fz[q]:-depth+0.4):z0;
+      o+=rect(x-w/2,Y(z1),w,z1-zb,'cut');
+    });
+    o+=rect(0,Y(z1),Lt,e,'cut');
+    for(var q2=0;q2<cpos.length-1;q2++){
+      if(cpos[q2+1]!==cpos[q2]+1)continue;
+      var w1=(dir==='x'?fl[k].ca:fl[k].cb)/100;
+      o+=rect(pos[cpos[q2]]+w1/2,Y(z1)+e,pos[cpos[q2+1]]-pos[cpos[q2]]-w1,bh-e,'cut');
+    }
+  }
+  o+=rect(-0.1,Y(ptop),0.2,P.parapet,'cut')+rect(Lt-0.1,Y(ptop),0.2,P.parapet,'cut');
+  var rx=Lt+0.7;
+  o+=line(-0.9,0,rx+0.3,0,'lvl');
+  o+=txt(rx+0.35,0,'±0,00',fs,'tl','start');
+  for(k=0;k<nf;k++){
+    o+=line(-0.5,Y(R.z[k]),rx+0.3,Y(R.z[k]),'lvl');
+    o+=txt(rx+0.35,Y(R.z[k])-fs*0.7,'+'+F(R.z[k],2),fs,'tl strong','start');
+    o+=txt(rx+0.35,Y(R.z[k])+fs*0.7,fl[k].name,fs*0.85,'dimt','start');
+  }
+  o+=line(-0.9,depth,rx+0.3,depth,'lvl');
+  o+=txt(rx+0.35,depth,'−'+F(depth,2),fs,'tl','start');
+  for(k=0;k<nf;k++)o+=dimV(Y(R.z[k]),Y(k===0?0:R.z[k-1]),-0.75,F(fl[k].h,2),fs*0.9);
+  o+=dimV(0,depth,-0.75,F(depth,2),fs*0.9);
+  for(var s=0;s<pos.length-1;s++)o+=dimH(pos[s],pos[s+1],depth+0.75,F(pos[s+1]-pos[s],2),fs*0.9);
+  o+=dimH(0,Lt,depth+1.3,F(Lt,2),fs*0.9);
+  pos.forEach(function(p,s){o+=bubble(p,depth+1.95,dir==='x'?String(s+1):letter(s),fs);});
+  var x0=-1.9,y0=-(ptop+0.6),w=Lt+1.9+3.2,h=ptop+0.6+depth+2.8;
+  return svg(x0,y0,w,h,o,Math.round(Math.min(760,Math.max(480,w*38))),'Coupe');
+}
+
+/* ---------- façade ---------- */
+function facade(P,R,fc){
+  var fl=P.floors,nf=fl.length,len=(fc==='N'||fc==='S')?R.Lx:R.Ly,top=R.top,ptop=top+P.parapet,o='',k;
+  var fs=Math.max(0.16,(len+3)/48);
+  function T(c){return fc==='N'?c.x:fc==='S'?R.Lx-c.x:fc==='E'?R.Ly-c.y:c.y;}
+  var onLine=R.fac[fc].onLine;
+  o+=rect(0,-top,len,top,'wall');
+  o+=rect(0,-ptop,len,P.parapet,'wall2');
+  for(k=0;k<nf;k++)o+=rect(0,-R.z[k],len,fl[k].e/100,'cut');
+  onLine.forEach(function(c){
+    var w=((fc==='N'||fc==='S')?fl[0].ca:fl[0].cb)/100,t=T(c);
+    o+=rect(t-w/2,-top,w,top,'colf');
+  });
+  var cnt=0;
+  P.openings.forEach(function(op){
+    if(op.f!==fc||op.k>=nf)return;
+    var z0=op.k===0?0:R.z[op.k-1],zs=z0+(op.kind==='porte'?0:op.sill),zt=zs+op.h,zl=R.z[op.k]-fl[op.k].e/100;
+    var bad=op.x<0||op.x+op.w>len+1e-6||zt>zl+1e-6;
+    cnt++;
+    if(P.lintelOn!==false)o+=rect(op.x-0.2,-(zt+0.2),op.w+0.4,0.2,'cut');
+    o+=rect(op.x,-zt,op.w,op.h,(bad?'bad ':'')+(op.kind==='porte'?'door':'fen'));
+    if(op.kind==='fen'){
+      o+=line(op.x+op.w/2,-zt,op.x+op.w/2,-zs,'ln2');
+      o+=line(op.x,-(zs+op.h/2),op.x+op.w,-(zs+op.h/2),'ln2');
+    }else{
+      o+=line(op.x+op.w/2,-zt,op.x+op.w/2,-zs,'ln2');
+      o+=circ(op.x+op.w*0.42,-(zs+op.h*0.48),Math.max(0.02,fs*0.12),'knob');
+    }
+    if(op.w>=0.8)o+=txt(op.x+op.w/2,-(zs+op.h)-fs*0.7,F(op.w,2)+' × '+F(op.h,2),fs*0.78,'tl');
+  });
+  o+=line(-0.8,0,len+0.8,0,'gl');
+  o+=rect(-0.8,0,len+1.6,0.3,'soil');
+  var rx=len+0.5;
+  for(k=0;k<nf;k++){
+    o+=line(-0.5,-R.z[k],rx,-R.z[k],'lvl');
+    o+=txt(rx+0.05,-R.z[k]-fs*0.7,'+'+F(R.z[k],2),fs*0.9,'tl strong','start');
+  }
+  o+=txt(rx+0.05,-ptop-fs*0.2,'+'+F(ptop,2),fs*0.9,'dimt','start');
+  o+=txt(rx+0.05,-fs*0.7,'±0,00',fs*0.9,'tl','start');
+  for(k=0;k<nf;k++)o+=dimV(-R.z[k],-(k===0?0:R.z[k-1]),-0.75,F(fl[k].h,2),fs*0.9);
+  o+=dimV(-ptop,-top,-0.75,F(P.parapet,2),fs*0.9);
+  var aN=(fc==='N'||fc==='S')?R.nx:R.ny;
+  for(var q=0;q<aN;q++){
+    var t=fc==='N'?R.xs[q]:fc==='S'?R.Lx-R.xs[q]:fc==='E'?R.Ly-R.ys[q]:R.ys[q];
+    var lab=(fc==='N'||fc==='S')?String(q+1):letter(q);
+    o+=bubble(t,0.85,lab,fs);
+  }
+  o+=dimH(0,len,1.55,F(len,2),fs*0.9);
+  return svg(-1.7,-(ptop+0.6),len+3.5,ptop+0.6+2.3,o,Math.round(Math.min(760,Math.max(480,(len+3.5)*38))),'Façade '+fc);
+}
+
+/* ---------- sections d'armatures (unités en cm) ---------- */
+function secBeam(d){
+  var b=d.b,h=d.h,c=3,pt=d.phit/10,fs=Math.max(b,h)/8.5,o='',W=b+22,H=h+24;
+  o+=rect(0,0,b,h,'conc');
+  o+=rect(c,c,b-2*c,h-2*c,'stir','rx="1.6"');
+  var rb=Math.max(d.phi/20,1),rt=Math.max(d.tphi/20,1),xa=c+pt+rb,yb=h-c-pt-rb,xt=c+pt+rt,yt=c+pt+rt;
+  spread(d.n,xa,b-xa).forEach(function(x){o+=circ(x,yb,rb,'bar');});
+  spread(d.tn,xt,b-xt).forEach(function(x){o+=circ(x,yt,rt,'bar');});
+  o+=txt(b/2,h+fs*1.1,d.n+'HA'+d.phi,fs,'tl strong');
+  o+=txt(b/2,-fs*0.9,String(b),fs,'dimt');
+  o+=txt(b+fs*0.9,h/2,String(h),fs,'dimt','middle',-90);
+  return svg(-6,-fs*1.7,W,H+fs*0.6,o,0,'Section de poutre '+b+' sur '+h,false);
+}
+function secColumn(d){
+  var b=d.b,h=d.h,c=3,pt=d.phit/10,r=Math.max(d.phi/20,1),fs=Math.max(b,h)/8,o='',W=b+22,H=h+24;
+  o+=rect(0,0,b,h,'conc');
+  o+=rect(c,c,b-2*c,h-2*c,'stir','rx="1.6"');
+  var x0=c+pt+r,x1=b-x0,y0=x0,y1=h-x0,rem=Math.max(0,d.n-4),ka=Math.max(0,Math.min(rem/2,Math.round(rem/2*(b/(b+h))))),kb=rem/2-ka,pts=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]],t;
+  for(t=1;t<=ka;t++){var px=x0+(x1-x0)*t/(ka+1);pts.push([px,y0],[px,y1]);}
+  for(t=1;t<=kb;t++){var py=y0+(y1-y0)*t/(kb+1);pts.push([x0,py],[x1,py]);}
+  pts.forEach(function(p){o+=circ(p[0],p[1],r,'bar');});
+  o+=txt(b/2,h+fs*1.1,d.n+'HA'+d.phi,fs,'tl strong');
+  o+=txt(b/2,-fs*0.9,String(b),fs,'dimt');
+  o+=txt(b+fs*0.9,h/2,String(h),fs,'dimt','middle',-90);
+  return svg(-6,-fs*1.7,W,H+fs*0.6,o,0,'Section de poteau '+b+' sur '+h,false);
+}
+function footing(d){
+  var A=d.A,B=d.B,fs=Math.max(A,B)/11,o='',m=Math.max(A,B)*0.18;
+  o+=rect(0,0,A,B,'conc');
+  var ys=spread(d.na,0.05,B-0.05),xs=spread(d.nb,0.05,A-0.05);
+  ys.forEach(function(y){o+=line(0.05,y,A-0.05,y,'barl');});
+  xs.forEach(function(x){o+=line(x,0.05,x,B-0.05,'barl2');});
+  var ca=d.a/100,cb=d.b/100;
+  o+=rect(A/2-ca/2,B/2-cb/2,ca,cb,'colm');
+  o+=txt(A/2,-fs*0.9,'A = '+F(A,2)+' m',fs,'tl strong');
+  o+=txt(A+fs*0.9,B/2,'B = '+F(B,2)+' m',fs,'tl strong','middle',-90);
+  o+=txt(A/2,B+fs*1.0,'// A : '+d.na+'HA'+d.pa+'   // B : '+d.nb+'HA'+d.pb,fs*0.9,'dimt');
+  return svg(-m*0.3,-fs*1.8,A+m*1.4,B+fs*3.2,o,0,'Plan de semelle',false);
+}
+function slabPlan(d){
+  var lx=d.lx,ly=d.ly,fs=Math.max(lx,ly)/14,o='',m=Math.max(lx,ly)*0.12;
+  o+=rect(0,0,lx,ly,'conc');
+  var k1=Math.max(3,Math.min(9,Math.round(ly/(d.bx.s/100)))),k2=Math.max(3,Math.min(9,Math.round(lx/(d.by.s/100))));
+  spread(k1,ly*0.08,ly*0.92).forEach(function(y){o+=line(lx*0.04,y,lx*0.96,y,'barl');});
+  spread(k2,lx*0.08,lx*0.92).forEach(function(x){o+=line(x,ly*0.04,x,ly*0.96,'barl2');});
+  o+=txt(lx/2,-fs*0.9,'lx = '+F(lx,2)+' m',fs,'tl strong');
+  o+=txt(lx+fs*0.9,ly/2,'ly = '+F(ly,2)+' m',fs,'tl strong','middle',-90);
+  o+=txt(lx/2,ly+fs*1.0,'sens lx : HA'+d.bx.phi+' e='+d.bx.s+'   sens ly : HA'+d.by.phi+' e='+d.by.s,fs*0.82,'dimt');
+  return svg(-m*0.3,-fs*1.8,lx+m*1.4,ly+fs*3.2,o,0,'Plan de dalle',false);
+}
+function drawFor(d){
+  if(!d)return '';
+  if(d.type==='poutre')return secBeam(d);
+  if(d.type==='poteau')return secColumn(d);
+  if(d.type==='semelle')return footing(d);
+  if(d.type==='dalle')return slabPlan(d);
+  return '';
+}
+return {coffrage:coffrage,fondations:fondations,coupe:coupe,facade:facade,drawFor:drawFor,letter:letter,esc:esc};
+})();
+
+(function(){
+'use strict';
+var KEY='dossier-ba-v1',P,R,tab='plan';
+var ui={floor:0,ferr:'poteaux',cdir:'x',cidx:0,fac:'N',confirm:''};
+var F=BE.F,esc=DR.esc,view=document.getElementById('view'),toastT=null;
+function $(s,r){return (r||document).querySelector(s);}
+function setPath(o,path,v){var a=path.split('.'),i;for(i=0;i<a.length-1;i++)o=o[a[i]];o[a[a.length-1]]=v;}
+function num(v){return (Math.round(v*100)/100).toFixed(2).replace('.',',');}
+function plural(n,w){return n+' '+w+(n>1?'s':'');}
+
+/* ---------- state ---------- */
+function load(){
+  var d=MD.defaultProject();
+  try{
+    var raw=localStorage.getItem(KEY);
+    if(raw){
+      var s=JSON.parse(raw);
+      if(s&&Array.isArray(s.axesX)&&Array.isArray(s.axesY)&&Array.isArray(s.floors)&&s.floors.length&&Array.isArray(s.openings)){
+        s.prices=Object.assign({},d.prices,s.prices||{});s.colOff=s.colOff||{};
+        return Object.assign(d,s);
+      }
+    }
+  }catch(e){}
+  return d;
+}
+var saveT=null;
+function save(){clearTimeout(saveT);saveT=setTimeout(function(){try{localStorage.setItem(KEY,JSON.stringify(P));}catch(e){}},250);}
+function recompute(){try{R=MD.analyse(P);}catch(e){R={err:'Erreur de calcul : '+e.message};}}
+function toast(msg){
+  var t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(function(){t.hidden=true;},2600);
+}
+
+/* ---------- form helpers ---------- */
+function fld(label,path,val,o){
+  o=o||{};var id='f-'+path.replace(/\./g,'-');
+  return '<div class="fld'+(o.cls?' '+o.cls:'')+'"><label for="'+id+'">'+label+'</label><input id="'+id+'" data-p="'+path+'" '+
+    (o.text?'type="text"':'type="number" inputmode="decimal" step="'+(o.step||'any')+'" data-n="1"')+' value="'+esc(val)+'"></div>';
+}
+function sel(label,path,val,opts,o){
+  o=o||{};var id='f-'+path.replace(/\./g,'-');
+  return '<div class="fld'+(o.cls?' '+o.cls:'')+'"><label for="'+id+'">'+label+'</label><select id="'+id+'" data-p="'+path+'"'+(o.str?'':' data-n="1"')+'>'+
+    opts.map(function(x){return '<option value="'+x[0]+'"'+(String(x[0])===String(val)?' selected':'')+'>'+esc(x[1])+'</option>';}).join('')+'</select></div>';
+}
+function chk(label,path,val,rerender){
+  var id='f-'+path.replace(/\./g,'-');
+  return '<label class="chk" for="'+id+'"><input type="checkbox" id="'+id+'" data-p="'+path+'"'+(rerender?' data-rerender="1"':'')+(val?' checked':'')+'> '+label+'</label>';
+}
+function chips(name,items,cur){
+  return '<div class="chips" role="group">'+items.map(function(x){
+    return '<button class="chip" data-act="'+name+'" data-v="'+x[0]+'" aria-pressed="'+(String(x[0])===String(cur))+'">'+esc(x[1])+'</button>';
+  }).join('')+'</div>';
+}
+function errCard(){return '<section class="card"><p class="warn">'+esc(R.err)+'</p><p class="note">Va dans l\'onglet Projet ou Structure pour corriger la trame et les poteaux.</p></section>';}
+function scrollBox(inner,id){return '<div class="scroll"'+(id?' id="'+id+'"':'')+'>'+inner+'</div>';}
+
+/* ---------- views ---------- */
+function gridInfo(){
+  var sx=0,sy=0;P.axesX.forEach(function(v){sx+=v;});P.axesY.forEach(function(v){sy+=v;});
+  return plural(P.axesX.length,'travée')+' en X × '+plural(P.axesY.length,'travée')+' en Y · emprise '+F(sx,2)+' × '+F(sy,2)+' m · '+F(sx*sy,1)+' m² au sol';
+}
+function axf(dir,label){
+  var a=P['axes'+dir].map(function(v){return F(v,2);}).join(' ');
+  return '<div class="fld w2"><label for="ax-'+dir+'">'+label+'</label><input id="ax-'+dir+'" type="text" inputmode="decimal" data-axes="'+dir+'" value="'+esc(a)+'"></div>';
+}
+function projet(){
+  var h='<section class="card"><h2>Projet</h2><div class="fields">'+
+    fld('Nom du projet','name',P.name,{text:1,cls:'w2'})+
+    sel('Béton fc28','fc',P.fc,[[20,'20 MPa'],[25,'25 MPa'],[30,'30 MPa']])+
+    sel('Acier','fe',P.fe,[[400,'HA 400'],[500,'HA 500']])+
+    fld('Sol admissible (bar)','sol',P.sol,{step:'0.1'})+
+    fld('Fondations : profondeur (m)','depth',P.depth,{step:'0.1'})+'</div></section>';
+  h+='<section class="card"><h2>Trame</h2><p class="note">Entre les distances entre axes, séparées par un espace. Exemple : 4,00 4,00 3,50</p><div class="fields">'+
+    axf('X','Travées dans le sens X (m)')+axf('Y','Travées dans le sens Y (m)')+'</div><p class="note strong" id="gridInfo">'+gridInfo()+'</p></section>';
+  h+='<section class="card"><h2>Niveaux</h2><p class="note">Chaque niveau comprend ses poteaux et le plancher haut. Le dernier plancher est la terrasse.</p>';
+  P.floors.forEach(function(f,k){
+    var p='floors.'+k+'.';
+    h+='<div class="lvl"><div class="lvl-h">'+fld('Nom',p+'name',f.name,{text:1,cls:'grow'})+
+      (P.floors.length>1?'<button class="btn danger" data-act="delfloor" data-v="'+k+'">Supprimer</button>':'')+'</div><div class="fields">'+
+      fld('Hauteur (m)',p+'h',f.h,{step:'0.05'})+fld('Dalle e (cm)',p+'e',f.e,{step:'1'})+
+      fld('G rev. + cloisons (kN/m²)',p+'g',f.g,{step:'0.1'})+fld('Q surcharge (kN/m²)',p+'q',f.q,{step:'0.5'})+
+      fld('Poteau a (cm)',p+'ca',f.ca,{step:'5'})+fld('Poteau b (cm)',p+'cb',f.cb,{step:'5'})+
+      (P.beamAuto?'':fld('Poutre b (cm)',p+'bb',f.bb,{step:'5'})+fld('Poutre h (cm)',p+'bh',f.bh,{step:'5'}))+'</div></div>';
+  });
+  h+='<div class="btns"><button class="btn" data-act="addfloor">Ajouter un niveau</button></div></section>';
+  h+='<section class="card"><h2>Longrines, chaînages et linteaux</h2><div class="fields">'+
+    fld('Longrine b (cm)','longB',P.longB,{step:'5'})+fld('Longrine h (cm)','longH',P.longH,{step:'5'})+
+    fld('Épaisseur des murs (cm)','wallT',P.wallT,{step:'5'})+fld('Hauteur du chaînage (cm)','chH',P.chH,{step:'5'})+'</div>'+
+    '<div class="btns">'+chk('Longrines entre les semelles','longOn',P.longOn!==false,false)+chk('Chaînages horizontaux et verticaux','chainOn',P.chainOn!==false,false)+chk('Linteaux au-dessus des ouvertures','lintelOn',P.lintelOn!==false,false)+'</div></section>';
+  h+='<section class="card"><h2>Hypothèses de calcul</h2><div class="fields">'+
+    sel('Longueur de flambement','kflamb',P.kflamb,[[0.7,'lf = 0,7·l0'],[1,'lf = 1,0·l0']])+
+    fld('Mur extérieur (kN/m²)','wallG',P.wallG,{step:'0.1'})+fld('Part pleine du mur','openF',P.openF,{step:'0.05'})+
+    fld('Cloison sur poutre (kN/m)','partG',P.partG,{step:'0.5'})+fld('Acrotère (m)','parapet',P.parapet,{step:'0.1'})+
+    fld('Chutes d\'acier (%)','loss',P.loss,{step:'1'})+'</div>'+
+    '<div class="btns">'+chk('Dimensionner les poutres automatiquement (h ≈ L/12)','beamAuto',P.beamAuto,true)+'</div></section>';
+  h+='<section class="card"><h2>Données</h2><p class="note">Le projet est enregistré dans ce navigateur.</p><div class="btns">'+
+    '<button class="btn" data-act="reset" data-v="example">'+(ui.confirm==='example'?'Confirmer : remplacer par l\'exemple':'Recharger l\'exemple')+'</button>'+
+    '<button class="btn" data-act="reset" data-v="empty">'+(ui.confirm==='empty'?'Confirmer : projet vide':'Nouveau projet vide')+'</button></div></section>';
+  return h;
+}
+
+function structure(){
+  var nx=P.axesX.length+1,ny=P.axesY.length+1,i,j,h;
+  h='<section class="card"><h2>Poteaux</h2><p class="note">Touche un nœud de la trame pour poser ou retirer un poteau.</p><div class="nodes" style="grid-template-columns:auto repeat('+nx+',minmax(0,1fr))"><span></span>';
+  for(i=0;i<nx;i++)h+='<span class="nl">'+(i+1)+'</span>';
+  for(j=0;j<ny;j++){
+    h+='<span class="nl">'+DR.letter(j)+'</span>';
+    for(i=0;i<nx;i++){
+      var on=!P.colOff[i+','+j];
+      h+='<button class="node" data-act="node" data-v="'+i+','+j+'" aria-pressed="'+on+'" aria-label="Poteau '+DR.letter(j)+(i+1)+'">'+(on?'■':'')+'</button>';
+    }
+  }
+  h+='</div></section>';
+  if(R.err)return h+errCard();
+  var nb=R.bg.length,np=R.pg.length;
+  h+='<section class="card"><h2>Ouvrage</h2><div class="stats">'+
+    '<div><b>'+R.cols.length+'</b><span>poteaux</span></div><div><b>'+nb+'</b><span>poutres par niveau</span></div>'+
+    '<div><b>'+np+'</b><span>dalles par niveau</span></div><div><b>'+F(R.top,2)+' m</b><span>hauteur hors sol</span></div></div>'+
+    '<div class="tw"><table class="tbl"><thead><tr><th>Niveau</th><th>Cote plancher</th><th>Poteau</th><th>Poutre</th><th>Dalle</th></tr></thead><tbody>'+
+    P.floors.map(function(f,k){return '<tr><td>'+esc(f.name)+'</td><td>+'+F(R.z[k],2)+' m</td><td>'+f.ca+'×'+f.cb+'</td><td>'+R.sec[k].bb+'×'+R.sec[k].bh+'</td><td>e = '+f.e+' cm</td></tr>';}).join('')+
+    '</tbody></table></div></section>';
+  h+='<section class="card"><h2>Alertes</h2>'+(R.warns.length?'<ul class="alerts">'+R.warns.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul>':'<p class="ok">Aucune alerte sur les éléments calculés.</p>')+
+    '<p class="note">Plancher en dalle pleine. Un plancher à corps creux demande un calcul des poutrelles, non fait ici.</p></section>';
+  return h;
+}
+
+function legendTables(k){
+  var fl=P.floors[k],h='<div class="legend">';
+  h+='<div><h3>Poteaux</h3><p>'+R.cols.length+' poteaux '+fl.ca+'×'+fl.cb+' cm</p></div>';
+  h+='<div><h3>Poutres</h3>'+R.bList.filter(function(g){return g.k===k;}).map(function(g){return '<p><b>'+g.id+'</b> '+g.b+'×'+g.h+' · L '+F(g.L,2)+' m · ×'+g.n+'</p>';}).join('')+'</div>';
+  h+='<div><h3>Dalles</h3>'+R.dList.filter(function(g){return g.k===k;}).map(function(g){return '<p><b>'+g.id+'</b> '+F(g.dx,2)+'×'+F(g.dy,2)+' m · e '+g.e+' cm · ×'+g.n+'</p>';}).join('')+'</div></div>';
+  return h;
+}
+function legendFond(){
+  return '<div class="legend"><div><h3>Longrines</h3>'+(R.lgList.length?R.lgList.map(function(g){return '<p><b>'+g.id+'</b> '+g.b+'×'+g.h+' · L '+F(g.L,2)+' m · ×'+g.n+'</p>';}).join(''):'<p>Aucune</p>')+'</div>'+
+    '<div><h3>Semelles</h3>'+R.sList.map(function(g){var geo=g.res.geo;return '<p><b>'+g.id+'</b> '+F(geo.A,2)+'×'+F(geo.B,2)+' m · h '+F(geo.h*100,0)+' cm · ×'+g.items.length+'</p>';}).join('')+'</div></div>';
+}
+function coffrage(){
+  if(R.err)return errCard();
+  if(ui.floor>=P.floors.length||ui.floor<-1)ui.floor=0;
+  var k=ui.floor,items=[[-1,'Fondations']].concat(P.floors.map(function(f,q){return [q,f.name+' (plancher haut)'];}));
+  return '<section class="card"><h2>'+(k<0?'Plan des fondations':'Plan de coffrage')+'</h2>'+chips('floor',items,k)+
+    '<div id="drawing">'+scrollBox(k<0?DR.fondations(P,R):DR.coffrage(P,R,k))+'</div>'+
+    '<div class="btns"><button class="btn" data-act="svg" data-v="'+(k<0?'fondations':'coffrage-'+k)+'">Exporter en SVG</button></div>'+(k<0?legendFond():legendTables(k))+'</section>';
+}
+
+function elCard(title,sub,res,extra){
+  if(res.err)return '<article class="card el"><h3>'+title+'</h3><p class="warn">'+esc(res.err)+'</p></article>';
+  var rows=res.rows.map(function(r){return '<tr'+(r[2]?' class="hl"':'')+'><th>'+esc(r[0])+'</th><td>'+esc(r[1])+'</td></tr>';}).join('');
+  var warns=res.warns.filter(function(w){return w.indexOf('béton de propreté')<0;});
+  var opt=res.options.filter(function(o){return o.list.length;}).map(function(o){return '<p class="note">'+esc(o.label)+' : '+o.list.map(esc).join(' · ')+'</p>';}).join('');
+  var steel=res.steel&&res.steel.length?'<div class="tw"><table class="tbl mini"><thead><tr><th>Aciers</th><th>HA</th><th>Longueur</th></tr></thead><tbody>'+
+    res.steel.map(function(s){return '<tr><td>'+esc(s.part)+'</td><td>'+s.phi+'</td><td>'+F(s.len,1)+' m</td></tr>';}).join('')+
+    '</tbody></table></div>':'';
+  return '<article class="card el"><h3>'+title+'</h3><p class="sub">'+sub+'</p><div class="el-b"><div class="fig">'+DR.drawFor(res.draw)+'</div><table class="kv"><tbody>'+rows+'</tbody></table></div>'+
+    (warns.length?'<ul class="alerts">'+warns.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul>':'')+opt+steel+(extra||'')+'</article>';
+}
+function labelsOf(arr,max){return arr.length>max?arr.slice(0,max).join(', ')+' +'+(arr.length-max):arr.join(', ');}
+function ferrPoteaux(){
+  return R.cList.map(function(g){
+    var labs=g.items.map(function(it){return R.cols[it.ci].id;});
+    return elCard('Poteaux '+g.a+'×'+g.b+' · '+esc(P.floors[g.k].name),labelsOf(labs,8)+' · Nu max '+F(g.rep.Nu,0)+' kN ('+R.cols[g.rep.ci].id+') · l0 = '+F(g.rep.l0,2)+' m',g.rep.res);
+  }).join('')||'<p class="note">Aucun poteau calculé.</p>';
+}
+function ferrPoutres(){
+  return R.bList.map(function(g){
+    return elCard(g.id+' · '+g.b+'×'+g.h+' · '+esc(P.floors[g.k].name),plural(g.n,'poutre')+' · L = '+F(g.L,2)+' m · G = '+F(g.G,1)+' kN/m, Q = '+F(g.Q,1)+' kN/m'+(g.cont?' · continue':' · isostatique'),g.res);
+  }).join('')||'<p class="note">Aucune poutre.</p>';
+}
+function ferrDalles(){
+  return R.dList.map(function(g){
+    return elCard(g.id+' · '+esc(P.floors[g.k].name),plural(g.n,'panneau')+' de '+F(g.dx,2)+' × '+F(g.dy,2)+' m',g.res);
+  }).join('')||'<p class="note">Aucune dalle.</p>';
+}
+function ferrSemelles(){
+  return R.sList.map(function(g){
+    var labs=g.items.map(function(ci){return R.cols[ci].id;});
+    return elCard(g.id,plural(g.items.length,'semelle')+' sous '+labelsOf(labs,8)+' · Nser max '+F(g.Nser,0)+' kN',g.res);
+  }).join('')||'<p class="note">Aucune semelle.</p>';
+}
+function ferrLongrines(){
+  if(!R.lgList.length)return '<p class="note">Aucune longrine (option désactivée dans Projet).</p>';
+  return R.lgList.map(function(g){
+    return elCard(g.id+' · longrine '+g.b+'×'+g.h,plural(g.n,'longrine')+' · L = '+F(g.L,2)+' m · '+(g.per?'de rive':'intérieure')+' · Nu max des poteaux '+F(g.Nu,0)+' kN',g.res);
+  }).join('');
+}
+function ferrChainages(){
+  var h='';
+  R.chList.forEach(function(c){h+=elCard(c.id+' · '+c.label,'×'+c.n+' · L = '+F(c.L,2)+' m',c.res);});
+  R.lnList.forEach(function(g){h+=elCard(g.id+' · linteau '+g.b+'×'+g.h,plural(g.n,'linteau')+' · ouverture de '+F(g.w,2)+' m · portée de calcul '+F(g.L,2)+' m',g.res);});
+  return h||'<p class="note">Aucun chaînage ni linteau (options désactivées ou aucune ouverture).</p>';
+}
+function ferrAciers(){
+  var q=R.q,types=['Poteaux','Poutres','Dalles','Semelles','Longrines','Chaînages','Linteaux'],rows='';
+  types.forEach(function(t){
+    Object.keys(q.steelAgg[t]).sort(function(a,b){return a-b;}).forEach(function(phi,ix){
+      var len=q.steelAgg[t][phi];
+      rows+='<tr><td>'+(ix===0?t:'')+'</td><td>HA'+phi+'</td><td class="r">'+F(len,0)+' m</td><td class="r">'+F(0.00617*phi*phi*len,0)+' kg</td></tr>';
+    });
+  });
+  var tot=Object.keys(q.byPhi).sort(function(a,b){return a-b;}).map(function(phi){
+    return '<tr><td>HA'+phi+'</td><td class="r">'+F(q.byPhi[phi].len,0)+' m</td><td class="r">'+F(q.byPhi[phi].kg,0)+' kg</td><td class="r">'+F(q.byPhi[phi].len/12,0)+' barres de 12 m</td></tr>';
+  }).join('');
+  return '<section class="card"><h2>Nomenclature des aciers</h2><div class="tw"><table class="tbl"><thead><tr><th>Élément</th><th>Diamètre</th><th class="r">Longueur</th><th class="r">Poids</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>'+
+    '<section class="card"><h2>Total par diamètre</h2><div class="tw"><table class="tbl"><thead><tr><th>Diamètre</th><th class="r">Longueur</th><th class="r">Poids</th><th class="r">Commande</th></tr></thead><tbody>'+tot+
+    '<tr class="tot"><td>Total</td><td></td><td class="r">'+F(q.kg,0)+' kg</td><td></td></tr>'+
+    '<tr class="tot"><td>Avec chutes ('+P.loss+' %)</td><td></td><td class="r">'+F(q.kgLoss,0)+' kg</td><td></td></tr></tbody></table></div>'+
+    '<p class="note">Ratio : '+F(q.ratio,0)+' kg d\'acier par m³ de béton. Longueurs avec crochets et recouvrements forfaitaires, sans épure de coupe.</p></section>';
+}
+function ferraillage(){
+  if(R.err)return errCard();
+  var tabs=[['poteaux','Poteaux'],['poutres','Poutres'],['dalles','Dalles'],['semelles','Semelles'],['longrines','Longrines'],['chainages','Chaînages'],['aciers','Aciers']];
+  var body={poteaux:ferrPoteaux,poutres:ferrPoutres,dalles:ferrDalles,semelles:ferrSemelles,longrines:ferrLongrines,chainages:ferrChainages,aciers:ferrAciers}[ui.ferr]();
+  return '<section class="card flat"><h2>Plan du ferrailleur</h2>'+chips('ferr',tabs,ui.ferr)+
+    '<p class="note">Calcul à l\'ELU, BAEL 91 révisé 99, fissuration peu préjudiciable. Les barres proposées sont à vérifier par un ingénieur.</p></section>'+body;
+}
+
+function coupes(){
+  if(R.err)return errCard();
+  var dir=ui.cdir,cnt=dir==='x'?R.ny:R.nx;
+  if(ui.cidx>=cnt)ui.cidx=0;
+  var items=[];for(var q=0;q<cnt;q++)items.push([q,dir==='x'?'Axe '+DR.letter(q):'Axe '+(q+1)]);
+  var onLine=R.cols.filter(function(c){return dir==='x'?c.j===ui.cidx:c.i===ui.cidx;}).length;
+  return '<section class="card"><h2>Coupes</h2>'+chips('cdir',[['x','Coupe en long (sens X)'],['y','Coupe en travers (sens Y)']],dir)+chips('cidx',items,ui.cidx)+
+    (onLine<2?'<p class="note warn">Cet axe porte moins de 2 poteaux : la coupe est incomplète.</p>':'')+
+    '<div id="drawing">'+scrollBox(DR.coupe(P,R,dir,ui.cidx))+'</div>'+
+    '<div class="btns"><button class="btn" data-act="svg" data-v="coupe-'+dir+'-'+ui.cidx+'">Exporter en SVG</button></div>'+
+    '<p class="note">Coupe schématique : poteaux, poutres, planchers, semelles et acrotère aux dimensions calculées.</p></section>';
+}
+
+function facOut(){
+  var f=R.fac[ui.fac],net=f.maconn;
+  return '<div id="facOut">'+scrollBox(DR.facade(P,R,ui.fac))+
+    '<div class="stats"><div><b>'+F(f.len,2)+' m</b><span>longueur</span></div><div><b>'+F(f.maconn,1)+' m²</b><span>maçonnerie nette</span></div>'+
+    '<div><b>'+F(f.enduit,1)+' m²</b><span>enduit extérieur</span></div><div><b>'+F(f.fen+f.porte,1)+' m²</b><span>ouvertures</span></div></div></div>';
+}
+function facades(){
+  if(R.err)return errCard();
+  var f=ui.fac,h='<section class="card"><h2>Façades</h2>'+chips('fac',MD.FACS.map(function(x){return [x,MD.FACNAME[x]];}),f)+
+    '<p class="note">Vue de l\'extérieur. Position x mesurée depuis le bord gauche de la façade.</p><div id="drawing"></div>'+
+    '<div class="btns"><button class="btn" data-act="svg" data-v="facade-'+f+'">Exporter en SVG</button></div></section>';
+  h+='<section class="card"><h2>Ouvertures · façade '+MD.FACNAME[f]+'</h2>';
+  var any=false;
+  P.openings.forEach(function(o,ix){
+    if(o.f!==f)return;any=true;var p='openings.'+ix+'.';
+    h+='<div class="lvl"><div class="fields">'+
+      sel('Niveau',p+'k',o.k,P.floors.map(function(fl,q){return [q,fl.name];}))+
+      sel('Type',p+'kind',o.kind,[['fen','Fenêtre'],['porte','Porte']],{str:1})+
+      fld('x (m)',p+'x',o.x,{step:'0.1'})+fld('Largeur (m)',p+'w',o.w,{step:'0.1'})+fld('Hauteur (m)',p+'h',o.h,{step:'0.1'})+
+      (o.kind==='fen'?fld('Allège (m)',p+'sill',o.sill,{step:'0.1'}):'')+'</div>'+
+      '<div class="btns"><button class="btn danger" data-act="delop" data-v="'+o.id+'">Supprimer</button></div></div>';
+  });
+  if(!any)h+='<p class="note">Aucune ouverture sur cette façade.</p>';
+  h+='<div class="btns"><button class="btn" data-act="addop">Ajouter une ouverture</button></div></section>';
+  return h;
+}
+
+function metreRows(){
+  var q=R.q,ft=R.facTot;
+  return [
+    {sec:'Terrassement et fondations'},
+    {k:'fouille',lab:'Fouilles en puits',u:'m³',q:q.fouille},
+    {k:'propre',lab:'Béton de propreté',u:'m³',q:q.propre},
+    {sec:'Ossature en béton armé'},
+    {k:'beton',lab:'Béton armé (semelles, poteaux, poutres, dalles)',u:'m³',q:q.volTot},
+    {k:'acier',lab:'Acier HA, chutes de '+P.loss+' % comprises',u:'kg',q:q.kgLoss},
+    {k:'coffrage',lab:'Coffrage',u:'m²',q:q.cofTot},
+    {sec:'Façades'},
+    {k:'maconn',lab:'Maçonnerie des murs extérieurs',u:'m²',q:ft.maconn},
+    {k:'enduit',lab:'Enduit extérieur',u:'m²',q:ft.enduit},
+    {k:'fen',lab:'Fenêtres',u:'m²',q:ft.fen},
+    {k:'porte',lab:'Portes',u:'m²',q:ft.porte}
+  ];
+}
+function metreTotals(){
+  var rows=metreRows(),ht=0;
+  rows.forEach(function(r){if(r.k){r.pu=P.prices[r.k]||0;r.tot=r.q*r.pu;ht+=r.tot;}});
+  var tva=P.tva?ht*0.2:0;
+  return {rows:rows,ht:ht,tva:tva,ttc:ht+tva};
+}
+function mad(v){return F(v,0)+' MAD';}
+function metre(){
+  if(R.err)return errCard();
+  var T=metreTotals(),q=R.q,h='<section class="card"><h2>Métré et devis estimatif</h2><div class="tw"><table class="tbl"><thead><tr><th>Désignation</th><th class="r">Qté</th><th>Unité</th><th class="r">PU (MAD)</th><th class="r">Montant</th></tr></thead><tbody>';
+  T.rows.forEach(function(r){
+    if(r.sec){h+='<tr class="sec"><td colspan="5">'+r.sec+'</td></tr>';return;}
+    h+='<tr><td>'+r.lab+'</td><td class="r">'+F(r.q,r.q<100?2:0)+'</td><td>'+r.u+'</td><td class="r"><input class="pu" aria-label="Prix unitaire '+esc(r.lab)+'" type="number" inputmode="decimal" data-n="1" data-p="prices.'+r.k+'" value="'+r.pu+'"></td><td class="r" id="tot-'+r.k+'">'+mad(r.tot)+'</td></tr>';
+  });
+  h+='<tr class="tot"><td colspan="4">Total HT</td><td class="r" id="t-ht">'+mad(T.ht)+'</td></tr>'+
+    '<tr><td colspan="4">TVA 20 %</td><td class="r" id="t-tva">'+mad(T.tva)+'</td></tr>'+
+    '<tr class="tot"><td colspan="4">Total TTC</td><td class="r" id="t-ttc">'+mad(T.ttc)+'</td></tr></tbody></table></div>'+
+    '<div class="btns">'+chk('Ajouter la TVA de 20 %','tva',P.tva,false)+'</div>'+
+    '<p class="note">Les prix unitaires sont des valeurs d\'exemple à remplacer par tes prix de chantier. Les cloisons intérieures, la plomberie, l\'électricité et les finitions ne sont pas comptées.</p>'+
+    '<div class="btns"><button class="btn primary" data-act="csv">Exporter en CSV</button><button class="btn" data-act="copy">Copier le récapitulatif</button><button class="btn primary" data-act="tobs">➕ Envoyer au devis Bâtir Sûr</button></div>'+
+    '<p class="note">L\'envoi remplace les lignes déjà envoyées depuis le Dossier BA et les lignes « 📐 plan » de Bâtir Sûr, pour ne pas compter le gros œuvre deux fois. Les cloisons intérieures sont à ajouter dans Bâtir Sûr.</p></section>';
+  h+='<section class="card"><h2>Détail par élément</h2><div class="tw"><table class="tbl"><thead><tr><th>Élément</th><th class="r">Béton (m³)</th><th class="r">Coffrage (m²)</th><th class="r">Acier (kg)</th></tr></thead><tbody>'+
+    [['Semelles','semelles','Semelles'],['Longrines','longrines','Longrines'],['Poteaux','poteaux','Poteaux'],['Poutres','poutres','Poutres'],['Dalles','dalles','Dalles'],['Chaînages','chainages','Chaînages'],['Linteaux','linteaux','Linteaux']].map(function(x){
+      return '<tr><td>'+x[0]+'</td><td class="r">'+F(q.vol[x[1]],2)+'</td><td class="r">'+F(q.cof[x[1]],1)+'</td><td class="r">'+F(q.kgType[x[2]],0)+'</td></tr>';
+    }).join('')+'<tr class="tot"><td>Total</td><td class="r">'+F(q.volTot,2)+'</td><td class="r">'+F(q.cofTot,1)+'</td><td class="r">'+F(q.kg,0)+'</td></tr></tbody></table></div>'+
+    '<p class="note">Ratio d\'acier : '+F(q.ratio,0)+' kg/m³ (chutes comprises).</p></section>';
+  return h;
+}
+
+/* ---------- lecture du plan par Claude ---------- */
+ui.plan={imgs:[],status:'idle',msg:'',result:null,ctl:null};
+function loadPdfjs(){
+  if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+  return new Promise(function(res,rej){
+    var s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload=function(){
+      try{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';res(window.pdfjsLib);}
+      catch(e){rej(e);}
+    };
+    s.onerror=function(){rej(new Error('pdfjs'));};
+    document.head.appendChild(s);
+  });
+}
+function toBlob(cv,type,q){return new Promise(function(res){cv.toBlob(res,type,q);});}
+async function renderPdf(file){
+  var lib=await loadPdfjs(),buf=await file.arrayBuffer(),doc=await lib.getDocument({data:buf}).promise,out=[],n=Math.min(doc.numPages,6),i;
+  for(i=1;i<=n;i++){
+    var pg=await doc.getPage(i),v0=pg.getViewport({scale:1}),sc=Math.min(4,2400/Math.max(v0.width,v0.height)),vp=pg.getViewport({scale:sc});
+    var cv=document.createElement('canvas');cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
+    var cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);
+    await pg.render({canvasContext:cx,viewport:vp}).promise;
+    var b=await toBlob(cv,'image/jpeg',0.92);
+    if(b)out.push({blob:b,label:file.name+(doc.numPages>1?' · page '+i:'')});
+  }
+  return out;
+}
+async function tilesOf(blob){
+  var out=[];
+  try{
+    var bmp=await createImageBitmap(blob),w=bmp.width,h=bmp.height;
+    if(Math.max(w,h)<1800)return out;
+    var tw=Math.round(w*0.54),th=Math.round(h*0.54),xs=[0,w-tw],ys=[0,h-th],r,c;
+    for(r=0;r<2;r++)for(c=0;c<2;c++){
+      var cv=document.createElement('canvas');cv.width=tw;cv.height=th;
+      cv.getContext('2d').drawImage(bmp,xs[c],ys[r],tw,th,0,0,tw,th);
+      var b=await toBlob(cv,'image/jpeg',0.92);
+      if(b)out.push(b);
+    }
+  }catch(e){}
+  return out.length===4?out:[];
+}
+async function planFiles(list){
+  var p=ui.plan,files=Array.prototype.slice.call(list||[]),imgs=[],k;
+  if(!files.length)return;
+  p.status='loading';p.msg='Préparation du plan…';p.result=null;p.cadText='';render();
+  try{
+    for(k=0;k<files.length;k++){
+      var f=files[k];
+      if(/\.(dwg|dxf)$/i.test(f.name)){p.msg='Lecture du fichier AutoCAD… (la première fois, le lecteur DWG se télécharge)';render();var cr=await BSCAD.read(f);imgs=imgs.concat(cr.imgs);p.cadText=cr.text;}
+      else if(f.type==='application/pdf'||/\.pdf$/i.test(f.name)){imgs=imgs.concat(await renderPdf(f));}
+      else if(/^image\//.test(f.type)){imgs.push({blob:f,label:f.name});}
+    }
+  }catch(e){
+    p.status='error';p.msg='Ce fichier ne peut pas être lu ici. Pour un DWG récent, enregistre-le en DXF dans AutoCAD ; sinon exporte le plan en PDF ou en image (JPG, PNG), puis réessaie.';render();return;
+  }
+  if(!imgs.length){p.status='error';p.msg='Choisis un PDF, une image (JPG, PNG) ou un fichier AutoCAD (DWG, DXF).';render();return;}
+  p.imgs.forEach(function(i){if(i.url)URL.revokeObjectURL(i.url);});
+  imgs.forEach(function(i){i.url=URL.createObjectURL(i.blob);});
+  p.imgs=imgs;p.status='ready';p.msg='';render();
+}
+function planPrompt(nPages,hasTiles){
+  return 'Tu es ingénieur structure béton armé au Maroc. Les images jointes sont des plans d\'architecte d\'un bâtiment (plans d\'étage, éventuellement coupes et façades).\n'+
+  'Les '+nPages+' premières images sont les pages entières, dans l\'ordre.'+(hasTiles?' Les 4 images suivantes sont des agrandissements de la première page : haut gauche, haut droit, bas gauche, bas droit. Sers-toi en pour lire les petites cotes.':'')+'\n\n'+
+  'Extrais les données pour dimensionner l\'ossature en béton armé (poteaux, poutres, dalles). Réponds uniquement avec un objet JSON de cette forme :\n'+
+  '{"name":"nom du projet","xs":[0,4,8,11.5],"ys":[0,5,9],"columns":[[0,0],[1,0]],"floors":[{"name":"RDC","h":3.1},{"name":"Étage 1","h":3.0}],'+
+  '"openings":[{"f":"N","k":0,"x":1.2,"w":1.2,"h":1.2,"sill":0.9,"kind":"fen"}],"confidence":"haute","notes":["..."]}\n\n'+
+  'Règles :\n'+
+  '- xs : positions absolues, en mètres, des axes structurels verticaux du plan, de gauche à droite, en commençant par 0. ys : même chose pour les axes horizontaux, de haut en bas, en commençant par 0.\n'+
+  '- Place les axes sous les murs porteurs et aux angles du bâtiment. Ajoute des axes intermédiaires si une portée dépasse 5,5 m.\n'+
+  '- columns : liste de [i,j] avec i = indice dans xs et j = indice dans ys, pour chaque intersection où un poteau est utile (angles, croisements de murs, extrémités de refends). Si le bâtiment n\'est pas rectangulaire (retraits, patio), n\'indique que les intersections qui existent. Ne retire une intersection que si elle est hors du bâtiment ou dans un vide (patio, cour, trémie). Une intersection à l\'intérieur d\'une pièce reste un poteau. Si tout est rectangulaire, liste toutes les intersections.\n'+
+  '- Utilise les cotes écrites sur le plan. Sinon utilise l\'échelle indiquée. Sinon estime avec des repères connus (porte 0,90 m) et mets confidence à "faible".\n'+
+  '- floors : du plus bas au plus haut, h = hauteur d\'étage de plancher fini à plancher fini, en m. Compte aussi la terrasse accessible seulement si elle a un niveau propre ; une simple terrasse sur le dernier étage n\'est pas un niveau.\n'+
+  '- openings : fenêtres et portes extérieures. f = façade parmi N, S, E, O (le Nord est en haut du plan sauf flèche contraire). k = indice du niveau (0 = rez-de-chaussée). x = position du bord gauche de l\'ouverture, en m, depuis le bord gauche de la façade VUE DE L\'EXTÉRIEUR : façade N depuis l\'angle ouest, façade S depuis l\'angle est, façade E depuis l\'angle sud, façade O depuis l\'angle nord. w = largeur, h = hauteur, sill = allège (0 pour une porte). kind = "fen" ou "porte".\n'+
+  '- notes : tes hypothèses et tout ce qui est illisible ou à vérifier, en français, phrases courtes.\n'+
+  'Si une donnée est introuvable, fais ton meilleur choix et dis-le dans notes. Réponds avec le JSON seul.';
+}
+function sanitizePlan(raw){
+  if(!raw||typeof raw!=='object')return {err:'Claude n\'a pas renvoyé de données exploitables. Essaie avec une image plus nette.'};
+  function axes(a){
+    var v=(Array.isArray(a)?a:[]).map(Number).filter(function(x){return isFinite(x);}).sort(function(p,q){return p-q;});
+    if(!v.length)return [];
+    var o=[v[0]],i;for(i=1;i<v.length;i++){if(v[i]-o[o.length-1]>=0.8)o.push(v[i]);}
+    return o.map(function(x){return x-o[0];});
+  }
+  var xs=axes(raw.xs),ys=axes(raw.ys),notes=Array.isArray(raw.notes)?raw.notes.map(String).slice(0,12):[];
+  if(xs.length<2||ys.length<2)return {err:'Les axes du plan n\'ont pas pu être lus. Essaie avec une image plus nette, avec les cotes lisibles.'};
+  if(xs.length>12||ys.length>12)return {err:'Trop d\'axes détectés. Envoie un seul plan d\'étage à la fois.'};
+  function spans(v){return v.slice(1).map(function(x,i){return Math.round((x-v[i])*20)/20;});}
+  var sx=spans(xs),sy=spans(ys),colOff={},on={},i,j,cnt=0,cols=Array.isArray(raw.columns)?raw.columns:null;
+  if(cols&&cols.length){
+    cols.forEach(function(c){
+      if(Array.isArray(c)&&c[0]>=0&&c[0]<xs.length&&c[1]>=0&&c[1]<ys.length&&c[0]%1===0&&c[1]%1===0)on[c[0]+','+c[1]]=1;
+    });
+  }
+  var useAll=!Object.keys(on).length||Object.keys(on).length<4;
+  for(j=0;j<ys.length;j++)for(i=0;i<xs.length;i++){
+    if(useAll||on[i+','+j])cnt++;else colOff[i+','+j]=1;
+  }
+  if(useAll)notes.push('Les poteaux n\'ont pas pu être placés avec certitude : un poteau a été mis à chaque croisement d\'axes.');
+  var fl=(Array.isArray(raw.floors)?raw.floors:[]).slice(0,8).map(function(f,q){
+    var h=Number(f&&f.h);if(!isFinite(h)||h<2.2||h>5)h=3;
+    return {name:String(f&&f.name||(q===0?'RDC':'Étage '+q)).slice(0,24),h:Math.round(h*20)/20};
+  });
+  if(!fl.length){fl=[{name:'RDC',h:3}];notes.push('Les niveaux n\'ont pas été trouvés : un seul niveau de 3,00 m a été supposé.');}
+  var Lx=xs[xs.length-1],Ly=ys[ys.length-1];
+  var ops=(Array.isArray(raw.openings)?raw.openings:[]).filter(function(o){
+    return o&&['N','S','E','O'].indexOf(o.f)>=0&&o.k>=0&&o.k<fl.length&&Number(o.w)>0.3&&Number(o.h)>0.3&&isFinite(Number(o.x));
+  }).slice(0,80).map(function(o){
+    var kind=o.kind==='porte'?'porte':'fen',len=(o.f==='N'||o.f==='S')?Lx:Ly,w=Math.min(Number(o.w),len),x=Math.max(0,Math.min(Number(o.x),len-w));
+    return {f:o.f,k:Math.floor(o.k),x:Math.round(x*20)/20,w:Math.round(w*20)/20,h:Math.round(Number(o.h)*20)/20,sill:kind==='porte'?0:Math.max(0,Math.round((Number(o.sill)||0.9)*20)/20),kind:kind};
+  });
+  return {name:String(raw.name||'Projet du plan').slice(0,60),sx:sx,sy:sy,colOff:colOff,nCols:cnt,floors:fl,openings:ops,conf:String(raw.confidence||'moyenne'),notes:notes};
+}
+function planErr(e){
+  var c=e&&e.code;
+  if(c==='no_key')return 'Aucune clé IA : dans Bâtir Sûr, onglet « 📐 Devis depuis plans », étape 2, collez votre clé Gemini ou Claude, puis relancez.';
+  if(c==='busy')return 'Les serveurs de l\'IA sont surchargés en ce moment (ce n\'est pas votre clé). Réessayez dans quelques minutes, ou changez de service dans Bâtir Sûr.';
+  if(c==='bad_key')return 'La clé IA est refusée : vérifiez-la dans Bâtir Sûr (onglet « 📐 Devis depuis plans », étape 2).';
+  if(c==='api')return 'La lecture a échoué : '+(e.message||'erreur inconnue');
+  if(c==='not_granted')return 'Claude n\'a pas la permission de lire ce plan. Autorise-le quand la fenêtre apparaît, puis relance.';
+  if(c==='rate_limited')return 'Trop de demandes pour le moment. Attends un peu puis relance la lecture.';
+  if(c==='session_expired')return 'Ta session a expiré. Reconnecte-toi à Claude puis relance.';
+  if(c==='image_rejected')return 'Image refusée (type ou taille). Envoie un JPG ou PNG de moins de 20 Mo.';
+  if(c==='invalid_json')return 'Claude n\'a pas pu structurer le plan. Essaie avec une image plus nette, un seul plan d\'étage à la fois.';
+  if(c==='images_unavailable'||c==='sampling_disabled'||c==='capability_disabled'||c==='capability_removed'||c==='not_declared')return 'La lecture de plan n\'est pas disponible dans cette vue.';
+  if(c==='refused')return 'Claude n\'a pas pu traiter ce document. Essaie un autre plan.';
+  return 'La lecture a échoué. Réessaie dans un instant.';
+}
+async function readPlan(){
+  var p=ui.plan;if(!p.imgs.length)return;
+  var sample=await claudeUse('sample');
+  if(!sample){p.status='error';p.msg='La lecture du plan par Claude n\'est pas disponible ici. Ouvre l\'app depuis Claude, ou entre les mesures dans l\'onglet Projet.';render();return;}
+  var lim=null;try{lim=await sample.limits();}catch(e){}
+  if(!lim||!lim.images){p.status='error';p.msg='L\'envoi d\'images à Claude n\'est pas disponible ici.';render();return;}
+  var max=lim.images.maxCount||4,pages=p.imgs.slice(0,max),blobs=pages.map(function(i){return i.blob;}),hasTiles=false;
+  if(max-blobs.length>=4){var t=await tilesOf(pages[0].blob);if(t.length===4){blobs=blobs.concat(t);hasTiles=true;}}
+  var ctl=new AbortController();p.ctl=ctl;p.status='reading';p.msg='';render();
+  try{
+    var raw=await sample.json(planPrompt(pages.length,hasTiles)+(p.cadText?'\n\n'+p.cadText+'\nUtilise en priorité ces cotes, niveaux et surfaces exacts.':''),{images:blobs,modelTier:'complex',signal:ctl.signal});
+    var s=sanitizePlan(raw);
+    if(s.err){p.status='error';p.msg=s.err;}else{p.result=s;p.status='done';}
+  }catch(e){
+    if(e&&e.code==='cancelled'){p.status=p.imgs.length?'ready':'idle';p.msg='';}
+    else{p.status='error';p.msg=planErr(e);}
+  }
+  p.ctl=null;render();
+}
+function applyPlan(){
+  var s=ui.plan.result;if(!s)return;
+  var nf=s.floors.length;
+  P.name=s.name;P.axesX=s.sx;P.axesY=s.sy;P.colOff=s.colOff;
+  P.floors=s.floors.map(function(f,q){
+    var last=q===nf-1,old=P.floors[q]||{};
+    return {name:f.name,h:f.h,e:old.e||15,g:last?2.5:1.5,q:last?1:1.5,ca:old.ca||25,cb:old.cb||25,bb:old.bb||25,bh:old.bh||45};
+  });
+  P.beamAuto=true;
+  P.openings=s.openings.map(function(o){return {id:P.oseq++,f:o.f,k:o.k,x:o.x,w:o.w,h:o.h,sill:o.sill,kind:o.kind};});
+  ui.floor=0;ui.cidx=0;ui.fac='N';
+  save();recompute();tab='resume';render();window.scrollTo(0,0);
+  try{history.replaceState(null,'','#resume');}catch(err){}
+  toast('Plan appliqué : tout est recalculé');
+}
+
+function planView(){
+  var p=ui.plan,h='<section class="card"><h2>Plan de l\'architecte</h2>'+
+    '<p class="note">Envoie le plan (PDF, image ou fichier AutoCAD DWG / DXF). L\'IA lit les axes, les distances, les niveaux et les ouvertures, puis l\'app calcule le coffrage, le ferraillage BAEL, les coupes, les façades et le métré.</p>'+
+    '<div class="btns"><label class="btn primary filebtn" for="planFile">Choisir le plan</label>'+
+    '<input id="planFile" type="file" accept="image/*,application/pdf,.dwg,.dxf" multiple hidden>'+
+    (p.imgs.length&&p.status!=='reading'?'<button class="btn primary" data-act="readplan">Lire le plan et tout calculer</button>':'')+
+    (p.status==='reading'?'<button class="btn" data-act="stopplan">Arrêter</button>':'')+'</div>';
+  if(p.imgs.length)h+='<div class="thumbs">'+p.imgs.map(function(i){return '<figure><img src="'+i.url+'" alt="'+esc(i.label)+'"><figcaption>'+esc(i.label)+'</figcaption></figure>';}).join('')+'</div>';
+  if(p.status==='loading')h+='<p class="note strong">'+esc(p.msg)+'</p>';
+  if(p.status==='reading')h+='<p class="note strong" role="status">L\'IA lit le plan… Cela prend en général de 30 secondes à 2 minutes.</p>';
+  if(p.status==='error')h+='<p class="warn" role="alert">'+esc(p.msg)+'</p>';
+  h+='<p class="note">Pour une lecture fiable : un plan d\'étage net par image, avec les cotes lisibles. Plus la page est grande, plus il faut envoyer des images zoomées sur la partie utile.</p></section>';
+  if(p.status==='done'&&p.result){
+    var s=p.result,tx=0,ty=0;s.sx.forEach(function(v){tx+=v;});s.sy.forEach(function(v){ty+=v;});
+    h+='<section class="card"><h2>Ce que Claude a lu</h2><p class="'+(s.conf==='haute'?'ok':'note strong')+'">Confiance : '+esc(s.conf)+'</p>'+
+      '<table class="kv"><tbody>'+
+      '<tr><th>Projet</th><td>'+esc(s.name)+'</td></tr>'+
+      '<tr><th>Axes sens X</th><td>'+s.sx.map(function(v){return F(v,2);}).join(' · ')+' m</td></tr>'+
+      '<tr><th>Axes sens Y</th><td>'+s.sy.map(function(v){return F(v,2);}).join(' · ')+' m</td></tr>'+
+      '<tr><th>Emprise</th><td>'+F(tx,2)+' × '+F(ty,2)+' m</td></tr>'+
+      '<tr><th>Poteaux</th><td>'+s.nCols+'</td></tr>'+
+      '<tr><th>Niveaux</th><td>'+s.floors.map(function(f){return esc(f.name)+' ('+F(f.h,2)+' m)';}).join(', ')+'</td></tr>'+
+      '<tr><th>Ouvertures</th><td>'+s.openings.length+'</td></tr></tbody></table>'+
+      (s.notes.length?'<h3>À vérifier</h3><ul class="alerts">'+s.notes.map(function(n){return '<li>'+esc(n)+'</li>';}).join('')+'</ul>':'')+
+      '<p class="note">Compare ces mesures avec ton plan avant de les utiliser. Tu pourras tout corriger ensuite dans Projet, Structure et Façades.</p>'+
+      '<div class="btns"><button class="btn primary" data-act="applyplan">Utiliser ces données</button></div></section>';
+  }
+  h+='<section class="card"><h2>Pas de plan lisible ?</h2><p class="note">Entre les distances entre axes et les niveaux à la main.</p><div class="btns"><button class="btn" data-act="goto" data-v="projet">Saisir les mesures</button></div></section>';
+  return h;
+}
+
+function rv(res,label){var r=(res.rows||[]).filter(function(x){return x[0]===label;})[0];return r?r[1]:'—';}
+function resumeView(){
+  if(R.err)return errCard();
+  var nb=0,nd=0,ns=0,nlg=0,nln=0;
+  R.lgList.forEach(function(g){nlg+=g.n;});R.lnList.forEach(function(g){nln+=g.n;});
+  R.bList.forEach(function(g){nb+=g.n;});R.dList.forEach(function(g){nd+=g.n;});R.sList.forEach(function(g){ns+=g.items.length;});
+  var q=R.q,h='<section class="card"><h2>Résultat · '+esc(P.name)+'</h2><div class="stats">'+
+    '<div><b>'+R.cols.length+'</b><span>poteaux (sur '+plural(P.floors.length,'niveau').replace('niveaus','niveaux')+')</span></div>'+
+    '<div><b>'+nb+'</b><span>poutres au total</span></div><div><b>'+nd+'</b><span>dalles au total</span></div><div><b>'+ns+'</b><span>semelles</span></div><div><b>'+nlg+'</b><span>longrines</span></div><div><b>'+nln+'</b><span>linteaux</span></div>'+
+    '<div><b>'+F(q.volTot,1)+' m³</b><span>béton armé</span></div><div><b>'+F(q.kgLoss,0)+' kg</b><span>acier HA</span></div></div>'+
+    '<p class="note">Dimensionnement à l\'ELU, BAEL 91 révisé 99. À faire valider par un ingénieur avant le chantier.</p></section>';
+  h+='<section class="card"><h2>Poteaux</h2><div class="tw"><table class="tbl nw"><thead><tr><th>Niveau</th><th class="r">Nombre</th><th>Section</th><th>Armatures</th><th>Cadres</th><th class="r">Nu max</th></tr></thead><tbody>'+
+    R.cList.map(function(g){return '<tr><td>'+esc(P.floors[g.k].name)+'</td><td class="r">'+g.items.length+'</td><td>'+g.a+'×'+g.b+' cm</td><td>'+esc(rv(g.rep.res,'Armatures longitudinales retenues'))+'</td><td>'+esc(rv(g.rep.res,'Cadres'))+'</td><td class="r">'+F(g.rep.Nu,0)+' kN</td></tr>';}).join('')+
+    '</tbody></table></div></section>';
+  h+='<section class="card"><h2>Poutres</h2><div class="tw"><table class="tbl nw"><thead><tr><th>Repère</th><th>Niveau</th><th class="r">Nombre</th><th>Section</th><th class="r">Portée</th><th>Armatures inférieures</th><th>Chapeaux</th><th>Cadres</th></tr></thead><tbody>'+
+    R.bList.map(function(g){return '<tr><td><b>'+g.id+'</b></td><td>'+esc(P.floors[g.k].name)+'</td><td class="r">'+g.n+'</td><td>'+g.b+'×'+g.h+' cm</td><td class="r">'+F(g.L,2)+' m</td><td>'+esc(rv(g.res,'Armatures inférieures retenues'))+'</td><td>'+esc(rv(g.res,'Chapeaux sur appuis (Ma = 0,5·M0)'))+'</td><td>'+esc(rv(g.res,'Armatures transversales'))+'</td></tr>';}).join('')+
+    '</tbody></table></div></section>';
+  h+='<section class="card"><h2>Dalles</h2><div class="tw"><table class="tbl nw"><thead><tr><th>Repère</th><th>Niveau</th><th class="r">Nombre</th><th>Dimensions</th><th class="r">Épaisseur</th><th>Sens lx</th><th>Sens ly</th></tr></thead><tbody>'+
+    R.dList.map(function(g){return '<tr><td><b>'+g.id+'</b></td><td>'+esc(P.floors[g.k].name)+'</td><td class="r">'+g.n+'</td><td>'+F(g.dx,2)+' × '+F(g.dy,2)+' m</td><td class="r">'+g.e+' cm</td><td>'+esc(rv(g.res,'Sens lx (inférieur)'))+'</td><td>'+esc(rv(g.res,'Sens ly (inférieur)'))+'</td></tr>';}).join('')+
+    '</tbody></table></div></section>';
+  h+='<section class="card"><h2>Semelles</h2><div class="tw"><table class="tbl nw"><thead><tr><th>Repère</th><th class="r">Nombre</th><th>A × B</th><th>Hauteur</th><th>Nappe // A</th><th>Nappe // B</th></tr></thead><tbody>'+
+    R.sList.map(function(g){var geo=g.res.geo;return '<tr><td><b>'+g.id+'</b></td><td class="r">'+g.items.length+'</td><td>'+F(geo.A,2)+' × '+F(geo.B,2)+' m</td><td>'+F(geo.h*100,0)+' cm</td><td>'+esc(rv(g.res,'Nappe // A retenue'))+'</td><td>'+esc(rv(g.res,'Nappe // B retenue'))+'</td></tr>';}).join('')+
+    '</tbody></table></div></section>';
+  h+='<section class="card"><h2>Longrines</h2>'+(R.lgList.length?'<div class="tw"><table class="tbl nw"><thead><tr><th>Repère</th><th class="r">Nombre</th><th>Section</th><th class="r">Portée</th><th>Armatures haut et bas</th><th>Cadres</th></tr></thead><tbody>'+
+    R.lgList.map(function(g){return '<tr><td><b>'+g.id+'</b></td><td class="r">'+g.n+'</td><td>'+g.b+'×'+g.h+' cm</td><td class="r">'+F(g.L,2)+' m</td><td>'+esc(rv(g.res,'Armatures haut et bas retenues'))+'</td><td>'+esc(rv(g.res,'Cadres'))+'</td></tr>';}).join('')+
+    '</tbody></table></div>':'<p class="note">Option désactivée.</p>')+'</section>';
+  h+='<section class="card"><h2>Chaînages et linteaux</h2><div class="tw"><table class="tbl nw"><thead><tr><th>Repère</th><th>Désignation</th><th class="r">Nombre</th><th>Section</th><th class="r">Longueur</th><th>Armatures</th></tr></thead><tbody>'+
+    R.chList.map(function(c){return '<tr><td><b>'+c.id+'</b></td><td>'+(c.kind==='h'?'Chaînage horizontal':'Chaînage vertical')+'</td><td class="r">'+c.n+'</td><td>'+c.b+'×'+c.h+' cm</td><td class="r">'+F(c.L,2)+' m</td><td>'+esc(rv(c.res,'Armatures minimales'))+' · cadres HA6 e = 20 cm</td></tr>';}).join('')+
+    R.lnList.map(function(g){return '<tr><td><b>'+g.id+'</b></td><td>Linteau, ouverture '+F(g.w,2)+' m</td><td class="r">'+g.n+'</td><td>'+g.b+'×'+g.h+' cm</td><td class="r">'+F(g.L,2)+' m</td><td>'+esc(rv(g.res,'Armatures inférieures retenues'))+'</td></tr>';}).join('')+
+    '</tbody></table></div></section>';
+  if(R.warns.length)h+='<section class="card"><h2>Alertes</h2><ul class="alerts">'+R.warns.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul></section>';
+  h+='<section class="card"><h2>Suite</h2><div class="btns"><button class="btn" data-act="goto" data-v="coffrage">Plan de coffrage</button><button class="btn" data-act="goto" data-v="ferraillage">Plan du ferrailleur</button><button class="btn" data-act="goto" data-v="coupes">Coupes</button><button class="btn" data-act="goto" data-v="facades">Façades</button><button class="btn" data-act="goto" data-v="metre">Métré et devis</button></div></section>';
+  return h;
+}
+
+var VIEWS={plan:planView,resume:resumeView,projet:projet,structure:structure,coffrage:coffrage,ferraillage:ferraillage,coupes:coupes,facades:facades,metre:metre};
+function render(){
+  document.querySelectorAll('.tabs button').forEach(function(b){b.setAttribute('aria-selected',String(b.dataset.tab===tab));});
+  try{view.innerHTML=VIEWS[tab]();}catch(e){view.innerHTML='<section class="card"><p class="warn">Erreur d\'affichage : '+esc(e.message)+'</p></section>';}
+  if(tab==='facades'&&!R.err)$('#drawing').innerHTML=facOutInner();
+}
+function facOutInner(){return facOut();}
+
+/* ---------- live updates ---------- */
+var LIVE={
+  projet:function(){var g=$('#gridInfo');if(g)g.textContent=gridInfo();},
+  facades:function(){if(R.err)return;var d=$('#drawing');if(d)d.innerHTML=facOut();},
+  metre:function(){
+    if(R.err)return;var T=metreTotals();
+    T.rows.forEach(function(r){if(r.k){var e=$('#tot-'+r.k);if(e)e.textContent=mad(r.tot);}});
+    $('#t-ht').textContent=mad(T.ht);$('#t-tva').textContent=mad(T.tva);$('#t-ttc').textContent=mad(T.ttc);
+  }
+};
+function dirty(needRender){
+  save();recompute();
+  if(needRender){render();return;}
+  if(LIVE[tab])LIVE[tab]();
+}
+
+/* ---------- events ---------- */
+function onField(e){
+  var t=e.target;
+  if(t.dataset.axes){
+    var a=MD.parseSpans(t.value);
+    if(a.length){P['axes'+t.dataset.axes]=a;dirty();}
+    return;
+  }
+  if(!t.dataset.p)return;
+  var v;
+  if(t.type==='checkbox')v=t.checked;
+  else if(t.dataset.n){v=parseFloat(String(t.value).replace(',','.'));if(!isFinite(v))return;}
+  else v=t.value;
+  setPath(P,t.dataset.p,v);
+  var re=!!t.dataset.rerender||(t.tagName==='SELECT'&&tab==='facades');
+  dirty(re);
+}
+view.addEventListener('input',onField);
+view.addEventListener('change',function(e){
+  if(e.target.id==='planFile'){planFiles(e.target.files);e.target.value='';return;}
+  if(e.target.tagName==='SELECT'||e.target.type==='checkbox')onField(e);
+});
+
+function claudeUse(name){
+  try{if(window.claude&&window.claude.use)return Promise.resolve(window.claude.use(name)).then(function(x){return x||BSHIM[name]||null;},function(){return BSHIM[name]||null;});}catch(e){}
+  return Promise.resolve(BSHIM[name]||null);
+}
+/* ---------- Bâtir Sûr : téléchargement et lecture IA avec la clé de l'utilisateur ---------- */
+var BSAI={
+  key:function(p){try{return localStorage.getItem('bs_key_'+p)||'';}catch(e){return '';}},
+  conf:function(){
+    var a={};try{a=(JSON.parse(localStorage.getItem('bs_plan')||'{}').ai)||{};}catch(e){}
+    var prov=a.prov||'gemini';
+    if(!BSAI.key(prov))prov=BSAI.key('gemini')?'gemini':BSAI.key('claude')?'claude':prov;
+    return {prov:prov,key:BSAI.key(prov),model:((a.prov===prov&&a.model)||(prov==='gemini'?'gemini-3.8-flash':'claude-sonnet-5-5')).trim()};
+  },
+  b64:function(b){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(String(r.result).split(',')[1]);};r.onerror=rej;r.readAsDataURL(b);});},
+  err:function(code,msg,status){var e=new Error(msg||code);e.code=code;e.status=status;return e;},
+  call:async function(c,prompt,imgs,signal){
+    var r,j;
+    if(c.prov==='gemini'){
+      var parts=[{text:prompt}].concat(imgs.map(function(d){return {inline_data:{mime_type:d.t,data:d.b}};}));
+      r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(c.model.replace(/^models\//,''))+':generateContent?key='+encodeURIComponent(c.key),
+        {method:'POST',signal:signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:parts}],generationConfig:{temperature:0.1,responseMimeType:'application/json'}})});
+      j=await r.json().catch(function(){return {};});
+    }else{
+      var content=imgs.map(function(d){return {type:'image',source:{type:'base64',media_type:d.t,data:d.b}};});content.push({type:'text',text:prompt});
+      r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',signal:signal,headers:{'content-type':'application/json','x-api-key':c.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:c.model,max_tokens:8000,messages:[{role:'user',content:content}]})});
+      j=await r.json().catch(function(){return {};});
+    }
+    if(!r.ok)throw BSAI.err('http',(j.error&&j.error.message)||('Erreur '+r.status),r.status);
+    return c.prov==='gemini'?((((j.candidates||[])[0]||{}).content||{}).parts||[]).map(function(x){return x.text||'';}).join(''):(j.content||[]).filter(function(x){return x.type==='text';}).map(function(x){return x.text;}).join('');
+  },
+  busy:function(e){return [500,502,503,504,529].indexOf(e.status)>=0||/high demand|overload|unavailable|try again later|temporar/i.test(e.message);},
+  alts:async function(c,tried){
+    try{var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key='+encodeURIComponent(c.key)),j=await r.json();
+      var v=function(m){return parseFloat((m.match(/gemini-(\d+(?:\.\d+)?)/)||[0,0])[1]);};
+      return (j.models||[]).filter(function(m){return (m.supportedGenerationMethods||[]).indexOf('generateContent')>=0;}).map(function(m){return m.name.replace('models/','');})
+        .filter(function(m){return /^gemini/.test(m)&&/flash|pro/.test(m)&&!/image|tts|live|audio|embed|robotics|computer/.test(m)&&tried.indexOf(m)<0;})
+        .sort(function(x,y){return ((/lite/.test(x)?1:/pro/.test(x)?2:0)*100-v(x))-((/lite/.test(y)?1:/pro/.test(y)?2:0)*100-v(y));}).slice(0,3);
+    }catch(e){return [];}
+  }
+};
+var BSHIM={
+  downloads:{save:async function(o){
+    var b=o.data instanceof Blob?o.data:new Blob([o.data],{type:/\.csv$/.test(o.filename)?'text/csv;charset=utf-8':/\.svg$/.test(o.filename)?'image/svg+xml':'application/octet-stream'});
+    var u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=o.filename;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},4000);
+  }},
+  sample:{
+    limits:async function(){return {images:{maxCount:8}};},
+    json:async function(prompt,o){
+      var c=BSAI.conf();if(!c.key)throw BSAI.err('no_key');
+      var imgs=await Promise.all((o.images||[]).map(async function(b){return {t:b.type||'image/jpeg',b:await BSAI.b64(b)};}));
+      prompt+='\n\nRéponds UNIQUEMENT avec un objet JSON valide, sans texte autour.';
+      var tried=[],waits=[8,20],alts=null,last=null;
+      for(var step=0;step<8;step++){
+        try{tried.push(c.model);var t=String(await BSAI.call(c,prompt,imgs,o.signal)).replace(/```(json)?/g,''),a=t.indexOf('{'),z=t.lastIndexOf('}');
+          if(a<0||z<a)throw BSAI.err('invalid_json');
+          try{return JSON.parse(t.slice(a,z+1));}catch(e){throw BSAI.err('invalid_json');}
+        }catch(e){
+          if(e&&e.name==='AbortError')throw BSAI.err('cancelled');
+          if(e.code==='invalid_json')throw e;
+          last=e;var sug=String(e.message).match(/use\s+(?:models\/)?([a-z0-9][\w.-]*[a-z0-9])/i);
+          if(sug&&/model/i.test(e.message)&&tried.indexOf(sug[1])<0){c.model=sug[1];continue;}
+          if(!BSAI.busy(e))break;
+          if(waits.length){await new Promise(function(r){setTimeout(r,waits.shift()*1000);});continue;}
+          if(c.prov!=='gemini')break;
+          if(alts===null)alts=await BSAI.alts(c,tried);
+          var nx=alts.shift();if(!nx)break;c.model=nx;waits=[6];
+        }
+      }
+      if(last&&BSAI.busy(last))throw BSAI.err('busy',last.message);
+      if(last&&/quota|429|exhausted|rate/i.test(last.message))throw BSAI.err('rate_limited');
+      if(last&&/api key|invalid|permission|401|403/i.test(last.message))throw BSAI.err('bad_key',last.message);
+      throw BSAI.err('api',last?last.message:'');
+    }
+  }
+};
+function sendToBS(){
+  var T=metreTotals(),lots={fouille:'Terrassement',propre:'Gros œuvre',beton:'Gros œuvre',acier:'Gros œuvre',coffrage:'Gros œuvre',maconn:'Maçonnerie',enduit:'Enduits & chapes',fen:'Menuiserie',porte:'Menuiserie'};
+  var dev=[];try{dev=JSON.parse(localStorage.getItem('bs_devis')||'[]')||[];}catch(e){}
+  var nPlan=dev.filter(function(d){return d.src==='plan';}).length,n=0;
+  dev=dev.filter(function(d){return d.src!=='dba'&&d.src!=='plan';});
+  T.rows.forEach(function(r){if(r.k&&r.q>0){n++;dev.push({l:r.lab,lot:lots[r.k]||'Gros œuvre',q:Math.round(r.q*100)/100,u:r.u,pu:r.pu||0,src:'dba'});}});
+  try{localStorage.setItem('bs_devis',JSON.stringify(dev));}catch(e){toast('Enregistrement impossible sur cet appareil');return;}
+  try{if(window.parent&&window.parent!==window)window.parent.postMessage({type:'bs-devis'},location.origin);}catch(e){}
+  toast(n+' lignes envoyées au devis Bâtir Sûr'+(nPlan?' ('+nPlan+' lignes 📐 plan remplacées)':''));
+}
+async function saveFile(filename,data){
+  var d=await claudeUse('downloads');
+  if(!d){toast('Le téléchargement n\'est pas disponible ici.');return;}
+  try{await d.save({filename:filename,data:data});toast('Fichier prêt');}
+  catch(err){if(!err||err.code!=='declined')toast('Le fichier n\'a pas pu être enregistré.');}
+}
+function slug(s){return String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'projet';}
+function csvText(){
+  var T=metreTotals(),out=[['Désignation','Unité','Quantité','Prix unitaire (MAD)','Montant (MAD)']];
+  T.rows.forEach(function(r){if(r.k)out.push([r.lab,r.u,num(r.q),num(r.pu),num(r.tot)]);});
+  out.push(['Total HT','','','',num(T.ht)],['TVA 20 %','','','',num(T.tva)],['Total TTC','','','',num(T.ttc)]);
+  return '﻿'+out.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(';');}).join('\r\n');
+}
+function summaryText(){
+  var T=metreTotals(),q=R.q,l=[P.name,'',plural(R.cols.length,'poteau')+' · '+plural(R.bg.length,'poutre')+'/niveau · '+plural(R.pg.length,'dalle')+'/niveau',''];
+  T.rows.forEach(function(r){if(r.k)l.push(r.lab+' : '+F(r.q,2)+' '+r.u+' × '+F(r.pu,2)+' = '+mad(r.tot));});
+  l.push('','Total HT : '+mad(T.ht),'Total TTC : '+mad(T.ttc),'Acier : '+F(q.ratio,0)+' kg/m³');
+  return l.join('\n');
+}
+var SVGLIGHT={canvas:'#FFFFFF',ink:'#17242D',ink2:'#566873',slab:'#EEF3F5',beam:'#D6EFE9',axis:'#C0544A',wall:'#E7ECEE',concrete:'#DDE3E6',glass:'#CFE6EE',door:'#D8C3A5',danger:'#B4381A',steel:'#B4381A',steel2:'#1F5FA8'};
+function svgCss(c){
+  return '.dwg{display:block;width:100%;height:auto}.dwg *{vector-effect:non-scaling-stroke}'+
+  '.dwg .hln{stroke:'+c.ink2+';stroke-width:.012px;vector-effect:none}'+
+  '.dwg .t{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;paint-order:stroke;stroke:'+c.canvas+';stroke-width:3px;stroke-linejoin:round}'+
+  '.dwg .tl{fill:'+c.ink+'}.dwg .dimt{fill:'+c.ink2+'}.dwg .strong{font-weight:600}'+
+  '.dwg .slab{fill:'+c.slab+';stroke:none}.dwg .beam{fill:'+c.beam+';stroke:'+c.ink2+';stroke-width:1px;stroke-dasharray:5 3}'+
+  '.dwg .colm{fill:'+c.ink+';stroke:'+c.ink+';stroke-width:1px}.dwg .ax{stroke:'+c.axis+';stroke-width:1px;stroke-dasharray:14 3 2 3}'+
+  '.dwg .bub{fill:'+c.canvas+';stroke:'+c.ink2+';stroke-width:1.2px}.dwg .dim{stroke:'+c.ink2+';stroke-width:1px;fill:none}'+
+  '.dwg .cut{fill:url(#hc);stroke:'+c.ink+';stroke-width:1.4px}.dwg .soil{fill:url(#sl);stroke:none}.dwg .gl{stroke:'+c.ink+';stroke-width:2.4px}'+
+  '.dwg .lvl{stroke:'+c.ink2+';stroke-width:1px;stroke-dasharray:6 4}.dwg .wall,.dwg .wall2{fill:'+c.wall+';stroke:'+c.ink+';stroke-width:1.2px}'+
+  '.dwg .foot{fill:'+c.concrete+';stroke:'+c.ink+';stroke-width:1.2px}.dwg .colf{fill:'+c.concrete+';stroke:'+c.ink2+';stroke-width:1px}.dwg .fen{fill:'+c.glass+';stroke:'+c.ink+';stroke-width:1.4px}'+
+  '.dwg .door{fill:'+c.door+';stroke:'+c.ink+';stroke-width:1.4px}.dwg .bad{stroke:'+c.danger+';stroke-width:2.5px}'+
+  '.dwg .ln2{stroke:'+c.ink+';stroke-width:1px}.dwg .knob{fill:'+c.ink+'}.dwg .conc{fill:'+c.concrete+';stroke:'+c.ink+';stroke-width:1.6px}'+
+  '.dwg .stir{fill:none;stroke:'+c.steel+';stroke-width:1.8px}.dwg .bar{fill:'+c.steel+';stroke:none}'+
+  '.dwg .barl{stroke:'+c.steel+';stroke-width:1.5px}.dwg .barl2{stroke:'+c.steel2+';stroke-width:1.5px}';
+}
+function varMap(){
+  var o={};Object.keys(SVGLIGHT).forEach(function(k){o[k]='var(--d-'+k+')';});return o;
+}
+function exportSvg(name){
+  var el=$('#drawing svg');if(!el){toast('Aucun dessin à exporter.');return;}
+  var vb=el.getAttribute('viewBox').split(' ').map(parseFloat),w=1600,h=Math.round(w*vb[3]/vb[2]);
+  var s=el.outerHTML.replace('<svg class="dwg"','<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" class="dwg"').replace(/ style="[^"]*"/,'');
+  var i=s.indexOf('>')+1;
+  s=s.slice(0,i)+'<style>'+svgCss(SVGLIGHT)+'</style><rect x="'+vb[0]+'" y="'+vb[1]+'" width="'+vb[2]+'" height="'+vb[3]+'" fill="'+SVGLIGHT.canvas+'" stroke="none"/>'+s.slice(i);
+  saveFile(slug(P.name)+'-'+name+'.svg',s);
+}
+function freshProject(kind){
+  if(kind==='example'){P=MD.defaultProject();}
+  else{
+    P=MD.defaultProject();P.name='Nouveau projet';P.axesX=[4,4];P.axesY=[4];P.openings=[];
+    P.floors=[{name:'RDC',h:3,e:15,g:1.5,q:1.5,ca:25,cb:25,bb:25,bh:40}];
+  }
+  ui.floor=0;ui.cidx=0;ui.confirm='';save();recompute();
+}
+view.addEventListener('click',function(e){
+  var b=e.target.closest('[data-act]');if(!b)return;
+  var a=b.dataset.act,v=b.dataset.v;
+  if(a==='floor'){ui.floor=+v;render();}
+  else if(a==='ferr'){ui.ferr=v;render();}
+  else if(a==='cdir'){ui.cdir=v;ui.cidx=0;render();}
+  else if(a==='cidx'){ui.cidx=+v;render();}
+  else if(a==='fac'){ui.fac=v;render();}
+  else if(a==='node'){if(P.colOff[v])delete P.colOff[v];else P.colOff[v]=1;dirty(true);}
+  else if(a==='addfloor'){var l=P.floors[P.floors.length-1];P.floors.push(Object.assign({},l,{name:'Étage '+P.floors.length}));dirty(true);}
+  else if(a==='delfloor'){P.floors.splice(+v,1);P.openings=P.openings.filter(function(o){return o.k<P.floors.length;});dirty(true);}
+  else if(a==='addop'){P.openings.push({id:P.oseq++,f:ui.fac,k:0,x:0.5,w:1.2,h:1.2,sill:0.9,kind:'fen'});dirty(true);}
+  else if(a==='delop'){P.openings=P.openings.filter(function(o){return o.id!==+v;});dirty(true);}
+  else if(a==='reset'){
+    if(ui.confirm===v){freshProject(v);render();toast(v==='example'?'Exemple rechargé':'Projet vide créé');}
+    else{ui.confirm=v;render();setTimeout(function(){if(ui.confirm===v){ui.confirm='';if(tab==='projet')render();}},5000);}
+  }
+  else if(a==='readplan'){readPlan();}
+  else if(a==='stopplan'){if(ui.plan.ctl)ui.plan.ctl.abort();}
+  else if(a==='applyplan'){applyPlan();}
+  else if(a==='goto'){tab=v;render();window.scrollTo(0,0);}
+  else if(a==='tobs'){sendToBS();}
+  else if(a==='csv'){saveFile(slug(P.name)+'-metre.csv',csvText());}
+  else if(a==='svg'){exportSvg(v);}
+  else if(a==='copy'){
+    var txt=summaryText();
+    try{navigator.clipboard.writeText(txt).then(function(){toast('Récapitulatif copié');},function(){toast('Copie refusée par le navigateur.');});}
+    catch(err){toast('Copie refusée par le navigateur.');}
+  }
+});
+document.querySelector('.tabs').addEventListener('click',function(e){
+  var b=e.target.closest('button[data-tab]');if(!b)return;
+  tab=b.dataset.tab;ui.confirm='';render();window.scrollTo(0,0);
+  try{history.replaceState(null,'','#'+tab);}catch(err){}
+});
+
+/* ---------- boot ---------- */
+(function(){
+  var st=document.createElement('style');st.textContent=svgCss(varMap());document.head.appendChild(st);
+  P=load();recompute();
+  var h=(location.hash||'').slice(1);if(VIEWS[h])tab=h;
+  render();
+})();
+})();
+
+</script>
+
+</body></html>
