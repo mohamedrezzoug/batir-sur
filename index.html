@@ -1628,7 +1628,7 @@ function renderPlanFiles() {
 
 /* ---------- lecture : IA ou texte ---------- */
 const AI = {
-  gemini: { n: 'Google Gemini (clé gratuite)', model: 'gemini-2.5-flash', link: 'https://aistudio.google.com/apikey', keyHelp: 'Créez une clé gratuite sur aistudio.google.com → « Get API key ».' },
+  gemini: { n: 'Google Gemini (clé gratuite)', model: 'gemini-3.8-flash', link: 'https://aistudio.google.com/apikey', keyHelp: 'Créez une clé gratuite sur aistudio.google.com → « Get API key ».' },
   claude: { n: 'Anthropic Claude', model: 'claude-sonnet-5-5', link: 'https://console.anthropic.com/settings/keys', keyHelp: 'Clé API payante créée sur console.anthropic.com.' }
 };
 const aiKey = p => { try { return localStorage.getItem('bs_key_' + p) || ''; } catch (e) { return ''; } };
@@ -1666,47 +1666,79 @@ function parseJSON(t) {
   if (a < 0 || b < a) throw new Error('Réponse sans JSON');
   return JSON.parse(t.slice(a, b + 1));
 }
+async function aiCall(prov, key, model, kinds, b64) {
+  let r, j;
+  if (prov === 'gemini') {
+    const parts = [{ text: aiPrompt(kinds) }];
+    kinds.forEach((k, i) => { parts.push({ text: 'Fichier : ' + (k === 'archi' ? 'plan d\'architecte' : 'plan de béton armé') }); parts.push({ inline_data: { mime_type: 'application/pdf', data: b64[i] } }); });
+    r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model.replace(/^models\//, '')) + ':generateContent?key=' + encodeURIComponent(key), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0.1, responseMimeType: 'application/json' } })
+    });
+    j = await r.json().catch(() => ({}));
+  } else {
+    const content = kinds.map((k, i) => ({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64[i] }, title: k === 'archi' ? 'Plan d\'architecte' : 'Plan de béton armé' }));
+    content.push({ type: 'text', text: aiPrompt(kinds) });
+    r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model, max_tokens: 8000, messages: [{ role: 'user', content }] })
+    });
+    j = await r.json().catch(() => ({}));
+  }
+  if (!r.ok) { const e = new Error((j.error && j.error.message) || ('Erreur ' + r.status)); e.status = r.status; throw e; }
+  return prov === 'gemini' ? (((j.candidates || [])[0] || {}).content ? j.candidates[0].content.parts.map(p => p.text || '').join('') : '')
+    : (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
+}
+const isBusy = e => [500, 502, 503, 504, 529].includes(e.status) || /high demand|overload|unavailable|try again later|temporar/i.test(e.message);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function geminiAlternatives(key, tried) {
+  try {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + encodeURIComponent(key)), j = await r.json();
+    const ms = (j.models || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent')).map(m => m.name.replace('models/', ''))
+      .filter(m => /^gemini/.test(m) && /flash|pro/.test(m) && !/image|tts|live|audio|embed|thinking-exp|robotics|computer/.test(m) && !tried.includes(m));
+    const ver = m => parseFloat((m.match(/gemini-(\d+(?:\.\d+)?)/) || [0, 0])[1]);
+    const rank = m => (/lite/.test(m) ? 1 : /pro/.test(m) ? 2 : 0) * 100 - ver(m) + (/preview|exp/.test(m) ? 0.5 : 0);
+    return ms.sort((x, y) => rank(x) - rank(y)).slice(0, 3);
+  } catch (e) { return []; }
+}
 async function aiRun() {
-  const A = S.plan.ai, prov = A.prov, key = aiKey(prov), model = (A.model || AI[prov].model).trim();
+  const A = S.plan.ai, prov = A.prov, key = aiKey(prov);
+  let model = (A.model || AI[prov].model).trim();
   const kinds = Object.keys(PLAN_KINDS).filter(k => PDFS[k]);
   if (!kinds.length) return toast('Ajoutez d\'abord au moins un plan PDF');
   if (!key) return toast('Collez votre clé API');
   const size = kinds.reduce((s, k) => s + PDFS[k].size, 0);
   if (size > 19 * 1048576) return toast('Plans trop lourds (> 19 Mo) : exportez-les en PDF plus léger');
-  const btn = $('#aiGo'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Lecture des plans… (30 s à 2 min)';
+  const btn = $('#aiGo'), stat = t => { btn.innerHTML = '<span class="spin"></span> ' + t; };
+  btn.disabled = true; stat('Lecture des plans… (30 s à 2 min)'); $('#aiErr').innerHTML = '';
+  const tried = [], setModel = m => { model = m; A.model = m; save('plan'); if ($('#aiModel')) $('#aiModel').value = m; };
   try {
     const b64 = await Promise.all(kinds.map(k => blob64(PDFS[k].blob)));
-    let text = '';
-    if (prov === 'gemini') {
-      const parts = [{ text: aiPrompt(kinds) }];
-      kinds.forEach((k, i) => { parts.push({ text: 'Fichier : ' + (k === 'archi' ? 'plan d\'architecte' : 'plan de béton armé') }); parts.push({ inline_data: { mime_type: 'application/pdf', data: b64[i] } }); });
-      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model.replace(/^models\//, '')) + ':generateContent?key=' + encodeURIComponent(key), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0.1, responseMimeType: 'application/json' } })
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error((j.error && j.error.message) || ('Erreur ' + r.status));
-      text = ((j.candidates || [])[0] || {}).content ? j.candidates[0].content.parts.map(p => p.text || '').join('') : '';
-    } else {
-      const content = kinds.map((k, i) => ({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64[i] }, title: k === 'archi' ? 'Plan d\'architecte' : 'Plan de béton armé' }));
-      content.push({ type: 'text', text: aiPrompt(kinds) });
-      const r = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({ model, max_tokens: 8000, messages: [{ role: 'user', content }] })
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error((j.error && j.error.message) || ('Erreur ' + r.status));
-      text = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
+    let text = null, lastErr = null, alts = null, waits = [8, 20];
+    for (let step = 0; step < 8 && text === null; step++) {
+      try { tried.push(model); text = await aiCall(prov, key, model, kinds, b64); }
+      catch (e) {
+        lastErr = e;
+        const sug = e.message.match(/use\s+(?:models\/)?([a-z0-9][\w.-]*[a-z0-9])/i);
+        if (sug && /model/i.test(e.message) && !tried.includes(sug[1])) { setModel(sug[1]); stat('Modèle remplacé par ' + sug[1] + '…'); continue; }
+        if (!isBusy(e)) break;
+        if (waits.length) { const w = waits.shift(); for (let t = w; t > 0; t--) { stat('Serveur très chargé : nouvel essai dans ' + t + ' s…'); await sleep(1000); } continue; }
+        if (prov !== 'gemini') break;
+        if (alts === null) alts = await geminiAlternatives(key, tried);
+        const nx = alts.shift(); if (!nx) break;
+        setModel(nx); stat('Serveur chargé : essai avec ' + nx + '…'); waits = [6];
+      }
     }
+    if (text === null) throw lastErr || new Error('Pas de réponse');
     const J = parseJSON(text);
     S.plan.m = normMetre(J);
-    S.plan.notes = ['🤖 Métré relevé par ' + AI[prov].n.replace(/ \(.*/, '') + ' le ' + new Date().toLocaleDateString('fr-FR') + ' : vérifiez chaque ligne.'].concat((J.remarques || []).map(String).slice(0, 15));
+    S.plan.notes = ['🤖 Métré relevé par ' + AI[prov].n.replace(/ \(.*/, '') + ' (' + model + ') le ' + new Date().toLocaleDateString('fr-FR') + ' : vérifiez chaque ligne.'].concat((J.remarques || []).map(String).slice(0, 15));
     save('plan'); renderPlans(); toast('Métré rempli ✔ Vérifiez-le');
     $('#plMetre').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (e) {
     const msg = String(e.message || e);
     toast('Échec de la lecture');
-    $('#aiErr').innerHTML = `<div class="alert bad">La lecture a échoué : ${esc(msg)}${/fetch|network/i.test(msg) ? '<br>Vérifiez la connexion internet.' : /key|API|permission|401|403/i.test(msg) ? '<br>Vérifiez la clé API.' : /model|not found|404/i.test(msg) ? '<br>Choisissez un autre modèle (bouton « Lister les modèles »).' : ''}</div>`;
+    $('#aiErr').innerHTML = `<div class="alert bad">La lecture a échoué : ${esc(msg)}${isBusy(e) ? '<br>Les serveurs de l\'IA sont surchargés en ce moment (ce n\'est pas votre clé). Réessayez dans quelques minutes, ou choisissez l\'autre service.' : /failed to fetch|network/i.test(msg) ? '<br>Vérifiez la connexion internet.' : /quota|429|rate|exhausted/i.test(msg) ? '<br>Limite gratuite atteinte : attendez une minute puis réessayez.' : /model|not found|404/i.test(msg) ? '<br>Choisissez un autre modèle (lien « Lister les modèles », puis touchez le champ Modèle).' : /api key|invalid|permission|401|403/i.test(msg) ? '<br>Vérifiez la clé API.' : ''}</div>`;
   } finally { btn.disabled = false; btn.textContent = '🤖 Lire les plans avec l\'IA'; }
 }
 async function aiModels() {
