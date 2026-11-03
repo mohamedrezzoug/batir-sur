@@ -2684,7 +2684,7 @@ function cadSummary() {
 /* ================= suivi du marché : attachements, révision des prix, décomptes ================= */
 const MAR_DEF = {
   num: '', objet: '', mo: '', titulaire: '', tva: 20, rg: 10, rgMax: 7, avance: 0, avancePct: 0,
-  revisable: 1, K: 0.15, idx: [{ n: 'BAT1', a: 0.85, i0: 0 }], m0: '',
+  revisable: 1, K: 0.15, idx: [{ n: 'BAT', a: 0.85, i0: 0 }], m0: '',
   lignes: [], atts: [], cur: -1
 };
 function MS() {
@@ -2693,6 +2693,8 @@ function MS() {
   return m;
 }
 const saveM = () => save('marche');
+const BAREME_URL = 'https://www.equipement.gov.ma/Ingenierie/Documents/Bareme-juin-2026.pdf';
+const IDX_GLOB = [['BAT', 'Bâtiment'], ['TR', 'Travaux routiers'], ['OA', 'Ouvrages d\'art'], ['SF', 'Sondages géotechniques, géologiques et forages d\'eau'], ['CEP', 'Canalisations d\'eau potable'], ['REP', 'Réservoirs d\'eau potable']];
 const r6 = x => Math.round(x * 1e6) / 1e6, r4 = x => Math.round(x * 1e4) / 1e4, rc = x => Math.round(x * 100) / 100;
 function marcheHT() { return rc(MS().lignes.reduce((s, l) => s + (+l.q || 0) * (+l.pu || 0), 0)); }
 function coefRev(att) {
@@ -2723,6 +2725,87 @@ function decompte(k) {
     avancement: initHT ? cumHT / initHT : 0 };
 }
 function lineCum(att, l) { return +((att && att.q || {})[l.id]) || 0; }
+
+/* ---------- bordereau des prix — détail estimatif : export / import ---------- */
+const lotOf = l => l.lot || (String(l.l).match(/\(([^()]+)\)\s*$/) || [0, 'Travaux'])[1];
+async function exportBPDE(empty) {
+  let E; try { E = await loadExcelJS(); } catch (e) { return toast('Impossible de charger le module Excel (connexion ?)'); }
+  const m = MS(), tva = (+m.tva || 0) / 100, wb = new E.Workbook(), MONEY = '#,##0.00';
+  const ws = wb.addWorksheet('BPDE', { pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 }, views: [{ state: 'frozen', ySplit: 8 }] });
+  ws.columns = [{ width: 16 }, { width: 48 }, { width: 9 }, { width: 12 }, { width: 15 }, { width: 36 }, { width: 17 }];
+  const thin = { style: 'thin' }, box = r => r.eachCell({ includeEmpty: true }, c => { c.border = { top: thin, bottom: thin, left: thin, right: thin }; });
+  const fill = c => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: c } });
+  ws.mergeCells('A1:G1'); ws.getCell('A1').value = 'BORDEREAU DES PRIX — DÉTAIL ESTIMATIF'; ws.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } }; ws.getCell('A1').fill = fill('FF2A3336'); ws.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' }; ws.getRow(1).height = 26;
+  [['Marché n°', m.num], ['Objet', m.objet], ['Maître d\'ouvrage', m.mo], ['Titulaire', m.titulaire]].forEach(([k, v], i) => { const r = ws.getRow(2 + i); r.getCell(1).value = k; r.getCell(1).font = { bold: true }; ws.mergeCells(2 + i, 2, 2 + i, 7); r.getCell(2).value = v || ''; });
+  const H = ws.getRow(8); H.values = ['N° prix', 'Désignation des prestations', 'Unité', 'Quantité', 'Prix unitaire HT (en chiffres)', 'Prix unitaire HT (en toutes lettres)', 'Prix total HT'];
+  H.eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = fill('FFB8522A'); c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; }); H.height = 32; box(H);
+  let row = 9; const first = row, groups = {};
+  (empty ? [] : m.lignes).forEach(l => { const g = lotOf(l); (groups[g] = groups[g] || []).push(l); });
+  const subs = [];
+  if (empty) { for (let i = 0; i < 15; i++) { const r = ws.getRow(row); r.values = ['', '', '', null, null, '', { formula: `IF(AND(D${row}<>"",E${row}<>""),D${row}*E${row},"")` }]; r.getCell(5).numFmt = MONEY; r.getCell(7).numFmt = MONEY; box(r); row++; } }
+  Object.entries(groups).forEach(([g, ls]) => {
+    const gr = ws.getRow(row); gr.getCell(2).value = g; gr.font = { bold: true, color: { argb: 'FF93401F' } }; gr.eachCell({ includeEmpty: true }, c => { c.fill = fill('FFF6E3D8'); }); box(gr); row++;
+    const f0 = row;
+    ls.forEach(l => { const r = ws.getRow(row), q = +l.q || 0, pu = +l.pu || 0;
+      r.values = [l.no, String(l.l).replace(/\s*\([^()]+\)\s*$/, ''), l.u, q, pu, enLettres(pu), { formula: `D${row}*E${row}`, result: rc(q * pu) }];
+      r.getCell(4).numFmt = '#,##0.00'; r.getCell(5).numFmt = MONEY; r.getCell(7).numFmt = MONEY; r.getCell(2).alignment = { wrapText: true, vertical: 'top' }; r.getCell(6).alignment = { wrapText: true, vertical: 'top' }; r.getCell(6).font = { italic: true, size: 9 }; box(r); row++; });
+    const st = ws.getRow(row); st.getCell(2).value = 'Sous-total ' + g; st.getCell(2).alignment = { horizontal: 'right' }; st.getCell(7).value = { formula: `SUM(G${f0}:G${row - 1})`, result: rc(ls.reduce((s, l) => s + (+l.q || 0) * (+l.pu || 0), 0)) }; st.getCell(7).numFmt = MONEY; st.font = { bold: true }; box(st); subs.push('G' + row); row++;
+  });
+  const ht = rc(m.lignes.reduce((s, l) => s + (+l.q || 0) * (+l.pu || 0), 0) * (empty ? 0 : 1));
+  const T = (lab, f, res, o = {}) => { const r = ws.getRow(row); ws.mergeCells(row, 1, row, 6); r.getCell(1).value = lab; r.getCell(1).alignment = { horizontal: 'right' }; r.getCell(7).value = { formula: f, result: res }; r.getCell(7).numFmt = MONEY; r.font = { bold: true, size: o.s || 11 }; if (o.f) r.eachCell({ includeEmpty: true }, c => { c.fill = fill(o.f); }); box(r); return 'G' + row++; };
+  const cHT = T('TOTAL HT', empty ? `SUM(G${first}:G${row - 1})` : subs.join('+') || '0', ht);
+  const cTV = T('TVA ' + fmt(+m.tva || 0) + ' %', `ROUND(${cHT}*${tva},2)`, rc(ht * tva));
+  T('TOTAL TTC', `${cHT}+${cTV}`, rc(ht * (1 + tva)), { s: 12, f: 'FFEFE7DC' });
+  row++; ws.mergeCells(row, 1, row, 7); ws.getCell(row, 1).value = empty ? 'Arrêté le présent bordereau des prix — détail estimatif à la somme de : …………………………………………… dirhams TTC.' : 'Arrêté le présent bordereau des prix — détail estimatif à la somme de : ' + enLettres(rc(ht * (1 + tva))) + ' toutes taxes comprises.';
+  ws.getCell(row, 1).font = { bold: true }; ws.getCell(row, 1).alignment = { wrapText: true }; ws.getRow(row).height = 30;
+  row += 2; ws.getCell(row, 6).value = 'Fait à …………… le ……………'; ws.getCell(row + 1, 6).value = 'Signature et cachet du concurrent';
+  const buf = await wb.xlsx.writeBuffer();
+  saveFile((empty ? 'modele-bordereau-des-prix' : 'bordereau-des-prix-detail-estimatif' + (m.num ? '-marche-' + String(m.num).replace(/[^\w-]+/g, '-') : '')) + '.xlsx', new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+async function importBPDE(file) {
+  let X; try { X = await loadXLSX(); } catch (e) { return toast('Impossible de charger le module Excel (connexion ?)'); }
+  let rows;
+  try {
+    if (/\.(csv|txt)$/i.test(file.name)) {
+      const buf = await file.arrayBuffer(); let txt = new TextDecoder('utf-8').decode(buf); if (/\uFFFD/.test(txt)) txt = new TextDecoder('windows-1252').decode(buf);
+      txt = txt.replace(/^\uFEFF/, ''); const first = txt.split(/\r?\n/).find(x => x.trim()) || '', sep = [';', '\t', ','].sort((a, b) => first.split(b).length - first.split(a).length)[0];
+      rows = []; let row = [], cell = '', q = false;
+      for (let i = 0; i < txt.length; i++) { const c = txt[i];
+        if (q) { if (c === '"' && txt[i + 1] === '"') { cell += '"'; i++; } else if (c === '"') q = false; else cell += c; }
+        else if (c === '"') q = true; else if (c === sep) { row.push(cell); cell = ''; } else if (c === '\n' || c === '\r') { if (c === '\r' && txt[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; } else cell += c; }
+      if (cell || row.length) { row.push(cell); rows.push(row); }
+    } else { const wb = X.read(await file.arrayBuffer(), { type: 'array' }); const ws = wb.Sheets[wb.SheetNames.find(n => /bpde|bordereau|d[ée]tail|devis/i.test(n)) || wb.SheetNames[0]]; rows = X.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' }); }
+  } catch (e) { return toast('Fichier illisible'); }
+  const nrm = s => String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+  const toN = v => { if (typeof v === 'number') return v; let t = String(v == null ? '' : v).replace(/[\s\u00a0\u202f]/g, '').replace(/dhs|dh|mad/ig, ''); if (!t) return NaN;
+    const c = t.lastIndexOf(','), d = t.lastIndexOf('.');
+    if (c >= 0 && d >= 0) t = c > d ? t.replace(/\./g, '').replace(',', '.') : t.replace(/,/g, '');
+    else if (c >= 0) t = t.split(',').length > 2 ? t.replace(/,/g, '') : t.replace(',', '.');
+    return /^-?\d+(\.\d+)?$/.test(t) ? parseFloat(t) : NaN; };
+  let hi = -1, C = {};
+  for (let i = 0; i < Math.min(rows.length, 40) && hi < 0; i++) {
+    const r = rows[i].map(nrm), c = {};
+    r.forEach((x, j) => {
+      if (c.l === undefined && /designation|libelle|nature des|prestation|ouvrage/.test(x)) c.l = j;
+      else if (c.no === undefined && /^(n ?°|no|num|n° prix|n°)/.test(x) && !/total/.test(x)) c.no = j;
+      else if (c.u === undefined && /^unit|^u$|unite/.test(x) && !/prix/.test(x)) c.u = j;
+      else if (c.q === undefined && /quantit|^qte|^qté|^q$/.test(x)) c.q = j;
+      else if (c.pu === undefined && /(prix unitaire|p\.? ?u|pu ht|^pu)/.test(x) && !/lettre/.test(x)) c.pu = j;
+    });
+    if (c.l !== undefined && (c.q !== undefined || c.pu !== undefined)) { hi = i; C = c; }
+  }
+  if (hi < 0) return toast('Colonnes introuvables : il faut au moins « Désignation » et « Quantité » ou « Prix unitaire »');
+  const L = []; let lot = 'Travaux', n = 0, skipped = 0;
+  for (let i = hi + 1; i < rows.length; i++) {
+    const r = rows[i], des = String(r[C.l] == null ? '' : r[C.l]).trim(), q = C.q !== undefined ? toN(r[C.q]) : NaN, pu = C.pu !== undefined ? toN(r[C.pu]) : NaN;
+    if (!des) continue;
+    if (/^(sous[- ]?total|total|tva|montant|arr[eê]t[eé])/i.test(nrm(des))) { skipped++; continue; }
+    if (!isFinite(q) && !isFinite(pu)) { lot = des.replace(/^(poste|serie|série|lot)\s*(ou\s*serie|ou\s*série)?\s*[:\-–]?\s*/i, '') || lot; continue; }
+    n++; L.push({ id: 'I' + Date.now().toString(36) + n, no: String(C.no !== undefined && r[C.no] !== '' ? r[C.no] : n), l: des, lot, u: C.u !== undefined ? String(r[C.u] || '') : 'u', q: isFinite(q) ? q : 0, pu: isFinite(pu) ? pu : 0 });
+  }
+  if (!L.length) return toast('Aucun prix trouvé dans le fichier');
+  return { L, skipped };
+}
 function renderMarche() {
   const box = $('#marBox'); if (!box) return;
   const m = MS(), ht = marcheHT(), tva = (+m.tva || 0) / 100, cur = m.atts[m.cur] ? m.cur : m.atts.length - 1;
@@ -2734,7 +2817,10 @@ function renderMarche() {
     <p class="note">Valeurs courantes, à adapter au CPS : retenue de garantie 10 % de chaque acompte, plafonnée à 7 % du montant initial du marché (avenants compris). L'avance est remboursée au prorata des travaux exécutés.</p></div>`;
   // bordereau
   h += `<div class="card tablecard" style="margin-top:16px"><div class="pstep"><span class="n">2</span><h3>Bordereau des prix — détail estimatif</h3></div>
-    <div class="actions" style="margin-top:4px"><button class="btn ghost sm" id="marFromDevis">📋 Créer depuis le devis global (${S.devis.length} lignes)</button><button class="btn ghost sm" id="marAddL">➕ Ajouter un prix</button></div>
+    <div class="actions" style="margin-top:4px"><button class="btn ghost sm" id="marFromDevis">📋 Créer depuis le devis global (${S.devis.length} lignes)</button><button class="btn ghost sm" id="marAddL">➕ Ajouter un prix</button>
+      <label class="btn ghost sm" style="cursor:pointer">📥 Importer (Excel / CSV)<input type="file" id="marImp" accept=".xlsx,.xls,.csv,.ods" style="display:none"></label>
+      ${m.lignes.length ? '<button class="btn sm" id="marExpB">📊 Exporter en Excel</button>' : ''}<button class="btn ghost sm" id="marTpl">📄 Modèle vide</button></div>
+    <div id="marImpBox"></div>
     ${m.lignes.length ? `<table class="mtbl" style="margin-top:10px"><tr><th>N° prix</th><th>Désignation</th><th>Unité</th><th class="num">Quantité</th><th class="num">P.U. HT</th><th class="num">Montant HT</th><th></th></tr>
     ${m.lignes.map((l, i) => `<tr><td><input data-ml="${i}.no" value="${esc(l.no)}" style="width:60px"></td><td><input data-ml="${i}.l" value="${esc(l.l)}" style="min-width:220px"></td><td><input data-ml="${i}.u" value="${esc(l.u)}" style="width:60px"></td>
       <td class="num"><input data-ml="${i}.q" type="number" step="any" value="${l.q}" style="width:90px"></td><td class="num"><input data-ml="${i}.pu" type="number" step="any" value="${l.pu}" style="width:100px"></td><td class="num">${fmt((+l.q || 0) * (+l.pu || 0), 2)}</td>
@@ -2746,7 +2832,18 @@ function renderMarche() {
   // révision
   h += `<div class="card" style="margin-top:16px"><div class="pstep"><span class="n">3</span><h3>Révision des prix</h3></div>
     <label class="chk" style="border:0"><input type="checkbox" id="marRev"${m.revisable ? ' checked' : ''}> Marché à prix révisables (sinon : prix fermes)</label>
-    ${m.revisable ? `<p class="note">Formule du CPS : <b>P = P0 × [ K + a·(I1/I1₀) + b·(I2/I2₀) + … ]</b>, avec K ≥ 0,15 et K + a + b + … = 1. Rapports arrondis à 6 décimales, coefficient à 4. Les travaux d'un mois sont révisés avec les index de ce mois (valeurs publiées par le ministère de l'Équipement).</p>
+    ${m.revisable ? `<div class="res" style="margin:6px 0 10px;background:var(--blue-l)">
+      <b style="color:var(--blue)">🔗 Barèmes d'indexation — ministère de l'Équipement</b>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;font-size:14px">
+        <a href="${esc(m.lienBareme || BAREME_URL)}" target="_blank" rel="noopener">📄 Dernier barème d'indexation (valeurs des index du mois) ↗</a>
+        <a href="https://www.equipement.gov.ma/Ingenierie/Documents/Bareme-Rectifie-Juil-Aout-Sept-Oct-Nov.pdf" target="_blank" rel="noopener">📄 Barème rectifié de juillet à novembre 2020 ↗</a>
+        <a href="https://www.equipement.gov.ma/Ingenierie/Reglementation/Documents/Arrete-21.191-revision-des-prix.pdf" target="_blank" rel="noopener">⚖️ Arrêté du METLE n° 21.191 (liste des index simples) ↗</a>
+      </div>
+      <details style="margin-top:8px;background:transparent;border:0;box-shadow:none"><summary style="padding:4px 0;font-size:13px;font-weight:600">Changer le lien du dernier barème (il change chaque mois)</summary>
+        <input data-mk="lienBareme" value="${esc(m.lienBareme || BAREME_URL)}" style="margin-top:6px"></details>
+    </div>
+    <p class="note">Arrêté du Chef du Gouvernement n° 3-302-15 du 15 safar 1437 (27 novembre 2015), BO n° 6422 du 17/12/2015 : <b>P/P0 = a + b·X/X0 + c·Y/Y0 + …</b> avec a ≥ 0,15 et a + b + c + … = 1 (index simples), ou de préférence <b>P/P0 = a + b·I/I0</b> avec un index global. Rapports arrondis à 6 décimales, coefficient à 4. Les travaux d'un mois sont révisés avec les index de ce mois.</p>
+    <div class="actions" style="margin:0 0 8px"><small class="note" style="margin:0">Formule à index global :</small>${IDX_GLOB.map(([k, l]) => `<button class="btn ghost sm" data-glob="${k}" title="${esc(l)}">${k}</button>`).join('')}</div>
     <div class="fields f4">${fld('K', 'Partie fixe K', 'number')}${fld('m0', 'Mois zéro (M0)', 'month')}</div>
     <table class="mtbl" style="margin-top:8px"><tr><th>Index</th><th class="num">Coefficient</th><th class="num">Valeur au mois zéro (I₀)</th><th></th></tr>
     ${m.idx.map((x, i) => `<tr><td><input data-mx="${i}.n" value="${esc(x.n)}" style="width:120px"></td><td class="num"><input data-mx="${i}.a" type="number" step="any" value="${x.a}" style="width:90px"></td><td class="num"><input data-mx="${i}.i0" type="number" step="any" value="${x.i0 || ''}" placeholder="à saisir" style="width:110px"></td><td class="x">${m.idx.length > 1 ? `<button class="btn ghost sm" data-mxd="${i}">✕</button>` : ''}</td></tr>`).join('')}</table>
@@ -2764,7 +2861,7 @@ function renderMarche() {
       <label class="fld"><span>Pénalités de cette période (DH)</span><input type="number" step="any" min="0" data-ma="pen" value="${a.pen || 0}"></label></div>
       <label class="chk" style="border:0"><input type="checkbox" data-mab="fin"${a.fin ? ' checked' : ''}> Attachement définitif (fin des travaux) → décompte définitif</label>
       ${a.fin ? `<label class="chk" style="border:0;padding-top:0"><input type="checkbox" data-mab="libRG"${a.libRG ? ' checked' : ''}> Libérer la retenue de garantie (après réception définitive, ou caution remise)</label>` : ''}
-      ${m.revisable ? `<div class="res" style="margin:8px 0"><b>Index du mois ${esc(a.mois || '…')}</b><div class="fields f4" style="margin-top:6px">${m.idx.map((x, i) => `<label class="fld"><span>${esc(x.n)} (I₀ = ${x.i0 || '?'})</span><input type="number" step="any" data-mai="${i}" value="${(a.ix || {})[i] || ''}" placeholder="valeur publiée"></label>`).join('')}</div>
+      ${m.revisable ? `<div class="res" style="margin:8px 0"><b>Index du mois ${esc(a.mois || '…')}</b> <a href="${esc(m.lienBareme || BAREME_URL)}" target="_blank" rel="noopener" style="font-size:13px;margin-left:8px">🔗 voir le barème ↗</a><div class="fields f4" style="margin-top:6px">${m.idx.map((x, i) => `<label class="fld"><span>${esc(x.n)} (I₀ = ${x.i0 || '?'})</span><input type="number" step="any" data-mai="${i}" value="${(a.ix || {})[i] || ''}" placeholder="valeur publiée"></label>`).join('')}</div>
         <div class="row big"><span>Coefficient de révision P/P0</span><b>${fmt(cr.C, 4)}</b></div>${cr.parts.some(p => !p.ok) ? '<div class="alert warn">Index manquant : le rapport est pris égal à 1 (pas de révision) tant que la valeur n\'est pas saisie.</div>' : ''}</div>` : ''}
       <div class="actions" style="margin:0 0 8px"><button class="btn ghost sm" id="marCopyPrev"${prev ? '' : ' disabled'}>↺ Reprendre les cumuls de l'attachement précédent</button><button class="btn ghost sm" id="marFull">✔ Tout à 100 %</button><button class="btn ghost sm" id="marDelA">🗑 Supprimer cet attachement</button></div>
       <table class="mtbl"><tr><th>N°</th><th>Désignation</th><th>U</th><th class="num">Qté marché</th><th class="num">Cumul précédent</th><th class="num">Cumul à ce jour</th><th class="num">Période</th><th class="num">%</th><th class="num">Montant cumulé HT</th></tr>
@@ -2802,8 +2899,21 @@ function renderMarche() {
   box.querySelectorAll('[data-mld]').forEach(b => confirmBtn(b, () => { m.lignes.splice(+b.dataset.mld, 1); saveM(); renderMarche(); }, '?'));
   box.querySelectorAll('[data-mx]').forEach(i => i.onchange = () => { const [r, k] = i.dataset.mx.split('.'); m.idx[+r][k] = k === 'n' ? i.value : (parseFloat(i.value) || 0); saveM(); renderMarche(); });
   box.querySelectorAll('[data-mxd]').forEach(b => b.onclick = () => { m.idx.splice(+b.dataset.mxd, 1); m.atts.forEach(a => { if (a.ix) { const o = {}; Object.keys(a.ix).forEach(k => { if (+k < +b.dataset.mxd) o[k] = a.ix[k]; else if (+k > +b.dataset.mxd) o[k - 1] = a.ix[k]; }); a.ix = o; } }); saveM(); renderMarche(); });
+  box.querySelectorAll('[data-glob]').forEach(b => confirmBtn(b, () => { m.K = 0.15; m.idx = [{ n: b.dataset.glob, a: 0.85, i0: 0 }]; m.atts.forEach(a => { a.ix = {}; }); saveM(); renderMarche(); toast('Formule : P/P0 = 0,15 + 0,85 × ' + b.dataset.glob + '/' + b.dataset.glob + '₀ — saisissez I₀'); }, b.dataset.glob + ' ?'));
   if ($('#marAddX')) $('#marAddX').onclick = () => { m.idx.push({ n: 'Index ' + (m.idx.length + 1), a: 0, i0: 0 }); saveM(); renderMarche(); };
   $('#marRev').onchange = e => { m.revisable = e.target.checked ? 1 : 0; saveM(); renderMarche(); };
+  if ($('#marExpB')) $('#marExpB').onclick = () => exportBPDE(false);
+  $('#marTpl').onclick = () => exportBPDE(true);
+  $('#marImp').onchange = async e => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    const R = await importBPDE(f); if (!R) return;
+    const lots = [...new Set(R.L.map(l => l.lot))], ht = R.L.reduce((s, l) => s + l.q * l.pu, 0);
+    $('#marImpBox').innerHTML = `<div class="alert info" style="margin-top:10px">📥 <b>${esc(f.name)}</b> : ${R.L.length} prix trouvés, ${lots.length} lot(s) (${esc(lots.slice(0, 6).join(', '))}${lots.length > 6 ? '…' : ''}), total HT ${fmt(ht, 2)} DH.${R.skipped ? ' ' + R.skipped + ' ligne(s) de total ignorée(s).' : ''}
+      <div class="actions" style="margin-top:8px"><button class="btn sm" id="impRep">${m.lignes.length ? 'Remplacer le bordereau' : 'Utiliser ce bordereau'}</button>${m.lignes.length ? '<button class="btn ghost sm" id="impAdd">Ajouter à la suite</button>' : ''}<button class="btn ghost sm" id="impNo">Annuler</button></div></div>`;
+    const done = add => { m.lignes = add ? m.lignes.concat(R.L) : R.L; saveM(); renderMarche(); toast(R.L.length + ' prix importés ✔'); };
+    if (m.lignes.length && m.atts.length) $('#impRep').textContent = 'Remplacer (⚠️ les attachements perdront leurs quantités)';
+    $('#impRep').onclick = () => done(false); if ($('#impAdd')) $('#impAdd').onclick = () => done(true); $('#impNo').onclick = () => { $('#marImpBox').innerHTML = ''; };
+  };
   $('#marAddL').onclick = () => { m.lignes.push({ id: 'L' + Date.now().toString(36), no: String(m.lignes.length + 1), l: '', u: 'u', q: 0, pu: 0 }); saveM(); renderMarche(); };
   const fromDevis = () => {
     if (!S.devis.length) return toast('Le devis global est vide');
