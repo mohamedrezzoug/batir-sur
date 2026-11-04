@@ -203,6 +203,17 @@ h4.mg{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.05
 .tag{display:inline-block;font-size:10.5px;font-weight:800;background:var(--blue-l);color:var(--blue);border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:middle}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;animation:sp 1s linear infinite;vertical-align:-2px}
 @keyframes sp{to{transform:rotate(360deg)}}
+.res .hrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.mset{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}.mset button{flex:1 1 220px;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:9px 12px;font:700 14px Manrope,sans-serif;cursor:pointer;color:var(--ink)}.mset button small{font-weight:600;opacity:.75}.mset button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.mdoc{background:#fff;border:1px solid var(--line);border-radius:10px;padding:22px 26px;margin:10px 0;font:15px/1.6 'Times New Roman',Georgia,serif;color:#111;max-height:70vh;overflow:auto}.mdoc .mdh{font-weight:700;margin-bottom:10px}.mdoc .c{text-align:center;font-weight:700;font-size:17px;margin:10px 0}.mdoc .r{text-align:right}.mdoc p{margin:6px 0;text-align:justify}.mdoc p.li{padding-left:22px;text-indent:-14px;margin:3px 0}
+.mdoc input.slot,.slot{font:inherit;font-size:14px;border:0;border-bottom:1.5px dotted #8a7f72;background:#fbf7f1;padding:0 3px;margin:0 2px;min-width:5ch;max-width:100%;border-radius:3px;color:#111}.slot.auto{background:#e4f3e7;border-bottom-color:#2e7d4f}.slot:focus{outline:2px solid var(--terra);background:#fff}
+.mdoc .mt-wrap{overflow-x:auto;margin:8px 0}.mdoc table.mt{border-collapse:collapse;width:100%;font-size:13px}.mdoc table.mt th,.mdoc table.mt td{border:1px solid #777;padding:3px 5px;vertical-align:top}.mdoc table.mt th{background:#efe9e1}.mdoc table.mt tr.nn td,.mdoc table.mt tr.tt td{text-align:center;font-weight:700}.mdoc table.mt td input{width:100%;min-width:70px;border:0;background:transparent;font:inherit}.mdoc table.sig{width:100%;margin:12px 0}.mdoc table.sig td{width:50%;padding:6px 4px;vertical-align:top}.mnotes{font-size:12.5px;color:#555;line-height:1.45}.mnotes div{margin:3px 0}
+.ccgrid{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start}.cclist{position:sticky;top:70px;max-height:calc(100vh - 90px);display:flex;flex-direction:column}.cclist input{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font:inherit;margin-bottom:8px}.ccl{overflow:auto}
+.ccch{border-bottom:1px solid var(--line)}.ccch summary{cursor:pointer;font-weight:800;padding:9px 2px;font-size:14px}.ccch summary small{font-weight:600;color:var(--muted)}
+.ccart,.cchit{display:block;width:100%;text-align:left;border:0;background:none;padding:6px 8px;border-radius:8px;font:13.5px/1.35 Manrope,sans-serif;color:var(--ink);cursor:pointer}.ccart b{color:var(--terra-d);margin-right:4px}.ccart:hover,.cchit:hover{background:var(--terra-l)}.ccart.on{background:var(--ink);color:#fff}.ccart.on b{color:#ffd9c4}
+.cchit span{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}.cchead{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;margin-bottom:10px}.ccpage{overflow:auto;background:#eee;border-radius:8px;padding:2px;min-height:300px}.ccpage canvas{display:block;margin:0 auto;background:#fff}
+@media(max-width:860px){.ccgrid{grid-template-columns:1fr}.cclist{position:static;max-height:none}.ccl{max-height:46vh}}
+.pselm{display:none;margin:6px 0 4px}.pselm select{width:100%}@media(max-width:860px){.pselm{display:block}.pchips{display:none}.mdoc{padding:14px 12px;font-size:14px}}
 </style>
 </head>
 <body>
@@ -224,6 +235,7 @@ h4.mg{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.05
   <button data-t="dba">🏗️ Dossier BA</button>
   <button data-t="devis">📋 Devis global <span class="badge" id="devisCount">0</span></button>
   <button data-t="marche">📑 Attachements & décomptes</button>
+  <button data-t="ccag">📜 CCAG-T</button>
   <button data-t="journal">📸 Journal de chantier</button>
   <button data-t="diag">🛡️ Diagnostic maison</button>
   <button data-t="fiss">🔍 Fissures</button>
@@ -267,6 +279,11 @@ h4.mg{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.05
   <p class="intro">Suivi d'un marché de travaux : bordereau des prix, <b>attachements</b> successifs des travaux réalisés (jusqu'à l'attachement définitif), <b>révision des prix</b> selon la formule du CPS, et <b>décomptes</b> provisoires puis définitif, avec export Excel.</p>
   <div id="marBox"></div>
   <div class="card" id="marModels" style="margin-top:16px"></div>
+</section>
+
+<section class="tab" id="t-ccag">
+  <p class="intro">Le <b>Cahier des clauses administratives générales applicables aux marchés de travaux (CCAG-T)</b>, approuvé par le décret n° 2-14-394 du 13 mai 2016 : choisissez un article dans le sommaire ou cherchez un mot, la page officielle s'affiche à côté.</p>
+  <div id="ccBox"></div>
 </section>
 
 <section class="tab" id="t-journal">
@@ -475,6 +492,7 @@ function goTab(t) {
   if (t === 'devis') renderDevis();
   if (t === 'plans') renderPlanSO();
   if (t === 'marche') renderMarche();
+  if (t === 'ccag') renderCCAG();
   if (t === 'dba' && !$('#dbaFrame').src) $('#dbaFrame').src = 'dossier-ba.html';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -3225,8 +3243,16 @@ async function genDecompteModel(id) {
 function renderModels() {
   const box = $('#marModels'); if (!box) return;
   const m = MS(); m.docs = m.docs || {}; const cur = m.docCur || '';
-  const groups = [...new Set(DOCS.map(d => d.g))];
-  let h = `<div class="pstep"><span class="n">6</span><h3>Modèles des pièces du marché</h3></div>
+  const groups = [...new Set(DOCS.map(d => d.g))], set = m.docSet || 'exec';
+  const sw = `<div class="mset"><button data-dset="exec" class="${set === 'exec' ? 'on' : ''}">🏗️ Exécution des travaux <small>(CCAG-T)</small></button><button data-dset="pass" class="${set === 'pass' ? 'on' : ''}">📝 Passation du marché <small>(arrêté n° 1689-23)</small></button></div>`;
+  if (set === 'pass') {
+    box.innerHTML = `<div class="pstep"><span class="n">6</span><h3>Modèles des pièces du marché</h3></div>${sw}
+    <p class="desc">Les <b>54 modèles</b> fixés par l'arrêté n° 1689-23 du 3 juillet 2023 (BO n° 7222), pris pour l'application de l'article 153 du décret n° 2-22-431 : acte d'engagement, bordereaux, déclaration sur l'honneur, avis, lettres, procès-verbaux, rapports, certificats administratifs… Pré-remplis avec les données du marché, en <b>Word</b>.</p>`;
+    box.querySelectorAll('[data-dset]').forEach(b => b.onclick = () => { m.docSet = b.dataset.dset; saveM(); renderModels(); });
+    if (!window.MODELES_1689) { box.insertAdjacentHTML('beforeend', '<p class="note"><span class="spin"></span> Chargement des modèles…</p>'); loadPass().then(() => renderModels()).catch(() => toast('Impossible de charger les modèles (connexion ?)')); return; }
+    return renderPass(box, m);
+  }
+  let h = `<div class="pstep"><span class="n">6</span><h3>Modèles des pièces du marché</h3></div>${sw}
   <p class="desc">Les modèles des pièces nécessaires à l'exécution des marchés de travaux (CCAG-T), pré-remplis avec les données du marché : en <b>Word</b> pour les ordres de service, procès-verbaux et décisions, en <b>Excel</b> pour les décomptes (avec les calculs). Les champs vides restent en pointillés à compléter à la main.</p>
   <details style="margin:0 0 12px"><summary>🏛️ Informations administratives communes (organisme, représentant, imputation budgétaire, entreprise)</summary><div class="body"><div class="fields f4">${ADM.map(([k, l, ph, t]) => `<label class="fld"><span>${l}</span><input data-mad="${k}" type="${t || 'text'}" value="${esc(m[k] || '')}" placeholder="${esc(ph || '')}"></label>`).join('')}</div></div></details>`;
   groups.forEach(g => { h += `<h4 class="mg">${g}</h4><div class="chips">${DOCS.filter(d => d.g === g).map(d => `<button data-doc="${d.id}" style="${d.id === cur ? 'background:var(--ink);color:#fff;border-color:var(--ink)' : ''}">${d.x ? '📊' : '📄'} ${esc(d.t)}</button>`).join('')}</div>`; });
@@ -3244,9 +3270,234 @@ function renderModels() {
   }
   box.innerHTML = h;
   box.querySelectorAll('[data-mad]').forEach(i => i.onchange = () => { m[i.dataset.mad] = i.value; saveM(); });
+  box.querySelectorAll('[data-dset]').forEach(b => b.onclick = () => { m.docSet = b.dataset.dset; saveM(); renderModels(); });
   box.querySelectorAll('[data-doc]').forEach(b => b.onclick = () => { m.docCur = b.dataset.doc; saveM(); renderModels(); });
   box.querySelectorAll('[data-dv]').forEach(i => i.onchange = () => { docVal(m, cur)[i.dataset.dv] = i.value; saveM(); });
   if ($('#docGen')) $('#docGen').onclick = () => D.x ? genDecompteModel(D.id) : genWord(D.id);
+}
+
+/* ================= modèles de passation (arrêté n° 1689-23, article 153 du décret n° 2-22-431) ================= */
+let PASSP = null;
+function loadPass() {
+  if (window.MODELES_1689) return Promise.resolve(window.MODELES_1689);
+  if (!PASSP) PASSP = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'modeles-passation.js?v=1'; sc.onload = () => res(window.MODELES_1689); sc.onerror = () => { PASSP = null; rej(new Error('modèles')); }; document.head.appendChild(sc); });
+  return PASSP;
+}
+const PASS_INFO = [['aoNum', 'N° de l\'appel d\'offres / de la consultation', '01/2026'], ['aoDate', 'Date de l\'appel d\'offres', '', 'date'], ['proc', 'Procédure', 'ouvert sur offres des prix', ['ouvert sur offres des prix', 'ouvert simplifié sur offres des prix', 'restreint sur offres des prix', 'avec présélection', 'ouvert au rabais ou à majoration', 'concours', 'procédure négociée', 'consultation architecturale']],
+  ['lieuExec', 'Lieu d\'exécution (commune, province, région)', ''], ['estim', 'Estimation du maître d\'ouvrage (DH TTC)', ''], ['annee', 'Année budgétaire', String(new Date().getFullYear())], ['dateDoc', 'Date du document', '', 'date']];
+const SLOT = /(?:[.…]\s?){3,}[.…]*/g;
+const nrmT = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[’']/g, "'").replace(/\s+/g, ' ');
+function pd(m, id) { m.pdocs = m.pdocs || {}; m.pdocs[id] = m.pdocs[id] || { s: {}, t: {} }; return m.pdocs[id]; }
+/* valeur proposée pour un blanc, selon le texte qui le précède et le suit */
+function slotAuto(m, M, before, after, prevKey) {
+  const b = nrmT(before).replace(/\(\d+\)/g, '').trimEnd(), a = nrmT(after).trimStart(), ht = marcheHT(), tv = +m.tva || 0;
+  const mo = m.mo || m.org || '', V = (k) => m[k] ? String(m[k]) : '';
+  const lt = x => x > 0 ? `${enLettres(x)} (${fmt(x, 2)} DH)` : '';
+  if (/^\((date et heure|prenom|nom|localite)/.test(a)) return ['', ''];
+  if (/organisme$/.test(b)) return ['org', V('org')];
+  if (/ma[iî]tre d'ouvrage ?:$/.test(b)) return ['mo', mo];
+  if (/titulaire ?:$/.test(b) || /attributaire ?:$/.test(b)) return ['titulaire', V('titulaire')];
+  if (/(objet|objet du marche|objet de l'appel d'offres|objet du contrat|objet de la consultation) ?:$/.test(b)) return ['objet', V('objet')];
+  if (/relatif a$/.test(b)) return /^[2-8]$/.test(M.code.split(' ')[1]) ? ['ao', V('aoNum') ? `l'appel d'offres ${V('proc') || ''} n° ${V('aoNum')}`.replace(/\s+/g, ' ') : ''] : ['objet', V('objet')];
+  if (/(marche|contrat d'architecte|contrat) n° ?:?$/.test(b)) return ['num', V('num')];
+  if (/(appel d'offres|consultation architecturale[a-z ]*|concours[a-z ]*|marche negocie|resultats definitifs de)[^.;:]{0,90}n° ?$/.test(b) || /^(appel d'offres|consultation|concours)/.test(b) && /n° ?$/.test(b)) return ['aoNum', V('aoNum')];
+  if (/(^|[\s.…])du ?$/.test(b) && prevKey === 'aoNum') return ['aoDate', m.aoDate ? fdate(m.aoDate) : ''];
+  if (/appel d'offres ?$/.test(b) && /^\(?\d*\)?\s*n°/.test(a)) return ['proc', V('proc') || 'ouvert sur offres des prix'];
+  if (/(, pour|relatif a l'objet suivant ?:?)$/.test(b) && prevKey === 'aoDate') return ['objet', V('objet')];
+  if (/lieu.{0,25}execution.{0,25}:$/.test(b)) return ['lieuExec', V('lieuExec')];
+  if (/annee budgetaire( \(n\))? ?:?$/.test(b)) return ['annee', V('annee')];
+  if (/estimation[^:]{0,60}:$/.test(b)) return ['estim', V('estim') ? lt(parseFloat(String(m.estim).replace(/\s/g, '').replace(',', '.'))) : ''];
+  if (/montant (total )?hors (tva|taxes)( des travaux)? ?:$/.test(b)) return ['ht', lt(ht)];
+  if (/taux de la tva ?:$/.test(b)) return ['tva', ht ? fmt(tv, 2) + ' %' : ''];
+  if (/montant de la tva ?:$/.test(b)) return ['mtva', lt(rc(ht * tv / 100))];
+  if (/montant (tva comprise|toutes taxes comprises|ttc) ?:$/.test(b)) return ['ttc', lt(rc(ht * (1 + tv / 100)))];
+  if (/(fait a|^a)$/.test(b)) return ['ville', V('ville')];
+  if (/, le$/.test(b) || /^le$/.test(b) && prevKey === 'ville') return ['date', m.dateDoc ? fdate(m.dateDoc) : ''];
+  if (/la commission d'appel d'offres composee de ?:$/.test(b)) return ['', ''];
+  return ['', ''];
+}
+/* découpe un texte en morceaux [texte, blanc, texte, blanc…] avec la valeur proposée */
+function slotParts(m, M, text, ctx) {
+  const out = []; let last = 0, mm; SLOT.lastIndex = 0;
+  while ((mm = SLOT.exec(text))) {
+    const before = text.slice(last, mm.index), full = text.slice(0, mm.index), after = text.slice(mm.index + mm[0].length, mm.index + mm[0].length + 30);
+    out.push({ t: before });
+    let [k, v] = slotAuto(m, M, full.slice(-90), after, ctx.prev); ctx.prev = k;
+    const head = nrmT(text.slice(0, 40)), pr = nrmT(m.proc || '');
+    if ((k === 'aoNum' || k === 'aoDate') && ((/^concours/.test(head) && !/concours/.test(pr)) || (/^marche negocie/.test(head) && !/negoci/.test(pr)) || (/^appel d'offres/.test(head) && /concours|negoci|architect/.test(pr)) || (/^consultation architecturale/.test(head) && !/architect/.test(pr)))) v = '';
+    if (/^lot n°/.test(head) && /^(objet|ht|ttc|mtva|tva)$/.test(k)) v = '';
+    ctx.used = ctx.used || {};
+    if (/^(ht|tva|mtva|ttc|aoNum|aoDate|proc)$/.test(k) && v) { if (ctx.used[k]) v = ''; else ctx.used[k] = 1; }
+    out.push({ s: ctx.n++, d: mm[0], v, k, pb: /[^\s(«'’\-–/]$/.test(before || text.slice(0, mm.index)) ? ' ' : '', pa: /^[\wÀ-ÿ«(]/.test(text.slice(mm.index + mm[0].length)) ? ' ' : '' });
+    last = mm.index + mm[0].length;
+  }
+  out.push({ t: text.slice(last) });
+  return out;
+}
+const stripRef = (s, keep) => keep ? s : s.replace(/\s?\((\d{1,2}|l)\)(?=[\s.,;:»)]|$)/g, '');
+function passRows(m, T) {
+  const L = m.lignes || [];
+  if (!L.length) return null;
+  const f = n => fmt(+n || 0, 2);
+  if (T.fill === 'bp' || T.fill === 'bpa') return L.map(l => [l.no, l.l, l.u, f(l.pu)]);
+  if (T.fill === 'de') return L.map(l => [l.no, l.l, l.u, fmt(+l.q || 0, 3), f(l.pu), f((+l.q || 0) * (+l.pu || 0))]);
+  if (T.fill === 'bpg') return L.map(l => [l.no, l.l, f((+l.q || 0) * (+l.pu || 0))]);
+  if (T.fill === 'dmg') return L.map(l => [l.no, l.l, fmt(+l.q || 0, 3), f(l.pu), f((+l.q || 0) * (+l.pu || 0))]);
+  if (T.fill === 'sdp') return L.map(l => [l.no, fmt(+l.q || 0, 3), '', '', '', '', '', '', f(l.pu)]);
+  return null;
+}
+/* lignes d'un tableau : saisies de l'utilisateur, sinon bordereau du marché, sinon lignes du modèle */
+function tblRows(m, M, bi, T, st) {
+  if (st.t[bi]) return st.t[bi];
+  if (T.fill) return (st.fillB !== false && passRows(m, T)) || [1, 2, 3].map(n => T.h.map((_, i) => i === 0 ? String(n) : ''));
+  return T.rows.map(r => r.slice());
+}
+function tblTot(m, T) {
+  if (!T.tot) return null; const ht = marcheHT(), tv = +m.tva || 0, n = T.h.length, z = v => [''].concat(Array(n - 2).fill(''), [v]);
+  const hasB = (m.lignes || []).length;
+  return [['Total hors TVA', hasB ? fmt(ht, 2) : '(a)'], [`Taux TVA (${hasB ? fmt(tv, 2) : '…'} %)`, hasB ? fmt(rc(ht * tv / 100), 2) : '(b)'], ['Total', hasB ? fmt(rc(ht * (1 + tv / 100)), 2) : '(a+b)']].map(([l, v]) => { const r = z(v); r[0] = l; return r; });
+}
+function renderPass(box, m) {
+  const MM = window.MODELES_1689; m.pcur = m.pcur || 'm1-1';
+  const groups = [...new Set(MM.map(d => d.g))], M = MM.find(d => d.id === m.pcur) || MM[0], st = pd(m, M.id), keep = !!st.keep;
+  let h = `<details style="margin:0 0 12px" ${m.pinfoOpen ? 'open' : ''} id="pInfo"><summary>🏛️ Informations de la consultation (utilisées pour pré-remplir les modèles)</summary><div class="body"><div class="fields f4">
+    ${[['org', 'Ministère ou organisme', 'Commune de …'], ['mo', 'Maître d\'ouvrage', ''], ['objet', 'Objet', ''], ['ville', 'Ville (« Fait à »)', '']].concat(PASS_INFO).map(([k, l, ph, t]) => Array.isArray(t)
+      ? `<label class="fld"><span>${l}</span><select data-pmk="${k}">${t.map(o => `<option${(m[k] || ph) === o ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></label>`
+      : `<label class="fld"><span>${l}</span><input data-pmk="${k}" type="${t || 'text'}" value="${esc(m[k] || '')}" placeholder="${esc(ph || '')}"></label>`).join('')}</div>
+    <p class="note">Le marché n°, le titulaire, la TVA et les montants viennent de l'étape 1 et du bordereau des prix (étape 2).</p></div></details>`;
+  h += `<label class="fld pselm"><span>Modèle</span><select id="pSel">${groups.map(g => `<optgroup label="${esc(g)}">${MM.filter(d => d.g === g).map(d => `<option value="${d.id}"${d.id === M.id ? ' selected' : ''}>${esc(d.t)}</option>`).join('')}</optgroup>`).join('')}</select></label><div class="pchips">`;
+  groups.forEach(g => { h += `<h4 class="mg">${g}</h4><div class="chips">${MM.filter(d => d.g === g).map(d => `<button data-pdoc="${d.id}" title="${esc(d.code)}" style="${d.id === M.id ? 'background:var(--ink);color:#fff;border-color:var(--ink)' : ''}">📄 ${esc(d.t)}</button>`).join('')}</div>`; });
+  h += '</div>';
+  // aperçu modifiable
+  const ctx = { n: 0, prev: '' }, slot = p => { const v = st.s[p.s] !== undefined ? st.s[p.s] : p.v, w = Math.max(6, Math.min(34, (v || p.d).length * 0.9)); return `<input class="slot${st.s[p.s] === undefined && p.v ? ' auto' : ''}" data-ps="${p.s}" value="${esc(v)}" placeholder="${'…'.repeat(Math.min(8, p.d.length))}" style="width:${w}ch">`; };
+  const rich = t => slotParts(m, M, stripRef(t, keep), ctx).map(p => p.s === undefined ? esc(p.t) : slot(p)).join('');
+  let pv = `<div class="mdoc"><div class="mdh">Royaume du Maroc${m.org ? '<br>' + esc(m.org) : ''}</div>`;
+  if (!M.b.some(b => b.c)) pv += `<div class="c">${esc(M.t)}</div>`;
+  M.b.forEach((b, bi) => {
+    if (b.p !== undefined) { if (/^(Royaume du Maroc|Organisme[.…\s(\d)]*)$/.test(b.p.trim())) return; pv += `<p>${rich(b.p)}</p>`; }
+    else if (b.li !== undefined) pv += `<p class="li">–&nbsp;${rich(b.li)}</p>`;
+    else if (b.c !== undefined) pv += `<div class="c">${rich(b.c)}</div>`;
+    else if (b.r !== undefined) pv += `<div class="r">${rich(b.r)}</div>`;
+    else if (b.sig) pv += `<table class="sig">${b.sig.map(r => `<tr>${r.map(c => `<td>${rich(c)}</td>`).join('')}</tr>`).join('')}</table>`;
+    else if (b.tbl) {
+      const T = b.tbl, rows = tblRows(m, M, bi, T, st), tot = tblTot(m, T);
+      pv += `<div class="mt-wrap"><table class="mt"><tr>${T.h.map(c => `<th>${esc(stripRef(c, keep))}</th>`).join('')}</tr>${T.n ? `<tr class="nn">${T.n.map(c => `<td>${esc(c)}</td>`).join('')}</tr>` : ''}
+        ${rows.map((r, ri) => `<tr>${T.h.map((_, ci) => `<td><input data-pt="${bi}.${ri}.${ci}" value="${esc(r[ci] || '')}"></td>`).join('')}</tr>`).join('')}
+        ${tot ? tot.map(r => `<tr class="tt">${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('') : ''}</table>
+        <div class="actions" style="margin:4px 0 0"><button class="btn ghost sm" data-ptadd="${bi}">➕ Ligne</button>${rows.length > 1 ? `<button class="btn ghost sm" data-ptdel="${bi}">➖ Ligne</button>` : ''}${T.fill && (m.lignes || []).length ? `<button class="btn ghost sm" data-ptfill="${bi}">📋 Reprendre le bordereau du marché (${m.lignes.length} prix)</button>` : ''}</div></div>`;
+    }
+  });
+  if (keep && Object.keys(M.n || {}).length) pv += `<div class="mnotes">${Object.entries(M.n).map(([k, v]) => `<div>(${k}) ${esc(v)}</div>`).join('')}</div>`;
+  pv += '</div>';
+  h += `<div class="res" style="margin-top:10px"><div class="hrow"><b style="font-size:16px">📄 ${esc(M.t)}</b><small class="note" style="margin:0">${esc(M.code)} · arrêté n° 1689-23</small></div>
+    <p class="note">Complétez directement les pointillés dans l'aperçu. <span class="slot auto" style="display:inline-block;width:auto;padding:0 6px">En vert</span> : rempli automatiquement avec les données du marché (modifiable). Les blancs laissés vides restent en pointillés dans le Word.</p>
+    <label class="chk" style="display:flex;gap:6px;align-items:center;margin:6px 0"><input type="checkbox" id="pKeep" ${keep ? 'checked' : ''}> Garder les renvois (1), (2)… et les notes explicatives du modèle officiel</label>
+    ${!(Object.keys(M.n || {}).length) || keep ? '' : `<details style="margin:6px 0"><summary>ℹ️ Notes explicatives du modèle (${Object.keys(M.n).length})</summary><div class="body mnotes">${Object.entries(M.n).map(([k, v]) => `<div>(${k}) ${esc(v)}</div>`).join('')}</div></details>`}
+    ${pv}
+    <div class="actions"><button class="btn" id="pGen">📄 Générer le document Word</button><button class="btn ghost" id="pReset">↺ Effacer mes saisies</button></div></div>`;
+  box.insertAdjacentHTML('beforeend', h);
+  box.querySelector('#pInfo').ontoggle = e => { m.pinfoOpen = e.target.open; };
+  box.querySelectorAll('[data-pmk]').forEach(i => i.onchange = () => { m[i.dataset.pmk] = i.value; saveM(); renderModels(); });
+  box.querySelectorAll('[data-pdoc]').forEach(b => b.onclick = () => { m.pcur = b.dataset.pdoc; saveM(); renderModels(); });
+  $('#pSel').onchange = e => { m.pcur = e.target.value; saveM(); renderModels(); };
+  box.querySelectorAll('[data-ps]').forEach(i => { i.oninput = () => { i.style.width = Math.max(6, Math.min(34, (i.value || i.placeholder).length * 0.9)) + 'ch'; i.classList.remove('auto'); }; i.onchange = () => { st.s[i.dataset.ps] = i.value; saveM(); }; });
+  const curRows = bi => { const T = M.b[bi].tbl; if (!st.t[bi]) st.t[bi] = tblRows(m, M, bi, T, st).map(r => T.h.map((_, i) => r[i] || '')); return st.t[bi]; };
+  box.querySelectorAll('[data-pt]').forEach(i => i.onchange = () => { const [bi, ri, ci] = i.dataset.pt.split('.').map(Number); curRows(bi)[ri][ci] = i.value; saveM(); });
+  box.querySelectorAll('[data-ptadd]').forEach(b => b.onclick = () => { const bi = +b.dataset.ptadd, R = curRows(bi); R.push(M.b[bi].tbl.h.map(() => '')); saveM(); renderModels(); });
+  box.querySelectorAll('[data-ptdel]').forEach(b => b.onclick = () => { const bi = +b.dataset.ptdel, R = curRows(bi); R.pop(); saveM(); renderModels(); });
+  box.querySelectorAll('[data-ptfill]').forEach(b => b.onclick = () => { delete st.t[+b.dataset.ptfill]; st.fillB = true; saveM(); renderModels(); });
+  $('#pKeep').onchange = e => { st.keep = e.target.checked; saveM(); renderModels(); };
+  $('#pReset').onclick = () => { m.pdocs[M.id] = { s: {}, t: {}, keep: st.keep }; saveM(); renderModels(); };
+  $('#pGen').onclick = () => genPassWord(M);
+}
+async function genPassWord(M) {
+  let X; try { X = await loadDocx(); } catch (e) { return toast('Impossible de charger le module Word (connexion ?)'); }
+  const m = MS(), st = pd(m, M.id), keep = !!st.keep;
+  const { Document, Paragraph, TextRun, AlignmentType, Packer, Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType } = X;
+  const run = (t, o = {}) => new TextRun({ text: t, bold: !!o.b, italics: !!o.i, size: o.s || 22, font: 'Times New Roman' });
+  const AL = a => a === 'right' ? AlignmentType.RIGHT : a === 'center' ? AlignmentType.CENTER : a === 'left' ? AlignmentType.LEFT : AlignmentType.JUSTIFIED;
+  const ctx = { n: 0, prev: '' };
+  const runs = (t, o = {}) => slotParts(m, M, stripRef(t, keep), ctx).map(p => { if (p.s === undefined) return run(p.t, o); const v = st.s[p.s] !== undefined ? st.s[p.s] : p.v; return v ? run(p.pb + v + p.pa, o) : run(p.d, o); });
+  const P = (t, o = {}) => new Paragraph({ children: runs(t, o), alignment: AL(o.align), spacing: { after: o.after !== undefined ? o.after : 100, line: 288 }, indent: o.ind ? { left: o.ind, hanging: 283 } : undefined });
+  const P0 = (t, o = {}) => new Paragraph({ children: [run(t, o)], alignment: AL(o.align), spacing: { after: o.after !== undefined ? o.after : 100 } });
+  const line = { style: BorderStyle.SINGLE, size: 4, color: '444444' }, none = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  const cell = (t, o = {}) => new TableCell({ children: [new Paragraph({ children: [run(String(t || ''), { b: o.b, s: 19 })], alignment: o.al || AlignmentType.LEFT })], shading: o.sh ? { type: ShadingType.CLEAR, color: 'auto', fill: o.sh } : undefined, borders: o.nb ? { top: none, bottom: none, left: none, right: none } : { top: line, bottom: line, left: line, right: line }, margins: { top: 50, bottom: 50, left: 80, right: 80 }, columnSpan: o.span });
+  const ch = [P0('Royaume du Maroc', { b: 1, align: 'left', after: 0 })]; if (m.org) ch.push(P0(m.org, { b: 1, align: 'left' })); ch.push(P0('', { after: 0 }));
+  if (!M.b.some(b => b.c)) ch.push(P0(M.t, { b: 1, s: 28, align: 'center' }));
+  M.b.forEach((b, bi) => {
+    if (b.p !== undefined) { if (/^(Royaume du Maroc|Organisme[.…\s(\d)]*)$/.test(b.p.trim())) return; ch.push(P(b.p)); }
+    else if (b.li !== undefined) ch.push(new Paragraph({ children: [run('–  ')].concat(runs(b.li)), alignment: AL(), spacing: { after: 60, line: 288 }, indent: { left: 567, hanging: 283 } }));
+    else if (b.c !== undefined) ch.push(P(b.c, { b: 1, s: 26, align: 'center', after: 160 }));
+    else if (b.r !== undefined) ch.push(P(b.r, { align: 'right', after: 40 }));
+    else if (b.sig) ch.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: b.sig.map(r => new TableRow({ children: r.map(c => new TableCell({ children: [new Paragraph({ children: runs(c), spacing: { after: 120 } })], borders: { top: none, bottom: none, left: none, right: none } })) })) }));
+    else if (b.tbl) {
+      const T = b.tbl, rows = tblRows(m, M, bi, T, st), tot = tblTot(m, T), n = T.h.length, nums = new Set(T.fill ? T.h.map((h, i) => /prix|total|quantit|montant|frais|taxes|marges|main/i.test(h) && !/n°|désignation/i.test(h) ? i : -1) : []);
+      const tr = [new TableRow({ tableHeader: true, children: T.h.map(c => cell(stripRef(c, keep), { b: 1, sh: 'E8E2D9', al: AlignmentType.CENTER })) })];
+      if (T.n) tr.push(new TableRow({ children: T.n.map(c => cell(c, { al: AlignmentType.CENTER })) }));
+      rows.forEach(r => tr.push(new TableRow({ children: T.h.map((_, i) => cell(r[i], { al: nums.has(i) ? AlignmentType.RIGHT : AlignmentType.LEFT })) })));
+      if (tot) tot.forEach(r => tr.push(new TableRow({ children: [cell(r[0], { b: 1, span: n - 1 }), cell(r[n - 1], { b: 1, al: AlignmentType.RIGHT })] })));
+      const wt = T.h.map(h => /désignation|objet|motif|justification|contenu|identité|observation/i.test(h) ? 3 : /concurrent|architecte|prestations|phase/i.test(h) ? 2 : 1), ws = wt.reduce((a, x) => a + x, 0), W = 9500;
+      ch.push(new Table({ width: { size: W, type: WidthType.DXA }, columnWidths: wt.map(x => Math.round(W * x / ws)), rows: tr })); ch.push(P0('', { after: 80 }));
+    }
+  });
+  if (keep && Object.keys(M.n || {}).length) { ch.push(P0('', { after: 0 })); Object.entries(M.n).forEach(([k, v]) => ch.push(P0(`(${k}) ${v}`, { i: 1, s: 17, after: 30, align: 'left' }))); }
+  const doc = new Document({ creator: 'Bâtir Sûr', title: M.t, sections: [{ properties: { page: { margin: { top: 1134, bottom: 1134, left: 1247, right: 1134 } } }, children: ch }] });
+  const blob = await Packer.toBlob(doc);
+  const slug = M.t.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase().slice(0, 60);
+  saveFile(M.code.replace(/\s/g, '-') + '-' + slug + (m.aoNum ? '-AO-' + String(m.aoNum).replace(/[^\w-]+/g, '-') : '') + '.docx', blob, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+}
+
+/* ================= CCAG-T : sommaire, recherche et texte officiel ================= */
+const CC = { p: 6, art: 1, q: '', zoom: 1, doc: null, busy: false, open: {} };
+let CCDP = null;
+function loadCCData() {
+  if (window.CCAGT) return Promise.resolve(window.CCAGT);
+  if (!CCDP) CCDP = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'ccag-t-data.js?v=1'; sc.onload = () => res(window.CCAGT); sc.onerror = () => { CCDP = null; rej(new Error('ccag')); }; document.head.appendChild(sc); });
+  return CCDP;
+}
+const ccNorm = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[’']/g, "'");
+async function renderCCAG() {
+  const box = $('#ccBox'); if (!box) return;
+  if (!window.CCAGT) { box.innerHTML = '<p class="note"><span class="spin" style="border-color:var(--terra);border-right-color:transparent"></span> Chargement du CCAG-T…</p>'; try { await loadCCData(); } catch (e) { box.innerHTML = '<div class="alert bad">Impossible de charger le CCAG-T (connexion ?).</div>'; return; } }
+  const D = window.CCAGT, q = ccNorm(CC.q.trim());
+  let list = '';
+  if (q.length >= 2) {
+    const arts = D.ch.flatMap(c => c.a.filter(a => ccNorm(a[1]).includes(q) || ('article ' + a[0]) === q || String(a[0]) === q));
+    const hits = Object.entries(D.txt).filter(([p]) => +p >= 6).map(([p, t]) => { const n = ccNorm(t), i = n.indexOf(q); return i < 0 ? null : [+p, t.slice(Math.max(0, i - 70), i + q.length + 90), n.split(q).length - 1]; }).filter(Boolean);
+    list = `<div class="ccres">${arts.length ? `<h4 class="mg">Articles</h4>${arts.map(a => `<button class="ccart${CC.art === a[0] ? ' on' : ''}" data-cca="${a[0]}"><b>Art. ${a[0] === 1 ? '1<sup>er</sup>' : a[0]}</b> ${esc(a[1])}</button>`).join('')}` : ''}
+      <h4 class="mg">Dans le texte (${hits.reduce((s, h) => s + h[2], 0)} résultat${hits.length > 1 ? 's' : ''})</h4>
+      ${hits.length ? hits.map(([p, sn, n]) => `<button class="cchit" data-ccp="${p}"><b>Page ${p - 5}</b> <small>(${n}×)</small><span>…${esc(sn)}…</span></button>`).join('') : '<p class="note">Aucun résultat. Le texte de recherche vient d\'un document scanné (sans accents) : essayez un autre mot.</p>'}</div>`;
+  } else {
+    list = D.ch.map((c, ci) => `<details class="ccch" ${CC.open[ci] || c.a.some(a => a[0] === CC.art) ? 'open' : ''} data-cci="${ci}"><summary>${esc(c.t)} <small>(art. ${c.a[0][0]}–${c.a[c.a.length - 1][0]})</small></summary>
+      ${c.a.map(a => `<button class="ccart${CC.art === a[0] ? ' on' : ''}" data-cca="${a[0]}"><b>Art. ${a[0] === 1 ? '1<sup>er</sup>' : a[0]}</b> ${esc(a[1])}</button>`).join('')}</details>`).join('');
+  }
+  const A = D.ch.flatMap(c => c.a).find(a => a[0] === CC.art);
+  box.innerHTML = `<div class="ccgrid"><div class="card cclist">
+      <input type="search" id="ccQ" placeholder="🔎 Chercher : article, mot (retenue, pénalités, réception…)" value="${esc(CC.q)}">
+      <div class="ccl">${list}</div></div>
+    <div class="card ccview"><div class="cchead"><div><b>${A ? `Article ${A[0] === 1 ? 'premier' : A[0]} — ${esc(A[1])}` : 'CCAG-T'}</b><small class="note" style="margin:0;display:block">Texte officiel — page ${CC.p - 5} / 25 du CCAG-T (BO n° 6470, p. ${CC.p + 857})</small></div>
+      <div class="actions" style="margin:0"><button class="btn ghost sm" id="ccPrev" ${CC.p <= 5 ? 'disabled' : ''}>◀</button><button class="btn ghost sm" id="ccNext" ${CC.p >= 30 ? 'disabled' : ''}>▶</button><button class="btn ghost sm" id="ccZm">−</button><button class="btn ghost sm" id="ccZp">+</button><a class="btn ghost sm" href="ccag-t.pdf" target="_blank" rel="noopener">📄 PDF complet</a></div></div>
+      <div class="ccpage" id="ccPage"><p class="note"><span class="spin" style="border-color:var(--terra);border-right-color:transparent"></span> Chargement de la page…</p></div></div></div>`;
+  const qi = $('#ccQ'); qi.oninput = () => { CC.q = qi.value; clearTimeout(CC.t); CC.t = setTimeout(() => { renderCCAG().then(() => { const x = $('#ccQ'); x.focus(); x.setSelectionRange(x.value.length, x.value.length); }); }, 250); };
+  box.querySelectorAll('[data-cci]').forEach(d => d.ontoggle = () => { CC.open[d.dataset.cci] = d.open; });
+  box.querySelectorAll('[data-cca]').forEach(b => b.onclick = () => { const a = D.ch.flatMap(c => c.a).find(x => x[0] === +b.dataset.cca); CC.art = a[0]; CC.p = a[2]; renderCCAG(); if (innerWidth < 860) setTimeout(() => $('.ccview').scrollIntoView({ behavior: 'smooth' }), 50); });
+  box.querySelectorAll('[data-ccp]').forEach(b => b.onclick = () => { CC.p = +b.dataset.ccp; const a = D.ch.flatMap(c => c.a).filter(x => x[2] <= CC.p).pop(); if (a) CC.art = a[0]; renderCCAG(); if (innerWidth < 860) setTimeout(() => $('.ccview').scrollIntoView({ behavior: 'smooth' }), 50); });
+  const go = d => { CC.p = Math.min(30, Math.max(5, CC.p + d)); const a = D.ch.flatMap(c => c.a).filter(x => x[2] <= CC.p).pop(); CC.art = a ? a[0] : 0; renderCCAG(); };
+  $('#ccPrev').onclick = () => go(-1); $('#ccNext').onclick = () => go(1);
+  $('#ccZm').onclick = () => { CC.zoom = Math.max(.6, CC.zoom - .2); drawCC(); }; $('#ccZp').onclick = () => { CC.zoom = Math.min(2.6, CC.zoom + .2); drawCC(); };
+  drawCC();
+}
+async function drawCC() {
+  const el = $('#ccPage'); if (!el) return;
+  try {
+    const lib = await pdfjs();
+    if (!CC.doc) CC.doc = await lib.getDocument('ccag-t.pdf').promise;
+    const pg = await CC.doc.getPage(CC.p), w = Math.max(280, el.clientWidth - 4), vp0 = pg.getViewport({ scale: 1 }), sc = w / vp0.width * CC.zoom, dpr = Math.min(2, window.devicePixelRatio || 1);
+    const vp = pg.getViewport({ scale: sc * dpr }), cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height; cv.style.width = (vp.width / dpr) + 'px';
+    await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+    el.innerHTML = ''; el.appendChild(cv);
+    if (CC.q.trim().length >= 2) el.insertAdjacentHTML('afterbegin', `<p class="note" style="margin:0 0 6px">🔎 « ${esc(CC.q)} » se trouve sur cette page.</p>`);
+  } catch (e) { el.innerHTML = '<div class="alert bad">Impossible d\'afficher la page (connexion ?). <a href="ccag-t.pdf" target="_blank">Ouvrir le PDF</a></div>'; }
 }
 
 /* ================= init ================= */
@@ -3268,7 +3519,7 @@ window.addEventListener('message', e => { if (e.origin === location.origin && e.
 window.addEventListener('storage', e => { if (e.key === 'bs_devis') reloadDevisFromStore(); });
 
 /* ===== liens directs (#calc, #devis, #journal…) ===== */
-const TABS = ['calc', 'plans', 'dba', 'devis', 'marche', 'journal', 'diag', 'fiss', 'guide', 'pieges', 'prix'];
+const TABS = ['calc', 'plans', 'dba', 'devis', 'marche', 'ccag', 'journal', 'diag', 'fiss', 'guide', 'pieges', 'prix'];
 function fromHash() { const h = location.hash.slice(1); if (TABS.includes(h)) goTab(h); }
 window.addEventListener('hashchange', fromHash); fromHash();
 
